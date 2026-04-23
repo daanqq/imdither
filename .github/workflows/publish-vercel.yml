@@ -33,6 +33,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ci_url="$(gh run list \
+            --repo "${{ github.repository }}" \
             --workflow "ci.yml" \
             --branch "${{ github.ref_name }}" \
             --commit "${{ github.sha }}" \
