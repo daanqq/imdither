@@ -1,21 +1,15 @@
-# shadcn/ui monorepo template
+# IMDITHER
 
-This is a Vite monorepo template with shadcn/ui.
+Open source web app for local image dithering.
 
-## Adding components
+Current stack:
+- Bun
+- Vite
+- React
+- Zustand
+- Vitest
+- Playwright
+- shadcn/ui as the shared primitive layer in `packages/ui`
 
-To add components to your app, run the following command at the root of your `web` app:
-
-```bash
-pnpm dlx shadcn@latest add button -c apps/web
-```
-
-This will place the ui components in the `packages/ui/src/components` directory.
-
-## Using components
-
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
-```
+Product requirements and implementation plan:
+- [docs/PRD.md](docs/PRD.md)
