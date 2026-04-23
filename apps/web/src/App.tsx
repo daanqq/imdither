@@ -62,7 +62,6 @@ import { cn } from "@workspace/ui/lib/utils"
 import {
   ClipboardIcon,
   DownloadIcon,
-  FileJsonIcon,
   ImageIcon,
   RotateCcwIcon,
   UploadIcon,
@@ -72,7 +71,6 @@ import {
   createDemoSource,
   decodeImageFile,
   downloadBlob,
-  downloadJson,
   drawPixelBuffer,
   fitWithinOutputBudget,
   INTERACTIVE_PREVIEW_PIXEL_BUDGET,
@@ -119,7 +117,6 @@ export function App() {
   )
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const settingsInputRef = React.useRef<HTMLInputElement>(null)
   const jobIdRef = React.useRef(0)
   const previewRunRef = React.useRef(0)
   const nextJobId = React.useCallback(() => {
@@ -396,31 +393,37 @@ export function App() {
     }
   }
 
-  async function handleImportSettings(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = event.target.files?.[0]
-    event.target.value = ""
-
-    if (!file) {
-      return
-    }
-
+  async function handleCopySettings() {
     try {
-      const parsed = safeNormalizeSettings(JSON.parse(await file.text()))
-
-      if (!parsed) {
-        throw new Error("Settings JSON does not match schema v1")
-      }
-
-      setAspectLockedSettings(parsed)
+      await navigator.clipboard.writeText(JSON.stringify(settings, null, 2))
       setError(null)
-      setSourceNotice("[SETTINGS IMPORTED]")
+      setSourceNotice("[SETTINGS COPIED TO CLIPBOARD]")
     } catch (settingsError) {
       setError(
         settingsError instanceof Error
           ? settingsError.message
-          : "Settings import failed"
+          : "Settings copy failed"
+      )
+    }
+  }
+
+  async function handlePasteSettings() {
+    try {
+      const clipboardText = await navigator.clipboard.readText()
+      const parsed = safeNormalizeSettings(JSON.parse(clipboardText))
+
+      if (!parsed) {
+        throw new Error("Clipboard JSON does not match settings schema v1")
+      }
+
+      setAspectLockedSettings(parsed)
+      setError(null)
+      setSourceNotice("[SETTINGS PASTED FROM CLIPBOARD]")
+    } catch (settingsError) {
+      setError(
+        settingsError instanceof Error
+          ? settingsError.message
+          : "Settings paste failed"
       )
     }
   }
@@ -570,15 +573,11 @@ export function App() {
             compareMode={compareMode}
             paletteDefaultMode={palette?.defaultColorMode ?? "grayscale-first"}
             settings={settings}
-            settingsInputRef={settingsInputRef}
             viewScale={viewScale}
             onAdvancedOpenChange={setAdvancedOpen}
             onCompareModeChange={setCompareMode}
-            onExportSettings={() =>
-              downloadJson(settings, makeExportName("settings", "json"))
-            }
-            onImportSettings={handleImportSettings}
-            onOpenSettingsPicker={() => settingsInputRef.current?.click()}
+            onCopySettings={handleCopySettings}
+            onPasteSettings={handlePasteSettings}
             onPatchPreprocess={patchPreprocess}
             onPatchResize={patchResize}
             onPatchSettings={patchSettings}
@@ -701,13 +700,11 @@ function ControlPanel({
   compareMode,
   paletteDefaultMode,
   settings,
-  settingsInputRef,
   viewScale,
   onAdvancedOpenChange,
   onCompareModeChange,
-  onExportSettings,
-  onImportSettings,
-  onOpenSettingsPicker,
+  onCopySettings,
+  onPasteSettings,
   onPatchPreprocess,
   onPatchResize,
   onPatchSettings,
@@ -721,13 +718,11 @@ function ControlPanel({
   compareMode: CompareMode
   paletteDefaultMode: ColorMode
   settings: EditorSettings
-  settingsInputRef: React.RefObject<HTMLInputElement | null>
   viewScale: ViewScale
   onAdvancedOpenChange: (open: boolean) => void
   onCompareModeChange: (mode: CompareMode) => void
-  onExportSettings: () => void
-  onImportSettings: (event: React.ChangeEvent<HTMLInputElement>) => void
-  onOpenSettingsPicker: () => void
+  onCopySettings: () => void
+  onPasteSettings: () => void
   onPatchPreprocess: (patch: Partial<EditorSettings["preprocess"]>) => void
   onPatchResize: (patch: Partial<EditorSettings["resize"]>) => void
   onPatchSettings: (patch: Partial<EditorSettings>) => void
@@ -1043,33 +1038,26 @@ function ControlPanel({
                   />
                 </Field>
                 <Separator />
-                <Input
-                  ref={settingsInputRef}
-                  className="sr-only"
-                  type="file"
-                  accept="application/json"
-                  onChange={onImportSettings}
-                />
-                <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Button
                     variant="outline"
-                    className="min-w-0"
-                    onClick={onExportSettings}
+                    className="min-w-0 justify-start"
+                    onClick={onCopySettings}
                   >
-                    <FileJsonIcon data-icon="inline-start" />
-                    Export JSON
+                    <ClipboardIcon data-icon="inline-start" />
+                    Copy settings
                   </Button>
                   <Button
                     variant="outline"
-                    className="min-w-0"
-                    onClick={onOpenSettingsPicker}
+                    className="min-w-0 justify-start"
+                    onClick={onPasteSettings}
                   >
-                    <ClipboardIcon data-icon="inline-start" />
-                    Import JSON
+                    <UploadIcon data-icon="inline-start" />
+                    Paste settings
                   </Button>
                   <Button
                     variant="destructive"
-                    className="min-w-0"
+                    className="min-w-0 justify-start"
                     onClick={() => onSetSettings(DEFAULT_SETTINGS)}
                   >
                     <RotateCcwIcon data-icon="inline-start" />
