@@ -1,0 +1,68 @@
+name: Publish to Vercel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Require main branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "Publish is allowed only from main. Selected ref: ${{ github.ref }}"
+            exit 1
+          fi
+
+      - name: Require successful CI for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci_url="$(gh run list \
+            --workflow "ci.yml" \
+            --branch "${{ github.ref_name }}" \
+            --commit "${{ github.sha }}" \
+            --json conclusion,status,url \
+            --jq 'map(select(.status == "completed" and .conclusion == "success")) | first | .url // ""')"
+
+          if [ -z "$ci_url" ]; then
+            echo "No successful CI run found for commit ${{ github.sha }} on ${{ github.ref_name }}."
+            echo "Run CI successfully before publishing."
+            exit 1
+          fi
+
+          echo "Using successful CI run: $ci_url"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Pull Vercel project settings
+        run: bunx vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        run: bunx vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy Vercel output
+        run: bunx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
