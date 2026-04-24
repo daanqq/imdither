@@ -77,7 +77,6 @@ import {
 } from "@/lib/image"
 import { runDitherJob } from "@/lib/worker-client"
 import {
-  paletteName,
   useEditorStore,
   type CompareMode,
   type ViewScale,

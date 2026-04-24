@@ -13,7 +13,7 @@ export type LoadedSource = {
   notice: string | null
 }
 
-export const PREVIEW_PIXEL_BUDGET = 1_300_000
+const PREVIEW_PIXEL_BUDGET = 1_300_000
 export const INTERACTIVE_PREVIEW_PIXEL_BUDGET = 450_000
 
 export async function decodeImageFile(file: File): Promise<LoadedSource> {
