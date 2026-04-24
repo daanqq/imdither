@@ -94,6 +94,7 @@ import {
 } from "@/store/editor-store"
 
 const SLIDE_COMPARE_FIT_INSET = 12
+const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
 
 export function App() {
   const {
@@ -333,6 +334,22 @@ export function App() {
   )
 
   React.useEffect(() => {
+    const mediaQuery = window.matchMedia(DESKTOP_VIEW_SCALE_QUERY)
+    const enforceMobileFit = () => {
+      if (!mediaQuery.matches) {
+        setViewScale("fit")
+      }
+    }
+
+    enforceMobileFit()
+    mediaQuery.addEventListener("change", enforceMobileFit)
+
+    return () => {
+      mediaQuery.removeEventListener("change", enforceMobileFit)
+    }
+  }, [setViewScale])
+
+  React.useEffect(() => {
     const handlePaste = async (event: ClipboardEvent) => {
       const file = pickImageFromClipboard(event.clipboardData)
 
@@ -547,12 +564,37 @@ export function App() {
                     </div>
                   )}
                 </div>
-                <div className="mx-3 mb-3 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                <div className="mx-3 mb-3 grid shrink-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                  <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:justify-center">
+                    <Input
+                      ref={fileInputRef}
+                      className="sr-only"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileInput}
+                    />
+                    <Button
+                      className="min-w-0 flex-1 md:w-36 md:flex-none"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadIcon data-icon="inline-start" />
+                      Upload
+                    </Button>
+                    <Button
+                      className="min-w-0 flex-1 md:w-36 md:flex-none"
+                      disabled={!source || status === "exporting"}
+                      onClick={handleExportPng}
+                    >
+                      <DownloadIcon data-icon="inline-start" />
+                      {status === "exporting" ? "[EXPORTING]" : "Export PNG"}
+                    </Button>
+                  </div>
                   <ToggleGroup
                     type="single"
                     value={viewScale}
                     variant="outline"
-                    className="h-full w-full max-w-72"
+                    className="order-2 hidden h-full w-full md:order-1 md:flex md:max-w-72"
                     onValueChange={(value) => {
                       if (value) {
                         setViewScale(value as ViewScale)
@@ -566,32 +608,10 @@ export function App() {
                       1:1
                     </ToggleGroupItem>
                   </ToggleGroup>
-                  <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
-                    <Input
-                      ref={fileInputRef}
-                      className="sr-only"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileInput}
-                    />
-                    <Button
-                      className="w-36"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <UploadIcon data-icon="inline-start" />
-                      Upload
-                    </Button>
-                    <Button
-                      className="w-36"
-                      disabled={!source || status === "exporting"}
-                      onClick={handleExportPng}
-                    >
-                      <DownloadIcon data-icon="inline-start" />
-                      {status === "exporting" ? "[EXPORTING]" : "Export PNG"}
-                    </Button>
-                  </div>
-                  <div aria-hidden="true" className="min-w-0" />
+                  <div
+                    aria-hidden="true"
+                    className="order-3 hidden min-w-0 md:block"
+                  />
                 </div>
               </CardContent>
             </Card>
