@@ -1091,6 +1091,11 @@ function SlideComparePreview({
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const viewportRef = React.useRef<HTMLDivElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
+  const dividerLineRef = React.useRef<HTMLDivElement>(null)
+  const dividerHandleRef = React.useRef<HTMLButtonElement>(null)
+  const dividerPercentRef = React.useRef(clampSlideDivider(dividerPercent))
+  const pendingDividerPercentRef = React.useRef(dividerPercentRef.current)
+  const dividerAnimationFrameRef = React.useRef<number | null>(null)
   const processedReady = Boolean(processed)
   const frameWidth = processed?.width ?? original.width
   const frameHeight = processed?.height ?? original.height
@@ -1123,7 +1128,22 @@ function SlideComparePreview({
     }
 
     drawPixelBuffer(processedCanvasRef.current, processed)
+    applyDividerVisual(dividerPercentRef.current)
   }, [processed])
+
+  React.useEffect(() => {
+    dividerPercentRef.current = clampedDivider
+    pendingDividerPercentRef.current = clampedDivider
+    applyDividerVisual(clampedDivider)
+  }, [clampedDivider])
+
+  React.useEffect(() => {
+    return () => {
+      if (dividerAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(dividerAnimationFrameRef.current)
+      }
+    }
+  }, [])
 
   React.useLayoutEffect(() => {
     const viewport = viewportRef.current
@@ -1164,15 +1184,76 @@ function SlideComparePreview({
     }
   }, [])
 
-  function updateFromPointer(clientX: number) {
-    const frame = frameRef.current
+  function applyDividerVisual(percent: number) {
+    const nextPercent = clampSlideDivider(percent)
 
-    if (!frame || !processedReady) {
+    if (processedCanvasRef.current) {
+      processedCanvasRef.current.style.clipPath = `inset(0 0 0 ${nextPercent}%)`
+    }
+
+    if (dividerLineRef.current) {
+      dividerLineRef.current.style.left = `${nextPercent}%`
+    }
+
+    if (dividerHandleRef.current) {
+      dividerHandleRef.current.style.left = `${nextPercent}%`
+      dividerHandleRef.current.setAttribute(
+        "aria-valuenow",
+        String(Math.round(nextPercent))
+      )
+    }
+  }
+
+  function scheduleDividerVisual(percent: number) {
+    pendingDividerPercentRef.current = clampSlideDivider(percent)
+
+    if (dividerAnimationFrameRef.current !== null) {
       return
     }
 
+    dividerAnimationFrameRef.current = requestAnimationFrame(() => {
+      dividerAnimationFrameRef.current = null
+      applyDividerVisual(pendingDividerPercentRef.current)
+    })
+  }
+
+  function commitDividerVisual(percent: number) {
+    const nextPercent = clampSlideDivider(percent)
+    dividerPercentRef.current = nextPercent
+    pendingDividerPercentRef.current = nextPercent
+    applyDividerVisual(nextPercent)
+    onDividerChange(nextPercent)
+  }
+
+  function getDividerPercentFromPointer(clientX: number) {
+    const frame = frameRef.current
+
+    if (!frame || !processedReady) {
+      return null
+    }
+
     const rect = frame.getBoundingClientRect()
-    onDividerChange(getSlideDividerFromClientX(clientX, rect.left, rect.width))
+    return getSlideDividerFromClientX(clientX, rect.left, rect.width)
+  }
+
+  function updateDividerFromPointer(clientX: number) {
+    const nextPercent = getDividerPercentFromPointer(clientX)
+
+    if (nextPercent === null) {
+      return
+    }
+
+    scheduleDividerVisual(nextPercent)
+  }
+
+  function commitDividerFromPointer(clientX: number) {
+    const nextPercent = getDividerPercentFromPointer(clientX)
+
+    if (nextPercent === null) {
+      return
+    }
+
+    commitDividerVisual(nextPercent)
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -1187,7 +1268,7 @@ function SlideComparePreview({
     }
 
     event.preventDefault()
-    onDividerChange(clampSlideDivider(nextPercent))
+    commitDividerVisual(nextPercent)
   }
 
   return (
@@ -1217,11 +1298,23 @@ function SlideComparePreview({
             }
 
             event.currentTarget.setPointerCapture(event.pointerId)
-            updateFromPointer(event.clientX)
+            updateDividerFromPointer(event.clientX)
           }}
           onPointerMove={(event) => {
             if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-              updateFromPointer(event.clientX)
+              updateDividerFromPointer(event.clientX)
+            }
+          }}
+          onPointerUp={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId)
+            }
+
+            commitDividerFromPointer(event.clientX)
+          }}
+          onPointerCancel={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId)
             }
           }}
         >
@@ -1245,10 +1338,12 @@ function SlideComparePreview({
           {processedReady ? (
             <>
               <div
+                ref={dividerLineRef}
                 className="pointer-events-none absolute inset-y-0 w-px bg-foreground ring-1 ring-background/75"
                 style={{ left: `${clampedDivider}%` }}
               />
               <button
+                ref={dividerHandleRef}
                 type="button"
                 aria-label="Slide comparison divider"
                 aria-valuemax={SLIDE_COMPARE_MAX}
@@ -1261,11 +1356,23 @@ function SlideComparePreview({
                 onPointerDown={(event) => {
                   event.stopPropagation()
                   event.currentTarget.setPointerCapture(event.pointerId)
-                  updateFromPointer(event.clientX)
+                  updateDividerFromPointer(event.clientX)
                 }}
                 onPointerMove={(event) => {
                   if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                    updateFromPointer(event.clientX)
+                    updateDividerFromPointer(event.clientX)
+                  }
+                }}
+                onPointerUp={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId)
+                  }
+
+                  commitDividerFromPointer(event.clientX)
+                }}
+                onPointerCancel={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId)
                   }
                 }}
               >
