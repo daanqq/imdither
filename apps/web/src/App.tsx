@@ -1,7 +1,6 @@
 import * as React from "react"
 import {
   DEFAULT_SETTINGS,
-  MAX_OUTPUT_PIXELS,
   PRESET_PALETTES,
   clampOutputSize,
   safeNormalizeSettings,
@@ -13,12 +12,10 @@ import {
   type ResizeFit,
   type ResizeMode,
 } from "@workspace/core"
-import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
@@ -62,7 +59,6 @@ import { cn } from "@workspace/ui/lib/utils"
 import {
   ClipboardIcon,
   DownloadIcon,
-  ImageIcon,
   RotateCcwIcon,
   UploadIcon,
 } from "lucide-react"
@@ -94,9 +90,6 @@ export function App() {
     viewScale,
     advancedOpen,
     status,
-    error,
-    sourceNotice,
-    metadata,
     setSettings,
     patchSettings,
     patchResize,
@@ -430,7 +423,6 @@ export function App() {
 
   const showOriginal = compareMode === "original" || compareMode === "split"
   const showProcessed = compareMode === "processed" || compareMode === "split"
-  const pixelLoad = settings.resize.width * settings.resize.height
   const previewReduced = preview
     ? preview.width !== settings.resize.width ||
       preview.height !== settings.resize.height
@@ -450,7 +442,7 @@ export function App() {
       }}
     >
       <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-3 overflow-hidden p-3">
-        <header className="grid shrink-0 gap-3 border-b border-border pb-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+        <header className="flex shrink-0 items-center border-b border-border pb-3">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <span className="size-2 rounded-full bg-destructive" />
@@ -458,46 +450,6 @@ export function App() {
                 IMDITHER
               </h1>
             </div>
-            <HeaderStats
-              error={error}
-              metadata={metadata}
-              notice={sourceNotice ?? source?.notice ?? null}
-              pixelLoad={pixelLoad}
-              previewReduced={previewReduced}
-              settings={settings}
-              source={source}
-              status={status}
-            />
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
-            <Input
-              ref={fileInputRef}
-              className="sr-only"
-              type="file"
-              accept="image/*"
-              onChange={handleFileInput}
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <UploadIcon data-icon="inline-start" />
-              Upload
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => loadSource(createDemoSource())}
-            >
-              <ImageIcon data-icon="inline-start" />
-              Demo
-            </Button>
-            <Button
-              disabled={!source || status === "exporting"}
-              onClick={handleExportPng}
-            >
-              <DownloadIcon data-icon="inline-start" />
-              {status === "exporting" ? "[EXPORTING]" : "Export PNG"}
-            </Button>
           </div>
         </header>
 
@@ -515,12 +467,13 @@ export function App() {
               <ProcessingOverlay
                 algorithm={settings.algorithm}
                 busy={busy}
+                previewReduced={previewReduced}
                 status={status}
               />
-              <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-3">
+              <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
                 <div
                   className={cn(
-                    "dot-grid-subtle flex min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-background p-2",
+                    "dot-grid-subtle m-3 flex min-h-0 flex-1 overflow-auto bg-background ring-1 ring-foreground/10",
                     viewScale === "fit" && "items-center justify-center"
                   )}
                 >
@@ -564,6 +517,52 @@ export function App() {
                     </div>
                   )}
                 </div>
+                <div className="mx-3 mb-3 grid shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                  <ToggleGroup
+                    type="single"
+                    value={viewScale}
+                    variant="outline"
+                    className="h-full w-full max-w-72"
+                    onValueChange={(value) => {
+                      if (value) {
+                        setViewScale(value as ViewScale)
+                      }
+                    }}
+                  >
+                    <ToggleGroupItem value="fit" className="h-full flex-1">
+                      Fit
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="actual" className="h-full flex-1">
+                      1:1
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
+                    <Input
+                      ref={fileInputRef}
+                      className="sr-only"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileInput}
+                    />
+                    <Button
+                      className="w-36"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <UploadIcon data-icon="inline-start" />
+                      Upload
+                    </Button>
+                    <Button
+                      className="w-36"
+                      disabled={!source || status === "exporting"}
+                      onClick={handleExportPng}
+                    >
+                      <DownloadIcon data-icon="inline-start" />
+                      {status === "exporting" ? "[EXPORTING]" : "Export PNG"}
+                    </Button>
+                  </div>
+                  <div aria-hidden="true" className="min-w-0" />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -573,7 +572,6 @@ export function App() {
             compareMode={compareMode}
             paletteDefaultMode={palette?.defaultColorMode ?? "grayscale-first"}
             settings={settings}
-            viewScale={viewScale}
             onAdvancedOpenChange={setAdvancedOpen}
             onCompareModeChange={setCompareMode}
             onCopySettings={handleCopySettings}
@@ -585,7 +583,6 @@ export function App() {
             onReset={resetAspectLockedSettings}
             onSetSettings={setAspectLockedSettings}
             resolutionAspectLabel={aspectLabel}
-            onViewScaleChange={setViewScale}
           />
         </section>
       </div>
@@ -593,82 +590,35 @@ export function App() {
   )
 }
 
-function HeaderStats({
-  error,
-  metadata,
-  notice,
-  pixelLoad,
-  previewReduced,
-  settings,
-  source,
-  status,
-}: {
-  error: string | null
-  metadata: ReturnType<typeof useEditorStore.getState>["metadata"]
-  notice: string | null
-  pixelLoad: number
-  previewReduced: boolean
-  settings: EditorSettings
-  source: LoadedSource | null
-  status: ReturnType<typeof useEditorStore.getState>["status"]
-}) {
-  const statusText = error
-    ? `error: ${error}`
-    : previewReduced
-      ? "preview reduced"
-      : notice || status
-
-  return (
-    <div className="hidden min-w-0 flex-1 items-center gap-3 lg:flex">
-      <Badge
-        variant={error ? "destructive" : "outline"}
-        className="max-w-52 truncate"
-      >
-        {statusText}
-      </Badge>
-      <Badge variant="outline">
-        {source
-          ? `${source.buffer.width}x${source.buffer.height}`
-          : "no source"}
-      </Badge>
-      <Badge variant="outline">
-        out {settings.resize.width}x{settings.resize.height}
-      </Badge>
-      <Badge variant="outline">
-        {metadata?.algorithmName ?? settings.algorithm}
-      </Badge>
-      <Badge variant="outline">
-        {metadata ? `${metadata.processingTimeMs}ms` : "--ms"}
-      </Badge>
-      <div className="flex w-32 flex-col gap-1">
-        <div className="flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
-          <span>{status}</span>
-          <span>{Math.round((pixelLoad / MAX_OUTPUT_PIXELS) * 100)}%</span>
-        </div>
-        <SegmentBar value={pixelLoad / MAX_OUTPUT_PIXELS} />
-      </div>
-    </div>
-  )
-}
-
 function ProcessingOverlay({
   algorithm,
   busy,
+  previewReduced,
   status,
 }: {
   algorithm: DitherAlgorithm
   busy: boolean
+  previewReduced: boolean
   status: ReturnType<typeof useEditorStore.getState>["status"]
 }) {
-  if (!busy) {
+  if (!busy && !previewReduced) {
     return null
   }
 
-  const title = status === "exporting" ? "EXPORTING PNG" : "PROCESSING PREVIEW"
+  const title =
+    status === "exporting"
+      ? "EXPORTING PNG"
+      : busy
+        ? "PROCESSING PREVIEW"
+        : "PREVIEW ONLY"
   const detail =
-    status === "queued"
-      ? "Queued. Controls remain editable."
-      : `${algorithm} worker is running. New changes replace queued preview.`
+    status === "exporting"
+      ? "Preparing full-size PNG export."
+      : previewReduced
+        ? `Showing reduced preview while full ${algorithm} output catches up.`
+        : status === "queued"
+          ? "Queued. Controls remain editable."
+          : `${algorithm} worker is running. New changes replace queued preview.`
 
   return (
     <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-xl border border-primary bg-background/95 p-3 shadow-none">
@@ -700,7 +650,6 @@ function ControlPanel({
   compareMode,
   paletteDefaultMode,
   settings,
-  viewScale,
   onAdvancedOpenChange,
   onCompareModeChange,
   onCopySettings,
@@ -712,13 +661,11 @@ function ControlPanel({
   onReset,
   onSetSettings,
   resolutionAspectLabel,
-  onViewScaleChange,
 }: {
   advancedOpen: boolean
   compareMode: CompareMode
   paletteDefaultMode: ColorMode
   settings: EditorSettings
-  viewScale: ViewScale
   onAdvancedOpenChange: (open: boolean) => void
   onCompareModeChange: (mode: CompareMode) => void
   onCopySettings: () => void
@@ -730,19 +677,16 @@ function ControlPanel({
   onReset: () => void
   onSetSettings: (settings: EditorSettings) => void
   resolutionAspectLabel: string
-  onViewScaleChange: (scale: ViewScale) => void
 }) {
   return (
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 overflow-hidden border-border bg-card py-3">
         <CardHeader className="shrink-0">
           <CardTitle>Control Panel</CardTitle>
-          <CardDescription>
-            Basic controls stay visible. Advanced tone path is collapsed.
-          </CardDescription>
         </CardHeader>
-        <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-x-hidden overflow-y-auto overscroll-contain pr-3">
-          <FieldGroup className="min-w-0 gap-4 pb-1">
+        <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0">
+          <div className="h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]">
+            <FieldGroup className="min-w-0 gap-4 pb-1">
             <Field>
               <FieldLabel htmlFor="palette">Palette</FieldLabel>
               <Select
@@ -774,9 +718,6 @@ function ControlPanel({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <FieldDescription>
-                Current: {paletteName(settings.paletteId)}
-              </FieldDescription>
             </Field>
 
             <Field>
@@ -834,49 +775,41 @@ function ControlPanel({
 
             <FieldSet>
               <FieldLegend variant="label">Compare</FieldLegend>
-              <ToggleGroup
-                type="single"
-                value={compareMode}
-                variant="outline"
-                className="w-full"
-                onValueChange={(value) => {
-                  if (value) {
-                    onCompareModeChange(value as CompareMode)
-                  }
-                }}
-              >
-                <ToggleGroupItem value="processed" className="flex-1">
-                  Processed
-                </ToggleGroupItem>
-                <ToggleGroupItem value="split" className="flex-1">
-                  Split
-                </ToggleGroupItem>
-                <ToggleGroupItem value="original" className="flex-1">
-                  Original
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </FieldSet>
-
-            <FieldSet>
-              <FieldLegend variant="label">View</FieldLegend>
-              <ToggleGroup
-                type="single"
-                value={viewScale}
-                variant="outline"
-                className="w-full"
-                onValueChange={(value) => {
-                  if (value) {
-                    onViewScaleChange(value as ViewScale)
-                  }
-                }}
-              >
-                <ToggleGroupItem value="fit" className="flex-1">
-                  Fit
-                </ToggleGroupItem>
-                <ToggleGroupItem value="actual" className="flex-1">
-                  1:1
-                </ToggleGroupItem>
-              </ToggleGroup>
+              <div className="flex w-full items-center gap-2">
+                <ToggleGroup
+                  type="single"
+                  value={compareMode === "split" ? compareMode : ""}
+                  variant="outline"
+                  className="flex-1"
+                  onValueChange={(value) => {
+                    if (value) {
+                      onCompareModeChange(value as CompareMode)
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="split" className="flex-1">
+                    Split
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <ToggleGroup
+                  type="single"
+                  value={compareMode === "split" ? "" : compareMode}
+                  variant="outline"
+                  className="flex-[2]"
+                  onValueChange={(value) => {
+                    if (value) {
+                      onCompareModeChange(value as CompareMode)
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="processed" className="flex-1">
+                    Processed
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="original" className="flex-1">
+                    Original
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </FieldSet>
 
             <NumberField
@@ -884,6 +817,23 @@ function ControlPanel({
               value={settings.resize.width}
               description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
               onChange={onResolutionWidthChange}
+            />
+
+            <SliderField
+              label="Brightness"
+              max={100}
+              min={-100}
+              step={1}
+              value={settings.preprocess.brightness}
+              onChange={(brightness) => onPatchPreprocess({ brightness })}
+            />
+            <SliderField
+              label="Contrast"
+              max={100}
+              min={-100}
+              step={1}
+              value={settings.preprocess.contrast}
+              onChange={(contrast) => onPatchPreprocess({ contrast })}
             />
 
             <Field>
@@ -907,91 +857,6 @@ function ControlPanel({
               </Select>
             </Field>
 
-            <FieldSet>
-              <FieldLegend variant="label">Resize Kernel</FieldLegend>
-              <ToggleGroup
-                type="single"
-                value={settings.resize.mode}
-                variant="outline"
-                className="w-full"
-                onValueChange={(value) => {
-                  if (value) {
-                    onPatchResize({ mode: value as ResizeMode })
-                  }
-                }}
-              >
-                <ToggleGroupItem value="bilinear" className="flex-1">
-                  Bilinear
-                </ToggleGroupItem>
-                <ToggleGroupItem value="nearest" className="flex-1">
-                  Nearest
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </FieldSet>
-
-            <FieldSet>
-              <FieldLegend variant="label">Alpha Flatten</FieldLegend>
-              <ToggleGroup
-                type="single"
-                value={settings.alphaBackground}
-                variant="outline"
-                className="w-full"
-                onValueChange={(value) => {
-                  if (value) {
-                    onPatchSettings({
-                      alphaBackground: value as AlphaBackground,
-                    })
-                  }
-                }}
-              >
-                <ToggleGroupItem value="black" className="flex-1">
-                  Black
-                </ToggleGroupItem>
-                <ToggleGroupItem value="white" className="flex-1">
-                  White
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </FieldSet>
-
-            <FieldSet>
-              <FieldLegend variant="label">Color Mode</FieldLegend>
-              <ToggleGroup
-                type="single"
-                value={settings.preprocess.colorMode}
-                variant="outline"
-                className="w-full"
-                onValueChange={(value) => {
-                  if (value) {
-                    onPatchPreprocess({ colorMode: value as ColorMode })
-                  }
-                }}
-              >
-                <ToggleGroupItem value="grayscale-first" className="flex-1">
-                  Gray
-                </ToggleGroupItem>
-                <ToggleGroupItem value="color-preserve" className="flex-1">
-                  Color
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </FieldSet>
-
-            <SliderField
-              label="Brightness"
-              max={100}
-              min={-100}
-              step={1}
-              value={settings.preprocess.brightness}
-              onChange={(brightness) => onPatchPreprocess({ brightness })}
-            />
-            <SliderField
-              label="Contrast"
-              max={100}
-              min={-100}
-              step={1}
-              value={settings.preprocess.contrast}
-              onChange={(contrast) => onPatchPreprocess({ contrast })}
-            />
-
             <Separator />
 
             <Collapsible
@@ -1014,6 +879,74 @@ function ControlPanel({
               </div>
 
               <CollapsibleContent className="flex min-w-0 flex-col gap-5 overflow-hidden pt-4">
+                <FieldSet>
+                  <FieldLegend variant="label">Resize Kernel</FieldLegend>
+                  <ToggleGroup
+                    type="single"
+                    value={settings.resize.mode}
+                    variant="outline"
+                    className="w-full"
+                    onValueChange={(value) => {
+                      if (value) {
+                        onPatchResize({ mode: value as ResizeMode })
+                      }
+                    }}
+                  >
+                    <ToggleGroupItem value="bilinear" className="flex-1">
+                      Bilinear
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="nearest" className="flex-1">
+                      Nearest
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </FieldSet>
+                <FieldSet>
+                  <FieldLegend variant="label">Alpha Flatten</FieldLegend>
+                  <ToggleGroup
+                    type="single"
+                    value={settings.alphaBackground}
+                    variant="outline"
+                    className="w-full"
+                    onValueChange={(value) => {
+                      if (value) {
+                        onPatchSettings({
+                          alphaBackground: value as AlphaBackground,
+                        })
+                      }
+                    }}
+                  >
+                    <ToggleGroupItem value="white" className="flex-1">
+                      White
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="black" className="flex-1">
+                      Black
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </FieldSet>
+                <FieldSet>
+                  <FieldLegend variant="label">Color Mode</FieldLegend>
+                  <ToggleGroup
+                    type="single"
+                    value={settings.preprocess.colorMode}
+                    variant="outline"
+                    className="w-full"
+                    onValueChange={(value) => {
+                      if (value) {
+                        onPatchPreprocess({ colorMode: value as ColorMode })
+                      }
+                    }}
+                  >
+                    <ToggleGroupItem value="color-preserve" className="flex-1">
+                      Color
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="grayscale-first"
+                      className="flex-1"
+                    >
+                      Gray
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </FieldSet>
                 <SliderField
                   label="Gamma"
                   max={3}
@@ -1069,7 +1002,8 @@ function ControlPanel({
                 </Button>
               </CollapsibleContent>
             </Collapsible>
-          </FieldGroup>
+            </FieldGroup>
+          </div>
         </CardContent>
       </Card>
     </aside>
@@ -1104,14 +1038,13 @@ function CanvasPanel({
   }, [buffer])
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col gap-2">
-      <div className="flex items-center justify-between gap-3 font-mono text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
+    <div className="m-1 flex min-h-0 min-w-0 flex-col gap-2">
+      <div className="flex items-center font-mono text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
         <span>{label}</span>
-        <span>{missing ? `[${status ?? "waiting"}]` : "[ready]"}</span>
       </div>
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto rounded-lg border border-border bg-card p-2",
+          "flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto",
           viewScale === "actual" && "items-start justify-start"
         )}
       >
@@ -1255,26 +1188,6 @@ function SliderField({
         onValueChange={(nextValue) => onChange(nextValue[0] ?? value)}
       />
     </Field>
-  )
-}
-
-function SegmentBar({ value }: { value: number }) {
-  const activeSegments = Math.min(12, Math.ceil(value * 12))
-  const overLimit = value > 1
-
-  return (
-    <div className="grid grid-cols-12 gap-0.5" aria-hidden="true">
-      {Array.from({ length: 12 }, (_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "h-2 bg-muted",
-            index < activeSegments &&
-              (overLimit ? "bg-destructive" : "bg-primary")
-          )}
-        />
-      ))}
-    </div>
   )
 }
 
