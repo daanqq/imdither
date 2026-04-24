@@ -1,7 +1,7 @@
 # IMDITHER PRD
 
-Status: draft v1
-Last updated: 2026-04-24
+Status: done
+Last updated: 2026-04-25
 
 ## 1. Product Summary
 

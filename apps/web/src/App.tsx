@@ -59,10 +59,13 @@ import { cn } from "@workspace/ui/lib/utils"
 import {
   ClipboardIcon,
   DownloadIcon,
+  MoonIcon,
   RotateCcwIcon,
+  SunIcon,
   UploadIcon,
 } from "lucide-react"
 
+import { useTheme } from "@/components/theme-provider"
 import {
   createDemoSource,
   decodeImageFile,
@@ -75,12 +78,22 @@ import {
   pixelBufferToPngBlob,
   type LoadedSource,
 } from "@/lib/image"
+import {
+  SLIDE_COMPARE_DEFAULT,
+  SLIDE_COMPARE_MAX,
+  SLIDE_COMPARE_MIN,
+  clampSlideDivider,
+  getSlideDividerFromClientX,
+  getSlideDividerFromKey,
+} from "@/lib/slide-compare"
 import { runDitherJob } from "@/lib/worker-client"
 import {
   useEditorStore,
   type CompareMode,
   type ViewScale,
 } from "@/store/editor-store"
+
+const SLIDE_COMPARE_FIT_INSET = 12
 
 export function App() {
   const {
@@ -106,6 +119,9 @@ export function App() {
   )
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
+  )
+  const [slideDividerPercent, setSlideDividerPercent] = React.useState(
+    SLIDE_COMPARE_DEFAULT
   )
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -420,8 +436,8 @@ export function App() {
     }
   }
 
-  const showOriginal = compareMode === "original" || compareMode === "split"
-  const showProcessed = compareMode === "processed" || compareMode === "split"
+  const showOriginal = compareMode === "original"
+  const showProcessed = compareMode === "processed"
   const previewReduced = preview
     ? preview.width !== settings.resize.width ||
       preview.height !== settings.resize.height
@@ -441,7 +457,7 @@ export function App() {
       }}
     >
       <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-3 overflow-hidden p-3">
-        <header className="flex shrink-0 items-center border-b border-border pb-3">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border pb-3">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <span className="size-2 rounded-full bg-destructive" />
@@ -450,6 +466,7 @@ export function App() {
               </h1>
             </div>
           </div>
+          <ThemeToggle />
         </header>
 
         <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_420px] xl:grid-rows-1">
@@ -472,8 +489,10 @@ export function App() {
               <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
                 <div
                   className={cn(
-                    "dot-grid-subtle m-3 flex min-h-0 flex-1 overflow-auto bg-background ring-1 ring-foreground/10",
-                    viewScale === "fit" && "items-center justify-center"
+                    "dot-grid-subtle m-3 flex min-h-0 flex-1 bg-background ring-1 ring-foreground/10",
+                    viewScale === "fit"
+                      ? "items-center justify-center overflow-hidden"
+                      : "overflow-auto"
                   )}
                 >
                   {!source ? (
@@ -489,11 +508,23 @@ export function App() {
                     <div
                       className={cn(
                         "grid h-full min-h-0 w-full gap-3",
-                        compareMode === "split" && "lg:grid-cols-2",
-                        viewScale === "fit" && "items-center"
+                        viewScale === "fit" &&
+                          (compareMode === "slide"
+                            ? "items-stretch"
+                            : "items-center")
                       )}
                     >
-                      {showOriginal && (
+                      {compareMode === "slide" ? (
+                        <SlideComparePreview
+                          dividerPercent={slideDividerPercent}
+                          original={source.buffer}
+                          processed={preview}
+                          status={status}
+                          viewScale={viewScale}
+                          onDividerChange={setSlideDividerPercent}
+                        />
+                      ) : null}
+                      {showOriginal ? (
                         <CanvasPanel
                           buffer={source.buffer}
                           label="Original"
@@ -501,8 +532,8 @@ export function App() {
                           expectedWidth={source.buffer.width}
                           viewScale={viewScale}
                         />
-                      )}
-                      {showProcessed && (
+                      ) : null}
+                      {showProcessed ? (
                         <CanvasPanel
                           buffer={preview}
                           expectedHeight={settings.resize.height}
@@ -512,7 +543,7 @@ export function App() {
                           status={status}
                           viewScale={viewScale}
                         />
-                      )}
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -644,6 +675,30 @@ function ProcessingOverlay({
   )
 }
 
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  const nextTheme = theme === "light" ? "dark" : "light"
+  const isLight = theme === "light"
+
+  return (
+    <Button
+      type="button"
+      aria-label={`Switch to ${nextTheme} theme`}
+      aria-pressed={isLight}
+      className="font-mono text-xs uppercase"
+      variant="outline"
+      onClick={() => setTheme(nextTheme)}
+    >
+      {isLight ? (
+        <MoonIcon data-icon="inline-start" />
+      ) : (
+        <SunIcon data-icon="inline-start" />
+      )}
+      {isLight ? "Dark theme" : "Light theme"}
+    </Button>
+  )
+}
+
 function ControlPanel({
   advancedOpen,
   compareMode,
@@ -686,327 +741,567 @@ function ControlPanel({
         <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0">
           <div className="h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]">
             <FieldGroup className="min-w-0 gap-4 pb-1">
-            <Field>
-              <FieldLabel htmlFor="palette">Palette</FieldLabel>
-              <Select
-                value={settings.paletteId}
-                onValueChange={(paletteId) => {
-                  const preset = PRESET_PALETTES.find(
-                    (item) => item.id === paletteId
-                  )
-                  onSetSettings({
-                    ...settings,
-                    paletteId,
-                    preprocess: {
-                      ...settings.preprocess,
-                      colorMode: preset?.defaultColorMode ?? paletteDefaultMode,
-                    },
-                  })
-                }}
-              >
-                <SelectTrigger id="palette" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {PRESET_PALETTES.map((preset) => (
-                      <SelectItem key={preset.id} value={preset.id}>
-                        {preset.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="algorithm">Algorithm</FieldLabel>
-              <Select
-                value={settings.algorithm}
-                onValueChange={(algorithm) =>
-                  onPatchSettings({ algorithm: algorithm as DitherAlgorithm })
-                }
-              >
-                <SelectTrigger id="algorithm" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="bayer">Bayer</SelectItem>
-                    <SelectItem value="matt-parker">Matt Parker</SelectItem>
-                    <SelectItem value="floyd-steinberg">
-                      Floyd-Steinberg
-                    </SelectItem>
-                    <SelectItem value="atkinson">Atkinson</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-
-            {settings.algorithm === "bayer" && (
               <Field>
-                <FieldLabel>Bayer Matrix</FieldLabel>
-                <ToggleGroup
-                  type="single"
-                  value={String(settings.bayerSize)}
-                  variant="outline"
-                  className="w-full"
-                  onValueChange={(value) => {
-                    if (value) {
-                      onPatchSettings({ bayerSize: Number(value) as BayerSize })
-                    }
+                <FieldLabel htmlFor="palette">Palette</FieldLabel>
+                <Select
+                  value={settings.paletteId}
+                  onValueChange={(paletteId) => {
+                    const preset = PRESET_PALETTES.find(
+                      (item) => item.id === paletteId
+                    )
+                    onSetSettings({
+                      ...settings,
+                      paletteId,
+                      preprocess: {
+                        ...settings.preprocess,
+                        colorMode:
+                          preset?.defaultColorMode ?? paletteDefaultMode,
+                      },
+                    })
                   }}
                 >
-                  {[2, 4, 8].map((size) => (
-                    <ToggleGroupItem
-                      key={size}
-                      value={String(size)}
-                      aria-label={`${size} by ${size}`}
-                      className="flex-1"
-                    >
-                      {size}x{size}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  <SelectTrigger id="palette" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {PRESET_PALETTES.map((preset) => (
+                        <SelectItem key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
-            )}
 
-            <FieldSet>
-              <FieldLegend variant="label">Compare</FieldLegend>
-              <div className="flex w-full items-center gap-2">
-                <ToggleGroup
-                  type="single"
-                  value={compareMode === "split" ? compareMode : ""}
-                  variant="outline"
-                  className="flex-1"
-                  onValueChange={(value) => {
-                    if (value) {
-                      onCompareModeChange(value as CompareMode)
-                    }
-                  }}
+              <Field>
+                <FieldLabel htmlFor="algorithm">Algorithm</FieldLabel>
+                <Select
+                  value={settings.algorithm}
+                  onValueChange={(algorithm) =>
+                    onPatchSettings({ algorithm: algorithm as DitherAlgorithm })
+                  }
                 >
-                  <ToggleGroupItem value="split" className="flex-1">
-                    Split
-                  </ToggleGroupItem>
-                </ToggleGroup>
-                <ToggleGroup
-                  type="single"
-                  value={compareMode === "split" ? "" : compareMode}
-                  variant="outline"
-                  className="flex-[2]"
-                  onValueChange={(value) => {
-                    if (value) {
-                      onCompareModeChange(value as CompareMode)
-                    }
-                  }}
-                >
-                  <ToggleGroupItem value="processed" className="flex-1">
-                    Processed
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="original" className="flex-1">
-                    Original
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            </FieldSet>
+                  <SelectTrigger id="algorithm" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="bayer">Bayer</SelectItem>
+                      <SelectItem value="matt-parker">Matt Parker</SelectItem>
+                      <SelectItem value="floyd-steinberg">
+                        Floyd-Steinberg
+                      </SelectItem>
+                      <SelectItem value="atkinson">Atkinson</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <NumberField
-              label="Width"
-              value={settings.resize.width}
-              description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
-              onChange={onResolutionWidthChange}
-            />
-
-            <SliderField
-              label="Brightness"
-              max={100}
-              min={-100}
-              step={1}
-              value={settings.preprocess.brightness}
-              onChange={(brightness) => onPatchPreprocess({ brightness })}
-            />
-            <SliderField
-              label="Contrast"
-              max={100}
-              min={-100}
-              step={1}
-              value={settings.preprocess.contrast}
-              onChange={(contrast) => onPatchPreprocess({ contrast })}
-            />
-
-            <Field>
-              <FieldLabel htmlFor="fit">Fit</FieldLabel>
-              <Select
-                value={settings.resize.fit}
-                onValueChange={(fit) =>
-                  onPatchResize({ fit: fit as ResizeFit })
-                }
-              >
-                <SelectTrigger id="fit" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="contain">Contain</SelectItem>
-                    <SelectItem value="cover">Cover</SelectItem>
-                    <SelectItem value="stretch">Stretch</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Separator />
-
-            <Collapsible
-              className="min-w-0 overflow-hidden"
-              open={advancedOpen}
-              onOpenChange={onAdvancedOpenChange}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <FieldLabel>Advanced</FieldLabel>
-                  <FieldDescription>
-                    Gamma, invert, JSON presets.
-                  </FieldDescription>
-                </div>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost">
-                    {advancedOpen ? "[CLOSE]" : "[OPEN]"}
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-
-              <CollapsibleContent className="flex min-w-0 flex-col gap-5 overflow-hidden pt-4">
-                <FieldSet>
-                  <FieldLegend variant="label">Resize Kernel</FieldLegend>
+              {settings.algorithm === "bayer" && (
+                <Field>
+                  <FieldLabel>Bayer Matrix</FieldLabel>
                   <ToggleGroup
                     type="single"
-                    value={settings.resize.mode}
-                    variant="outline"
-                    className="w-full"
-                    onValueChange={(value) => {
-                      if (value) {
-                        onPatchResize({ mode: value as ResizeMode })
-                      }
-                    }}
-                  >
-                    <ToggleGroupItem value="bilinear" className="flex-1">
-                      Bilinear
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="nearest" className="flex-1">
-                      Nearest
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </FieldSet>
-                <FieldSet>
-                  <FieldLegend variant="label">Alpha Flatten</FieldLegend>
-                  <ToggleGroup
-                    type="single"
-                    value={settings.alphaBackground}
+                    value={String(settings.bayerSize)}
                     variant="outline"
                     className="w-full"
                     onValueChange={(value) => {
                       if (value) {
                         onPatchSettings({
-                          alphaBackground: value as AlphaBackground,
+                          bayerSize: Number(value) as BayerSize,
                         })
                       }
                     }}
                   >
-                    <ToggleGroupItem value="white" className="flex-1">
-                      White
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="black" className="flex-1">
-                      Black
-                    </ToggleGroupItem>
+                    {[2, 4, 8].map((size) => (
+                      <ToggleGroupItem
+                        key={size}
+                        value={String(size)}
+                        aria-label={`${size} by ${size}`}
+                        className="flex-1"
+                      >
+                        {size}x{size}
+                      </ToggleGroupItem>
+                    ))}
                   </ToggleGroup>
-                </FieldSet>
-                <FieldSet>
-                  <FieldLegend variant="label">Color Mode</FieldLegend>
+                </Field>
+              )}
+
+              <FieldSet>
+                <FieldLegend variant="label">Compare</FieldLegend>
+                <div className="flex w-full items-center gap-2">
                   <ToggleGroup
                     type="single"
-                    value={settings.preprocess.colorMode}
+                    value={compareMode === "slide" ? compareMode : ""}
                     variant="outline"
-                    className="w-full"
+                    className="flex-1"
                     onValueChange={(value) => {
                       if (value) {
-                        onPatchPreprocess({ colorMode: value as ColorMode })
+                        onCompareModeChange(value as CompareMode)
                       }
                     }}
                   >
-                    <ToggleGroupItem value="color-preserve" className="flex-1">
-                      Color
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="grayscale-first"
-                      className="flex-1"
-                    >
-                      Gray
+                    <ToggleGroupItem value="slide" className="flex-1">
+                      Slide
                     </ToggleGroupItem>
                   </ToggleGroup>
-                </FieldSet>
-                <SliderField
-                  label="Gamma"
-                  max={3}
-                  min={0.2}
-                  step={0.05}
-                  value={settings.preprocess.gamma}
-                  onChange={(gamma) => onPatchPreprocess({ gamma })}
-                />
-                <Field orientation="horizontal">
-                  <FieldContent>
-                    <FieldLabel htmlFor="invert">
-                      Invert Before Palette
-                    </FieldLabel>
-                    <FieldDescription>
-                      Applies after tone preprocessing.
-                    </FieldDescription>
-                  </FieldContent>
-                  <Switch
-                    id="invert"
-                    checked={settings.preprocess.invert}
-                    onCheckedChange={(invert) => onPatchPreprocess({ invert })}
-                  />
-                </Field>
-                <Separator />
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Button
+                  <ToggleGroup
+                    type="single"
+                    value={compareMode === "slide" ? "" : compareMode}
                     variant="outline"
-                    className="min-w-0 justify-start"
-                    onClick={onCopySettings}
+                    className="flex-[2]"
+                    onValueChange={(value) => {
+                      if (value) {
+                        onCompareModeChange(value as CompareMode)
+                      }
+                    }}
                   >
-                    <ClipboardIcon data-icon="inline-start" />
-                    Copy settings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="min-w-0 justify-start"
-                    onClick={onPasteSettings}
-                  >
-                    <UploadIcon data-icon="inline-start" />
-                    Paste settings
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="min-w-0 justify-start"
-                    onClick={() => onSetSettings(DEFAULT_SETTINGS)}
-                  >
-                    <RotateCcwIcon data-icon="inline-start" />
-                    Defaults
-                  </Button>
+                    <ToggleGroupItem value="processed" className="flex-1">
+                      Processed
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="original" className="flex-1">
+                      Original
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
-                <Button variant="ghost" onClick={onReset}>
-                  Reset persisted controls
-                </Button>
-              </CollapsibleContent>
-            </Collapsible>
+              </FieldSet>
+
+              <NumberField
+                label="Width"
+                value={settings.resize.width}
+                description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
+                onChange={onResolutionWidthChange}
+              />
+
+              <SliderField
+                label="Brightness"
+                max={100}
+                min={-100}
+                step={1}
+                value={settings.preprocess.brightness}
+                onChange={(brightness) => onPatchPreprocess({ brightness })}
+              />
+              <SliderField
+                label="Contrast"
+                max={100}
+                min={-100}
+                step={1}
+                value={settings.preprocess.contrast}
+                onChange={(contrast) => onPatchPreprocess({ contrast })}
+              />
+
+              <Field>
+                <FieldLabel htmlFor="fit">Fit</FieldLabel>
+                <Select
+                  value={settings.resize.fit}
+                  onValueChange={(fit) =>
+                    onPatchResize({ fit: fit as ResizeFit })
+                  }
+                >
+                  <SelectTrigger id="fit" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="contain">Contain</SelectItem>
+                      <SelectItem value="cover">Cover</SelectItem>
+                      <SelectItem value="stretch">Stretch</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Separator />
+
+              <Collapsible
+                className="min-w-0 overflow-hidden"
+                open={advancedOpen}
+                onOpenChange={onAdvancedOpenChange}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Advanced</FieldLabel>
+                    <FieldDescription>
+                      Gamma, invert, JSON presets.
+                    </FieldDescription>
+                  </div>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost">
+                      {advancedOpen ? "[CLOSE]" : "[OPEN]"}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+
+                <CollapsibleContent className="flex min-w-0 flex-col gap-5 overflow-hidden pt-4">
+                  <FieldSet>
+                    <FieldLegend variant="label">Resize Kernel</FieldLegend>
+                    <ToggleGroup
+                      type="single"
+                      value={settings.resize.mode}
+                      variant="outline"
+                      className="w-full"
+                      onValueChange={(value) => {
+                        if (value) {
+                          onPatchResize({ mode: value as ResizeMode })
+                        }
+                      }}
+                    >
+                      <ToggleGroupItem value="bilinear" className="flex-1">
+                        Bilinear
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="nearest" className="flex-1">
+                        Nearest
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </FieldSet>
+                  <FieldSet>
+                    <FieldLegend variant="label">Alpha Flatten</FieldLegend>
+                    <ToggleGroup
+                      type="single"
+                      value={settings.alphaBackground}
+                      variant="outline"
+                      className="w-full"
+                      onValueChange={(value) => {
+                        if (value) {
+                          onPatchSettings({
+                            alphaBackground: value as AlphaBackground,
+                          })
+                        }
+                      }}
+                    >
+                      <ToggleGroupItem value="white" className="flex-1">
+                        White
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="black" className="flex-1">
+                        Black
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </FieldSet>
+                  <FieldSet>
+                    <FieldLegend variant="label">Color Mode</FieldLegend>
+                    <ToggleGroup
+                      type="single"
+                      value={settings.preprocess.colorMode}
+                      variant="outline"
+                      className="w-full"
+                      onValueChange={(value) => {
+                        if (value) {
+                          onPatchPreprocess({ colorMode: value as ColorMode })
+                        }
+                      }}
+                    >
+                      <ToggleGroupItem
+                        value="color-preserve"
+                        className="flex-1"
+                      >
+                        Color
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="grayscale-first"
+                        className="flex-1"
+                      >
+                        Gray
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </FieldSet>
+                  <SliderField
+                    label="Gamma"
+                    max={3}
+                    min={0.2}
+                    step={0.05}
+                    value={settings.preprocess.gamma}
+                    onChange={(gamma) => onPatchPreprocess({ gamma })}
+                  />
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldLabel htmlFor="invert">
+                        Invert Before Palette
+                      </FieldLabel>
+                      <FieldDescription>
+                        Applies after tone preprocessing.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      id="invert"
+                      checked={settings.preprocess.invert}
+                      onCheckedChange={(invert) =>
+                        onPatchPreprocess({ invert })
+                      }
+                    />
+                  </Field>
+                  <Separator />
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      className="min-w-0 justify-start"
+                      onClick={onCopySettings}
+                    >
+                      <ClipboardIcon data-icon="inline-start" />
+                      Copy settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-w-0 justify-start"
+                      onClick={onPasteSettings}
+                    >
+                      <UploadIcon data-icon="inline-start" />
+                      Paste settings
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="min-w-0 justify-start"
+                      onClick={() => onSetSettings(DEFAULT_SETTINGS)}
+                    >
+                      <RotateCcwIcon data-icon="inline-start" />
+                      Defaults
+                    </Button>
+                  </div>
+                  <Button variant="ghost" onClick={onReset}>
+                    Reset persisted controls
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
             </FieldGroup>
           </div>
         </CardContent>
       </Card>
     </aside>
   )
+}
+
+function SlideComparePreview({
+  dividerPercent,
+  original,
+  processed,
+  status,
+  viewScale,
+  onDividerChange,
+}: {
+  dividerPercent: number
+  original: LoadedSource["buffer"]
+  processed: LoadedSource["buffer"] | null
+  status?: string
+  viewScale: ViewScale
+  onDividerChange: (percent: number) => void
+}) {
+  const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
+  const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
+  const viewportRef = React.useRef<HTMLDivElement>(null)
+  const frameRef = React.useRef<HTMLDivElement>(null)
+  const processedReady = Boolean(processed)
+  const frameWidth = processed?.width ?? original.width
+  const frameHeight = processed?.height ?? original.height
+  const clampedDivider = clampSlideDivider(dividerPercent)
+  const [viewportSize, setViewportSize] = React.useState<{
+    height: number
+    width: number
+  } | null>(null)
+  const displaySize =
+    viewScale === "fit" && viewportSize
+      ? getContainedSize(
+          frameWidth,
+          frameHeight,
+          viewportSize.width - SLIDE_COMPARE_FIT_INSET,
+          viewportSize.height - SLIDE_COMPARE_FIT_INSET
+        )
+      : { height: frameHeight, width: frameWidth }
+
+  React.useEffect(() => {
+    if (!originalCanvasRef.current) {
+      return
+    }
+
+    drawPixelBuffer(originalCanvasRef.current, original)
+  }, [original])
+
+  React.useEffect(() => {
+    if (!processed || !processedCanvasRef.current) {
+      return
+    }
+
+    drawPixelBuffer(processedCanvasRef.current, processed)
+  }, [processed])
+
+  React.useLayoutEffect(() => {
+    const viewport = viewportRef.current
+
+    if (!viewport) {
+      return
+    }
+
+    const updateViewportSize = () => {
+      const rect = viewport.getBoundingClientRect()
+      setViewportSize((current) => {
+        const next = {
+          height: Math.floor(rect.height),
+          width: Math.floor(rect.width),
+        }
+
+        if (
+          current &&
+          current.height === next.height &&
+          current.width === next.width
+        ) {
+          return current
+        }
+
+        return next
+      })
+    }
+
+    updateViewportSize()
+    const frameId = requestAnimationFrame(updateViewportSize)
+
+    const observer = new ResizeObserver(updateViewportSize)
+    observer.observe(viewport)
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      observer.disconnect()
+    }
+  }, [])
+
+  function updateFromPointer(clientX: number) {
+    const frame = frameRef.current
+
+    if (!frame || !processedReady) {
+      return
+    }
+
+    const rect = frame.getBoundingClientRect()
+    onDividerChange(getSlideDividerFromClientX(clientX, rect.left, rect.width))
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    const nextPercent = getSlideDividerFromKey(
+      clampedDivider,
+      event.key,
+      event.shiftKey
+    )
+
+    if (nextPercent === null) {
+      return
+    }
+
+    event.preventDefault()
+    onDividerChange(clampSlideDivider(nextPercent))
+  }
+
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
+      <div
+        ref={viewportRef}
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 items-center justify-center",
+          viewScale === "fit" ? "overflow-hidden" : "overflow-auto",
+          viewScale === "actual" && "items-start justify-start"
+        )}
+      >
+        <div
+          ref={frameRef}
+          className={cn(
+            "relative overflow-hidden bg-background ring-1 ring-foreground/10",
+            processedReady && "cursor-ew-resize",
+            viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none"
+          )}
+          style={{
+            height: `${displaySize.height}px`,
+            width: `${displaySize.width}px`,
+          }}
+          onPointerDown={(event) => {
+            if (!processedReady) {
+              return
+            }
+
+            event.currentTarget.setPointerCapture(event.pointerId)
+            updateFromPointer(event.clientX)
+          }}
+          onPointerMove={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              updateFromPointer(event.clientX)
+            }
+          }}
+        >
+          <canvas
+            ref={originalCanvasRef}
+            className="absolute inset-0 block size-full bg-background"
+          />
+          {processedReady ? (
+            <canvas
+              ref={processedCanvasRef}
+              className="absolute inset-0 block size-full bg-background"
+              style={{
+                clipPath: `inset(0 0 0 ${clampedDivider}%)`,
+              }}
+            />
+          ) : null}
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.1em] text-foreground/80 uppercase">
+            <span className="bg-background/80 px-1.5 py-0.5">Original</span>
+            <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
+          </div>
+          {processedReady ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-y-0 w-px bg-foreground ring-1 ring-background/75"
+                style={{ left: `${clampedDivider}%` }}
+              />
+              <button
+                type="button"
+                aria-label="Slide comparison divider"
+                aria-valuemax={SLIDE_COMPARE_MAX}
+                aria-valuemin={SLIDE_COMPARE_MIN}
+                aria-valuenow={Math.round(clampedDivider)}
+                className="absolute top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-background font-mono text-[10px] text-foreground ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                role="slider"
+                style={{ left: `${clampedDivider}%` }}
+                onKeyDown={handleKeyDown}
+                onPointerDown={(event) => {
+                  event.stopPropagation()
+                  event.currentTarget.setPointerCapture(event.pointerId)
+                  updateFromPointer(event.clientX)
+                }}
+                onPointerMove={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    updateFromPointer(event.clientX)
+                  }
+                }}
+              >
+                ||
+              </button>
+            </>
+          ) : (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+              [{status ?? "processing"}]
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getContainedSize(
+  sourceWidth: number,
+  sourceHeight: number,
+  containerWidth: number,
+  containerHeight: number
+): { height: number; width: number } {
+  const safeSourceWidth = Math.max(1, sourceWidth)
+  const safeSourceHeight = Math.max(1, sourceHeight)
+  const safeContainerWidth = Math.max(1, containerWidth)
+  const safeContainerHeight = Math.max(1, containerHeight)
+  const scale = Math.min(
+    safeContainerWidth / safeSourceWidth,
+    safeContainerHeight / safeSourceHeight
+  )
+
+  return {
+    height: Math.max(1, Math.floor(safeSourceHeight * scale)),
+    width: Math.max(1, Math.floor(safeSourceWidth * scale)),
+  }
 }
 
 function CanvasPanel({

@@ -9,7 +9,7 @@ import {
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
-export type CompareMode = "processed" | "original" | "split"
+export type CompareMode = "processed" | "original" | "slide"
 export type ViewScale = "fit" | "actual"
 export type JobStatus =
   | "idle"
@@ -46,7 +46,7 @@ export const useEditorStore = create<EditorState>()(
   persist(
     (set) => ({
       settings: DEFAULT_SETTINGS,
-      compareMode: "split",
+      compareMode: "slide",
       viewScale: "fit",
       advancedOpen: false,
       status: "idle",
@@ -118,15 +118,28 @@ export const useEditorStore = create<EditorState>()(
 
         return {
           ...persistedState,
+          compareMode: normalizeCompareMode(persistedState.compareMode),
           settings: settingsWithoutPersistedDimensions(
             normalizeSettings(persistedState.settings)
           ),
         }
       },
-      version: 2,
+      version: 3,
     }
   )
 )
+
+export function normalizeCompareMode(value: unknown): CompareMode {
+  if (value === "processed" || value === "original" || value === "slide") {
+    return value
+  }
+
+  if (value === "split") {
+    return "slide"
+  }
+
+  return "slide"
+}
 
 export function paletteName(id: string): string {
   return PRESET_PALETTES.find((palette) => palette.id === id)?.name ?? "Custom"
@@ -147,6 +160,6 @@ function settingsWithoutPersistedDimensions(
 
 function isPersistedEditorState(
   value: unknown
-): value is { settings: unknown } {
+): value is { settings: unknown; compareMode?: unknown } {
   return typeof value === "object" && value !== null && "settings" in value
 }
