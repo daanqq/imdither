@@ -394,7 +394,6 @@ type EditorSettings = {
 Tooling:
 
 - `Vitest` for unit and component tests
-- `Playwright` for end-to-end tests
 
 Test layers:
 
@@ -486,7 +485,6 @@ Explicitly out of MVP-1:
 
 - unit and golden coverage for `packages/core`
 - component tests for editor wiring
-- Playwright smoke flows
 - OSS-friendly README and algorithm docs
 
 ### Phase 6: Release Preparation
