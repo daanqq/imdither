@@ -432,9 +432,6 @@ export const ControlPanel = React.memo(function ControlPanel({
                       Defaults
                     </Button>
                   </div>
-                  <Button variant="ghost" onClick={onReset}>
-                    Reset persisted controls
-                  </Button>
                 </CollapsibleContent>
               </Collapsible>
             </FieldGroup>
