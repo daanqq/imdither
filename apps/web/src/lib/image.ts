@@ -13,9 +13,6 @@ export type LoadedSource = {
   notice: string | null
 }
 
-const PREVIEW_PIXEL_BUDGET = 1_300_000
-export const INTERACTIVE_PREVIEW_PIXEL_BUDGET = 450_000
-
 export async function decodeImageFile(file: File): Promise<LoadedSource> {
   const bitmap = await createImageBitmap(file)
   const source = bitmapToPixelBuffer(bitmap)
@@ -136,27 +133,6 @@ export function downloadJson(value: unknown, filename: string) {
     type: "application/json",
   })
   downloadBlob(blob, filename)
-}
-
-export function makePreviewSettings<
-  T extends { resize: { width: number; height: number } },
->(settings: T, pixelBudget = PREVIEW_PIXEL_BUDGET): T {
-  const pixels = settings.resize.width * settings.resize.height
-
-  if (pixels <= pixelBudget) {
-    return settings
-  }
-
-  const scale = Math.sqrt(pixelBudget / pixels)
-
-  return {
-    ...settings,
-    resize: {
-      ...settings.resize,
-      width: Math.max(1, Math.floor(settings.resize.width * scale)),
-      height: Math.max(1, Math.floor(settings.resize.height * scale)),
-    },
-  }
 }
 
 export function fitWithinOutputBudget(width: number, height: number) {

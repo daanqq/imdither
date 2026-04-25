@@ -72,12 +72,11 @@ import {
   downloadBlob,
   drawPixelBuffer,
   fitWithinOutputBudget,
-  INTERACTIVE_PREVIEW_PIXEL_BUDGET,
-  makePreviewSettings,
   pickImageFromClipboard,
   pixelBufferToPngBlob,
   type LoadedSource,
 } from "@/lib/image"
+import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
   SLIDE_COMPARE_DEFAULT,
   SLIDE_COMPARE_MAX,
@@ -86,7 +85,6 @@ import {
   getSlideDividerFromClientX,
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
-import { runDitherJob } from "@/lib/worker-client"
 import {
   useEditorStore,
   type CompareMode,
@@ -131,12 +129,7 @@ export function App() {
   )
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const jobIdRef = React.useRef(0)
-  const previewRunRef = React.useRef(0)
-  const nextJobId = React.useCallback(() => {
-    jobIdRef.current += 1
-    return jobIdRef.current
-  }, [])
+  const processingJobs = React.useMemo(() => createProcessingJobs(), [])
   const sourceAspectRatio =
     source && source.buffer.width > 0
       ? source.buffer.height / source.buffer.width
@@ -223,105 +216,37 @@ export function App() {
       return undefined
     }
 
-    const controller = new AbortController()
-    const previewRunId = previewRunRef.current + 1
-    previewRunRef.current = previewRunId
-    const quickSettings = makePreviewSettings(
+    const handle = processingJobs.startPreviewJob({
+      sourceKey: source.id,
+      image: source.buffer,
       settings,
-      INTERACTIVE_PREVIEW_PIXEL_BUDGET
-    )
-    const finalSettings = makePreviewSettings(settings)
-    const shouldRefine =
-      quickSettings.resize.width !== finalSettings.resize.width ||
-      quickSettings.resize.height !== finalSettings.resize.height
-    const isCurrentRun = () =>
-      !controller.signal.aborted && previewRunRef.current === previewRunId
-    const applyPreviewResult = (
-      result: Awaited<ReturnType<typeof runDitherJob>>
-    ) => {
-      if (!isCurrentRun()) {
-        return false
-      }
-
-      setPreview(result.image)
-      setMetadata({
-        ...result.metadata,
-        outputWidth: settings.resize.width,
-        outputHeight: settings.resize.height,
-      })
-      setError(null)
-      return true
-    }
-    const handlePreviewError = (jobError: unknown) => {
-      if (
-        controller.signal.aborted ||
-        (jobError instanceof DOMException && jobError.name === "AbortError") ||
-        !isCurrentRun()
-      ) {
-        return
-      }
-
-      setError(jobError instanceof Error ? jobError.message : "Job failed")
-      setStatus("error")
-    }
-
-    setStatus("queued")
-    const quickTimeout = window.setTimeout(() => {
-      if (!isCurrentRun()) {
-        return
-      }
-
-      setStatus("processing")
-      runDitherJob({
-        jobId: nextJobId(),
-        sourceKey: source.id,
-        image: source.buffer,
-        settings: quickSettings,
-        signal: controller.signal,
-      })
-        .then((result) => {
-          if (!applyPreviewResult(result)) {
+      onEvent: (event) => {
+        switch (event.type) {
+          case "queued":
+            setStatus("queued")
             return
-          }
-
-          setStatus("ready")
-        })
-        .catch(handlePreviewError)
-    }, 120)
-    const refineTimeout = shouldRefine
-      ? window.setTimeout(() => {
-          if (!isCurrentRun()) {
+          case "processing":
+            setStatus("processing")
             return
-          }
-
-          runDitherJob({
-            jobId: nextJobId(),
-            sourceKey: source.id,
-            image: source.buffer,
-            settings: finalSettings,
-            signal: controller.signal,
-          })
-            .then((result) => {
-              if (!applyPreviewResult(result)) {
-                return
-              }
-
-              setStatus("ready")
-            })
-            .catch(handlePreviewError)
-        }, 650)
-      : undefined
+          case "reduced-preview-ready":
+          case "refined-preview-ready":
+            setPreview(event.result.image)
+            setMetadata(event.result.metadata)
+            setError(null)
+            setStatus("ready")
+            return
+          case "failed":
+            setError(event.error.message)
+            setStatus("error")
+            return
+        }
+      },
+    })
 
     return () => {
-      window.clearTimeout(quickTimeout)
-
-      if (refineTimeout) {
-        window.clearTimeout(refineTimeout)
-      }
-
-      controller.abort()
+      handle.cancel()
     }
-  }, [nextJobId, settings, source, setError, setMetadata, setStatus])
+  }, [processingJobs, settings, source, setError, setMetadata, setStatus])
 
   const handleFile = React.useCallback(
     async (file: File) => {
@@ -402,12 +327,10 @@ export function App() {
       return
     }
 
-    previewRunRef.current += 1
     setStatus("exporting")
 
     try {
-      const result = await runDitherJob({
-        jobId: nextJobId(),
+      const result = await processingJobs.runExportJob({
         sourceKey: source.id,
         image: source.buffer,
         settings,
