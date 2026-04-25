@@ -39,6 +39,31 @@ describe("dither algorithm registry", () => {
         label: "Atkinson",
         capabilities: { bayerSize: false },
       },
+      {
+        id: "burkes",
+        label: "Burkes",
+        capabilities: { bayerSize: false },
+      },
+      {
+        id: "stucki",
+        label: "Stucki",
+        capabilities: { bayerSize: false },
+      },
+      {
+        id: "sierra-lite",
+        label: "Sierra Lite",
+        capabilities: { bayerSize: false },
+      },
+      {
+        id: "blue-noise",
+        label: "Blue Noise",
+        capabilities: { bayerSize: false },
+      },
+      {
+        id: "halftone-dot",
+        label: "Halftone Dot",
+        capabilities: { bayerSize: false },
+      },
     ])
 
     for (const option of DITHER_ALGORITHM_OPTIONS) {
@@ -77,6 +102,11 @@ describe("dither algorithm registry", () => {
       "Matt Parker",
       "Floyd-Steinberg",
       "Atkinson",
+      "Burkes",
+      "Stucki",
+      "Sierra Lite",
+      "Blue Noise",
+      "Halftone Dot",
     ])
   })
 })

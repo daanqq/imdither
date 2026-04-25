@@ -95,6 +95,63 @@ describe("core pipeline", () => {
     expect(colors.size).toBeGreaterThan(2)
     expect(colors.size).toBeLessThanOrEqual(palette.colors.length)
   })
+
+  it("processes blue-noise dithering with its own ordered mask", () => {
+    const input = grayscaleGradientBuffer(16, 16)
+    const sharedSettings = {
+      ...DEFAULT_SETTINGS,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const blueNoise = processImage(input, {
+      ...sharedSettings,
+      algorithm: "blue-noise",
+    }).image.data
+    const bayer = processImage(input, {
+      ...sharedSettings,
+      algorithm: "bayer",
+      bayerSize: 8,
+    }).image.data
+
+    expect(Array.from(blueNoise)).not.toEqual(Array.from(bayer))
+  })
+
+  it("processes halftone-dot dithering as a distinct clustered pattern", () => {
+    const input = grayscaleGradientBuffer(16, 16)
+    const sharedSettings = {
+      ...DEFAULT_SETTINGS,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const halftone = processImage(input, {
+      ...sharedSettings,
+      algorithm: "halftone-dot",
+    }).image.data
+    const blueNoise = processImage(input, {
+      ...sharedSettings,
+      algorithm: "blue-noise",
+    }).image.data
+    const bayer = processImage(input, {
+      ...sharedSettings,
+      algorithm: "bayer",
+      bayerSize: 8,
+    }).image.data
+
+    expect(Array.from(halftone)).not.toEqual(Array.from(blueNoise))
+    expect(Array.from(halftone)).not.toEqual(Array.from(bayer))
+  })
 })
 
 function fixtureBuffer(): PixelBuffer {

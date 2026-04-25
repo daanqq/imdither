@@ -37,6 +37,28 @@ const PARKER_INDEX = [
   [0.29, 0.01, 0.47],
 ] as const
 
+const BLUE_NOISE_MATRIX = [
+  [36, 12, 52, 24, 43, 7, 59, 18],
+  [4, 48, 20, 61, 15, 39, 27, 55],
+  [57, 31, 9, 45, 50, 22, 2, 34],
+  [16, 41, 26, 6, 63, 30, 47, 11],
+  [44, 1, 54, 21, 37, 13, 60, 28],
+  [25, 62, 14, 40, 5, 49, 19, 56],
+  [53, 23, 35, 10, 58, 32, 8, 46],
+  [0, 38, 29, 51, 17, 42, 33, 3],
+]
+
+const HALFTONE_DOT_MATRIX = [
+  [63, 52, 44, 40, 41, 45, 53, 62],
+  [51, 35, 27, 23, 24, 28, 36, 54],
+  [43, 26, 14, 8, 9, 15, 29, 46],
+  [39, 22, 7, 0, 1, 10, 25, 42],
+  [38, 21, 6, 2, 3, 11, 30, 47],
+  [37, 20, 13, 5, 4, 16, 31, 48],
+  [50, 34, 19, 12, 17, 32, 49, 56],
+  [61, 55, 33, 18, 57, 58, 59, 60],
+]
+
 export function clonePixelBuffer(buffer: PixelBuffer): PixelBuffer {
   return {
     width: buffer.width,
@@ -170,8 +192,30 @@ export function ditherOrdered(
   palette: Palette,
   size: BayerSize
 ): PixelBuffer {
+  return ditherWithThresholdMatrix(input, palette, BAYER_MATRICES[size], size)
+}
+
+export function ditherBlueNoise(
+  input: PixelBuffer,
+  palette: Palette
+): PixelBuffer {
+  return ditherWithThresholdMatrix(input, palette, BLUE_NOISE_MATRIX, 8)
+}
+
+export function ditherHalftoneDot(
+  input: PixelBuffer,
+  palette: Palette
+): PixelBuffer {
+  return ditherWithThresholdMatrix(input, palette, HALFTONE_DOT_MATRIX, 8)
+}
+
+function ditherWithThresholdMatrix(
+  input: PixelBuffer,
+  palette: Palette,
+  matrix: number[][],
+  size: number
+): PixelBuffer {
   const output = createBuffer(input.width, input.height)
-  const matrix = BAYER_MATRICES[size]
   const divisor = size * size
   const strength = palette.colors.length <= 2 ? 96 : 56
 
@@ -251,6 +295,52 @@ export function ditherFloydSteinberg(
     [-1, 1, 3 / 16],
     [0, 1, 5 / 16],
     [1, 1, 1 / 16],
+  ])
+}
+
+export function ditherBurkes(
+  input: PixelBuffer,
+  palette: Palette
+): PixelBuffer {
+  return diffuseError(input, palette, [
+    [1, 0, 8 / 32],
+    [2, 0, 4 / 32],
+    [-2, 1, 2 / 32],
+    [-1, 1, 4 / 32],
+    [0, 1, 8 / 32],
+    [1, 1, 4 / 32],
+    [2, 1, 2 / 32],
+  ])
+}
+
+export function ditherStucki(
+  input: PixelBuffer,
+  palette: Palette
+): PixelBuffer {
+  return diffuseError(input, palette, [
+    [1, 0, 8 / 42],
+    [2, 0, 4 / 42],
+    [-2, 1, 2 / 42],
+    [-1, 1, 4 / 42],
+    [0, 1, 8 / 42],
+    [1, 1, 4 / 42],
+    [2, 1, 2 / 42],
+    [-2, 2, 1 / 42],
+    [-1, 2, 2 / 42],
+    [0, 2, 4 / 42],
+    [1, 2, 2 / 42],
+    [2, 2, 1 / 42],
+  ])
+}
+
+export function ditherSierraLite(
+  input: PixelBuffer,
+  palette: Palette
+): PixelBuffer {
+  return diffuseError(input, palette, [
+    [1, 0, 2 / 4],
+    [-1, 1, 1 / 4],
+    [0, 1, 1 / 4],
   ])
 }
 

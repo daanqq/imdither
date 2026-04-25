@@ -1,8 +1,13 @@
 import {
   ditherAtkinson,
+  ditherBlueNoise,
+  ditherBurkes,
   ditherFloydSteinberg,
+  ditherHalftoneDot,
   ditherMattParker,
   ditherOrdered,
+  ditherSierraLite,
+  ditherStucki,
   mapToPalette,
 } from "./stages"
 import type { BayerSize, Palette, PixelBuffer } from "./types"
@@ -13,6 +18,11 @@ export const DITHER_ALGORITHM_IDS = [
   "matt-parker",
   "floyd-steinberg",
   "atkinson",
+  "burkes",
+  "stucki",
+  "sierra-lite",
+  "blue-noise",
+  "halftone-dot",
 ] as const
 
 export type DitherAlgorithm = (typeof DITHER_ALGORITHM_IDS)[number]
@@ -78,6 +88,41 @@ const DITHER_ALGORITHMS: readonly DitherAlgorithmDefinition[] = [
     capabilities: { bayerSize: false },
     process: (input, palette) => ditherAtkinson(input, palette),
     metadataLabel: () => "Atkinson",
+  },
+  {
+    id: "burkes",
+    label: "Burkes",
+    capabilities: { bayerSize: false },
+    process: (input, palette) => ditherBurkes(input, palette),
+    metadataLabel: () => "Burkes",
+  },
+  {
+    id: "stucki",
+    label: "Stucki",
+    capabilities: { bayerSize: false },
+    process: (input, palette) => ditherStucki(input, palette),
+    metadataLabel: () => "Stucki",
+  },
+  {
+    id: "sierra-lite",
+    label: "Sierra Lite",
+    capabilities: { bayerSize: false },
+    process: (input, palette) => ditherSierraLite(input, palette),
+    metadataLabel: () => "Sierra Lite",
+  },
+  {
+    id: "blue-noise",
+    label: "Blue Noise",
+    capabilities: { bayerSize: false },
+    process: (input, palette) => ditherBlueNoise(input, palette),
+    metadataLabel: () => "Blue Noise",
+  },
+  {
+    id: "halftone-dot",
+    label: "Halftone Dot",
+    capabilities: { bayerSize: false },
+    process: (input, palette) => ditherHalftoneDot(input, palette),
+    metadataLabel: () => "Halftone Dot",
   },
 ]
 

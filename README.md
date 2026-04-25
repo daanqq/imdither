@@ -21,7 +21,8 @@ the browser; the app does not upload source images to a server.
 
 ## Processing Controls
 
-- Algorithms: None, Bayer, Matt Parker, Floyd-Steinberg, and Atkinson.
+- Algorithms: None, Bayer, Matt Parker, Floyd-Steinberg, Atkinson, Burkes,
+  Stucki, Sierra Lite, Blue Noise, and Halftone Dot.
 - Bayer matrix sizes: 2x2, 4x4, and 8x8.
 - Preset palettes: Black / White, 4 Gray, 6 Gray, Warm Mono, Blue Ink,
   Game Boy, DawnBringer 16, DawnBringer 32, Sweetie 16, AAP-16, Endesga 32,
