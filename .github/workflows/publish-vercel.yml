@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   actions: read
+  deployments: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +17,9 @@ jobs:
     name: Publish to Vercel
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -66,4 +70,8 @@ jobs:
         run: bunx vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Vercel output
-        run: bunx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        id: deploy
+        run: |
+          deployment_url="$(bunx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+          echo "Published: $deployment_url"
