@@ -35,10 +35,7 @@ export function App() {
   const setError = useEditorStore((state) => state.setError)
   const setSourceNotice = useEditorStore((state) => state.setSourceNotice)
   const setMetadata = useEditorStore((state) => state.setMetadata)
-  const [source, setSource] = React.useState<LoadedSource | null>(() => {
-    const result = createDemoSourceIntake()
-    return result.type === "accepted" ? result.source : null
-  })
+  const [source, setSource] = React.useState<LoadedSource | null>(null)
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
   )
@@ -102,6 +99,38 @@ export function App() {
     },
     [setError, setSourceNotice, setStatus, transitionSettings]
   )
+
+  React.useEffect(() => {
+    let isCurrent = true
+
+    async function loadDemoSource() {
+      try {
+        setStatus("processing")
+        const result = await createDemoSourceIntake()
+
+        if (isCurrent) {
+          applySourceIntake(result)
+        }
+      } catch (demoError) {
+        if (!isCurrent) {
+          return
+        }
+
+        setError(
+          demoError instanceof Error
+            ? demoError.message
+            : "Demo image failed to load"
+        )
+        setStatus("error")
+      }
+    }
+
+    void loadDemoSource()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [applySourceIntake, setError, setStatus])
 
   React.useEffect(() => {
     if (!source) {

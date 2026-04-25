@@ -1,9 +1,9 @@
 import type { PixelBuffer } from "@workspace/core"
 
+import demoImageUrl from "../assets/demo.png"
 import { hidePixelBufferData } from "./pixel-buffer-visibility"
 import {
   acceptLoadedSource,
-  createDemoSourceIntake as createCoreDemoSourceIntake,
   formatSourceNotices,
   isOversizedSource,
   rejectOversizedSource,
@@ -52,8 +52,38 @@ export async function intakeImageFile(file: File): Promise<SourceIntakeResult> {
   return prepareSourceIntakeResult(await intakeImageFileOnMainThread(file))
 }
 
-export function createDemoSourceIntake(): SourceIntakeResult {
-  return prepareSourceIntakeResult(createCoreDemoSourceIntake())
+export async function createDemoSourceIntake(): Promise<SourceIntakeResult> {
+  const response = await fetch(demoImageUrl)
+
+  if (!response.ok) {
+    return {
+      type: "rejected",
+      message: "Demo image failed to load.",
+    }
+  }
+
+  const blob = await response.blob()
+  const file = new File([blob], "Bundled demo image", {
+    type: blob.type || "image/png",
+  })
+  const result = await intakeImageFile(file)
+
+  if (result.type === "rejected") {
+    return result
+  }
+
+  return {
+    ...result,
+    source: {
+      ...result.source,
+      id: "demo",
+      name: "Bundled demo image",
+    },
+    notices: [
+      { kind: "demo-loaded", message: "[DEMO SOURCE LOADED]" },
+      ...result.notices,
+    ],
+  }
 }
 
 async function intakeImageFileOnMainThread(

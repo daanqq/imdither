@@ -133,8 +133,26 @@ describe("Source Intake", () => {
     )
   })
 
-  it("marks the bundled Demo Image with a Source Notice", () => {
-    const result = createDemoSourceIntake()
+  it("loads the bundled Demo Image with a Source Notice", async () => {
+    vi.stubGlobal("Worker", undefined)
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        blob: async () => new Blob(["demo"], { type: "image/png" }),
+      }))
+    )
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({
+        width: 1,
+        height: 1,
+        close: vi.fn(),
+      }))
+    )
+    vi.stubGlobal("document", createFakeCanvasDocument(1, 1))
+
+    const result = await createDemoSourceIntake()
 
     expect(result.type).toBe("accepted")
 
@@ -142,6 +160,8 @@ describe("Source Intake", () => {
       return
     }
 
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(result.source.id).toBe("demo")
     expect(result.source.name).toBe("Bundled demo image")
     expect(Object.keys(result.source.buffer)).toEqual(["width", "height"])
     expect(formatSourceNotices(result.notices)).toBe("[DEMO SOURCE LOADED]")
