@@ -8,6 +8,7 @@ import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
 import { downloadBlob, pixelBufferToPngBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
+import { getScreenPreviewTarget } from "@/lib/screen-preview"
 import {
   createDemoSourceIntake,
   formatSourceNotices,
@@ -41,6 +42,10 @@ export function App() {
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
   )
+  const [previewDisplaySize, setPreviewDisplaySize] = React.useState<{
+    height: number
+    width: number
+  } | null>(null)
   const [isDesktopViewScale, setIsDesktopViewScale] = React.useState(() =>
     typeof window === "undefined"
       ? true
@@ -57,6 +62,23 @@ export function App() {
         : null,
     }),
     [source]
+  )
+  const previewTarget = React.useMemo(
+    () =>
+      getScreenPreviewTarget({
+        displayHeight: previewDisplaySize?.height,
+        displayWidth: previewDisplaySize?.width,
+        outputHeight: settings.resize.height,
+        outputWidth: settings.resize.width,
+        viewScale,
+      }),
+    [
+      previewDisplaySize?.height,
+      previewDisplaySize?.width,
+      settings.resize.height,
+      settings.resize.width,
+      viewScale,
+    ]
   )
 
   const applySourceIntake = React.useCallback(
@@ -90,6 +112,7 @@ export function App() {
       sourceKey: source.id,
       image: source.buffer,
       settings,
+      previewTarget,
       onEvent: (event) => {
         switch (event.type) {
           case "queued":
@@ -116,7 +139,15 @@ export function App() {
     return () => {
       handle.cancel()
     }
-  }, [processingJobs, settings, source, setError, setMetadata, setStatus])
+  }, [
+    previewTarget,
+    processingJobs,
+    settings,
+    source,
+    setError,
+    setMetadata,
+    setStatus,
+  ])
 
   const handleFile = React.useCallback(
     async (file: File) => {
@@ -292,13 +323,16 @@ export function App() {
             isDesktopViewScale={isDesktopViewScale}
             original={source?.buffer ?? null}
             preview={preview}
+            previewTargetHeight={
+              previewTarget?.height ?? settings.resize.height
+            }
+            previewTargetWidth={previewTarget?.width ?? settings.resize.width}
             status={status}
-            targetHeight={settings.resize.height}
-            targetWidth={settings.resize.width}
             viewScale={viewScale}
             onExportPng={handleExportPng}
             onFileSelected={handleFile}
             onInvalidDrop={handleInvalidDrop}
+            onPreviewDisplaySizeChange={setPreviewDisplaySize}
             onViewScaleChange={handleViewScaleChange}
           />
 

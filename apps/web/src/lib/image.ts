@@ -23,6 +23,43 @@ export function drawPixelBuffer(
   )
 }
 
+export function drawPixelBufferToCanvasSize(
+  canvas: HTMLCanvasElement,
+  buffer: PixelBuffer,
+  size: { height: number; width: number }
+) {
+  const width = Math.max(1, Math.round(size.width))
+  const height = Math.max(1, Math.round(size.height))
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext("2d")
+
+  if (!context) {
+    return
+  }
+
+  const source = document.createElement("canvas")
+  source.width = buffer.width
+  source.height = buffer.height
+  const sourceContext = source.getContext("2d")
+
+  if (!sourceContext) {
+    return
+  }
+
+  sourceContext.putImageData(
+    new ImageData(
+      new Uint8ClampedArray(buffer.data),
+      buffer.width,
+      buffer.height
+    ),
+    0,
+    0
+  )
+  context.imageSmoothingEnabled = true
+  context.drawImage(source, 0, 0, width, height)
+}
+
 export async function pixelBufferToPngBlob(buffer: PixelBuffer): Promise<Blob> {
   const canvas = document.createElement("canvas")
   drawPixelBuffer(canvas, buffer)

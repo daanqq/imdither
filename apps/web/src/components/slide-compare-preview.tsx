@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 
-import { drawPixelBuffer } from "@/lib/image"
+import { drawPixelBuffer, drawPixelBufferToCanvasSize } from "@/lib/image"
 import {
   SLIDE_COMPARE_MAX,
   SLIDE_COMPARE_MIN,
@@ -17,6 +17,8 @@ import {
 
 export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
+  displayHeight,
+  displayWidth,
   original,
   processed,
   status,
@@ -32,8 +34,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const pendingDividerPercentRef = React.useRef(dividerPercentRef.current)
   const dividerAnimationFrameRef = React.useRef<number | null>(null)
   const processedReady = Boolean(processed)
-  const frameWidth = processed?.width ?? original.width
-  const frameHeight = processed?.height ?? original.height
+  const frameWidth = displayWidth ?? processed?.width ?? original.width
+  const frameHeight = displayHeight ?? processed?.height ?? original.height
   const clampedDivider = clampSlideDivider(dividerPercent)
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: frameHeight,
@@ -46,8 +48,16 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       return
     }
 
+    if (processedReady) {
+      drawPixelBufferToCanvasSize(originalCanvasRef.current, original, {
+        height: frameHeight,
+        width: frameWidth,
+      })
+      return
+    }
+
     drawPixelBuffer(originalCanvasRef.current, original)
-  }, [original])
+  }, [frameHeight, frameWidth, original, processedReady])
 
   React.useEffect(() => {
     if (!processed || !processedCanvasRef.current) {

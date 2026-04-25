@@ -16,6 +16,8 @@ export type SlideCompareViewScale = "fit" | "actual"
 
 export type SlideComparePreviewProps = {
   dividerPercent: number
+  displayHeight?: number
+  displayWidth?: number
   original: PixelBuffer
   processed: PixelBuffer | null
   status?: string
@@ -51,6 +53,8 @@ export function areSlideComparePreviewPropsEqual(
 ) {
   if (
     previous.dividerPercent !== next.dividerPercent ||
+    previous.displayHeight !== next.displayHeight ||
+    previous.displayWidth !== next.displayWidth ||
     previous.original !== next.original ||
     previous.processed !== next.processed ||
     previous.viewScale !== next.viewScale ||

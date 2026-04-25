@@ -52,13 +52,14 @@ describe("PreviewStage", () => {
         isDesktopViewScale
         original={buffer}
         preview={buffer}
+        previewTargetHeight={1}
+        previewTargetWidth={1}
         status="ready"
-        targetHeight={1}
-        targetWidth={1}
         viewScale="fit"
         onExportPng={onExportPng}
         onFileSelected={onFileSelected}
         onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
         onViewScaleChange={vi.fn()}
       />
     )

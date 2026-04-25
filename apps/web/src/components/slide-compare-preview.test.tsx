@@ -80,6 +80,29 @@ describe("SlideComparePreview", () => {
     ).toBe(false)
   })
 
+  it("redraws ready slide canvases when their shared display dimensions change", () => {
+    const original = makePixelBuffer(4, 3)
+    const processed = makePixelBuffer(2, 2)
+    const onDividerChange = () => {}
+    const baseProps = {
+      dividerPercent: 37,
+      displayHeight: 100,
+      displayWidth: 120,
+      original,
+      processed,
+      status: "ready",
+      viewScale: "fit",
+      onDividerChange,
+    } as const
+
+    expect(
+      areSlideComparePreviewPropsEqual(baseProps, {
+        ...baseProps,
+        displayWidth: 121,
+      })
+    ).toBe(false)
+  })
+
   it("keeps missing-processed status updates visible", () => {
     const original = makePixelBuffer(4, 3)
     const onDividerChange = () => {}

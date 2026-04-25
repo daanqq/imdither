@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 
-const DEFAULT_FIT_INSET = 12
+export const DEFAULT_FIT_INSET = 12
 
 type PreviewFrameStyle = CSSProperties & {
   "--preview-aspect"?: string

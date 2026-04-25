@@ -1,6 +1,7 @@
 import type { EditorSettings, PixelBuffer } from "@workspace/core"
 
 import { runDitherJob, type DitherJobResult } from "@/lib/worker-client"
+import type { PreviewTarget } from "@/lib/screen-preview"
 
 type RunProcessingJobParams = {
   jobId: number
@@ -13,6 +14,7 @@ type RunProcessingJobParams = {
 type PreviewJobParams = {
   sourceKey: string
   image: PixelBuffer
+  previewTarget?: PreviewTarget | null
   settings: EditorSettings
   onEvent: (event: PreviewJobEvent) => void
 }
@@ -128,12 +130,16 @@ function createPreviewJob(
   dependencies: PreviewJobDependencies
 ): PreviewJobState {
   const controller = new AbortController()
-  const quickSettings = settingsWithinPixelBudget(
+  const previewSettings = settingsWithPreviewTarget(
     params.settings,
+    params.previewTarget
+  )
+  const quickSettings = settingsWithinPixelBudget(
+    previewSettings,
     dependencies.timings.interactivePixelBudget
   )
   const refinedSettings = settingsWithinPixelBudget(
-    params.settings,
+    previewSettings,
     dependencies.timings.previewPixelBudget
   )
   const shouldRefine =
@@ -255,6 +261,24 @@ function settingsWithinPixelBudget(
       ...settings.resize,
       width: Math.max(1, Math.floor(settings.resize.width * scale)),
       height: Math.max(1, Math.floor(settings.resize.height * scale)),
+    },
+  }
+}
+
+function settingsWithPreviewTarget(
+  settings: EditorSettings,
+  previewTarget?: PreviewTarget | null
+): EditorSettings {
+  if (!previewTarget) {
+    return settings
+  }
+
+  return {
+    ...settings,
+    resize: {
+      ...settings.resize,
+      height: previewTarget.height,
+      width: previewTarget.width,
     },
   }
 }

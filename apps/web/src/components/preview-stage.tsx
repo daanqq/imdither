@@ -33,12 +33,13 @@ export type PreviewStageProps = {
   original: PixelBuffer | null
   preview: PixelBuffer | null
   status: JobStatus
-  targetHeight: number
-  targetWidth: number
+  previewTargetHeight: number
+  previewTargetWidth: number
   viewScale: ViewScale
   onExportPng: () => void
   onFileSelected: (file: File) => void | Promise<void>
   onInvalidDrop: (message: string) => void
+  onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
   onViewScaleChange: (scale: ViewScale) => void
 }
 
@@ -48,13 +49,14 @@ export const PreviewStage = React.memo(function PreviewStage({
   isDesktopViewScale,
   original,
   preview,
+  previewTargetHeight,
+  previewTargetWidth,
   status,
-  targetHeight,
-  targetWidth,
   viewScale,
   onExportPng,
   onFileSelected,
   onInvalidDrop,
+  onPreviewDisplaySizeChange,
   onViewScaleChange,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
@@ -67,10 +69,14 @@ export const PreviewStage = React.memo(function PreviewStage({
   const comparisonFrameWidth = preview?.width ?? original?.width
   const comparisonFrameHeight = preview?.height ?? original?.height
   const previewReduced = preview
-    ? preview.width !== targetWidth || preview.height !== targetHeight
+    ? preview.width !== previewTargetWidth ||
+      preview.height !== previewTargetHeight
     : false
   const busy =
     status === "queued" || status === "processing" || status === "exporting"
+  const previewDisplayRef = usePreviewDisplayMeasurement(
+    onPreviewDisplaySizeChange
+  )
 
   async function handleFileInput(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -117,6 +123,7 @@ export const PreviewStage = React.memo(function PreviewStage({
         />
         <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
           <div
+            ref={previewDisplayRef}
             className={cn(
               "dot-grid-subtle m-3 flex min-h-0 flex-1 bg-background ring-1 ring-foreground/10",
               viewScale === "fit"
@@ -140,6 +147,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                     dividerPercent={slideDividerPercent}
                     original={original}
                     processed={preview}
+                    displayHeight={preview ? preview.height : undefined}
+                    displayWidth={preview ? preview.width : undefined}
                     status={status}
                     viewScale={viewScale}
                     onDividerChange={setSlideDividerPercent}
@@ -157,8 +166,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                 {showProcessed ? (
                   <CanvasPanel
                     buffer={preview}
-                    expectedHeight={targetHeight}
-                    expectedWidth={targetWidth}
+                    expectedHeight={previewTargetHeight}
+                    expectedWidth={previewTargetWidth}
                     label="Processed"
                     missing={!preview}
                     status={status}
@@ -222,6 +231,66 @@ export const PreviewStage = React.memo(function PreviewStage({
     </div>
   )
 })
+
+function usePreviewDisplayMeasurement(
+  onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
+) {
+  const latestSizeRef = React.useRef<{ height: number; width: number } | null>(
+    null
+  )
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  return React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node || typeof ResizeObserver === "undefined") {
+        return
+      }
+
+      const observer = new ResizeObserver((entries) => {
+        const rect = entries[0]?.contentRect
+
+        if (!rect) {
+          return
+        }
+
+        const nextSize = {
+          height: Math.max(1, Math.round(rect.height)),
+          width: Math.max(1, Math.round(rect.width)),
+        }
+        const latestSize = latestSizeRef.current
+
+        if (
+          latestSize &&
+          Math.abs(latestSize.width - nextSize.width) < 16 &&
+          Math.abs(latestSize.height - nextSize.height) < 16
+        ) {
+          return
+        }
+
+        latestSizeRef.current = nextSize
+
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+        }
+
+        timerRef.current = setTimeout(() => {
+          onPreviewDisplaySizeChange(nextSize)
+        }, 120)
+      })
+
+      observer.observe(node)
+
+      return () => {
+        observer.disconnect()
+
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+        }
+      }
+    },
+    [onPreviewDisplaySizeChange]
+  )
+}
 
 function ProcessingOverlay({
   algorithm,

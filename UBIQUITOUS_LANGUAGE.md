@@ -8,6 +8,7 @@
 | **Demo Image**       | The bundled **Source Image** available before the user loads their own image.                       | Sample, placeholder                           |
 | **Processed Image**  | The image produced by applying the current **Editor Settings** to the **Source Image**.             | Result image, output image, after image       |
 | **Reduced Preview**  | A lower-resolution **Processed Image** used for responsive on-screen editing.                       | Preview only, draft output, temporary output  |
+| **Screen Preview**   | A **Processed Image** sized for the current on-screen **Display Frame** in **Fit View**.            | Fit output, screen output, display output     |
 | **Full Output**      | The **Processed Image** at the selected **Output Size**.                                            | Full preview, final render, full-size preview |
 | **Export PNG**       | The downloaded PNG encoded from the **Full Output**.                                                | Download, export file, final image            |
 | **Output Size**      | The selected width and height used for **Full Output** and **Export PNG**.                          | Resolution, dimensions, image size            |
@@ -45,6 +46,7 @@
 | **Resize Fit**                 | The rule that maps source dimensions into output dimensions using contain, cover, or stretch. | Crop mode, fit mode                          |
 | **Resize Mode**                | The sampling method used by resize, currently bilinear or nearest-neighbor.                   | Resample mode, scaling mode                  |
 | **Processing Metadata**        | The export-facing facts that describe the processing result.                                  | Export details, render metadata              |
+| **Preview Target Override**    | A temporary processing size used by a **Preview Job** without changing **Editor Settings**.   | Preview settings, screen settings            |
 
 ## Algorithm Registry
 
@@ -59,46 +61,52 @@
 
 ## Preview And Comparison
 
-| Term                               | Definition                                                                                                | Aliases to avoid                   |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Preview**                        | The on-screen rendering of the **Source Image**, **Processed Image**, or both.                            | Canvas view, display, preview mode |
-| **Compare Mode**                   | The preview selection among processed-only, original-only, and slide comparison.                          | Preview mode, split mode           |
-| **Processed View**                 | A **Compare Mode** that shows only the **Processed Image**.                                               | Result view, output view           |
-| **Original View**                  | A **Compare Mode** that shows only the **Source Image**.                                                  | Source view, before view           |
-| **Slide Compare**                  | A **Compare Mode** that overlays source and processed images in one frame with a draggable divider.       | Split compare, before-after slider |
-| **Slide Divider**                  | The draggable vertical control that sets the reveal boundary in **Slide Compare**.                        | Slider, handle, divider            |
-| **View Scale**                     | The desktop preview sizing mode, currently fit or 1:1.                                                    | Zoom mode, scale mode              |
-| **Fit View**                       | A **View Scale** that fits the preview within the available preview area.                                 | Fit, fit to screen                 |
-| **1:1 View**                       | A **View Scale** that displays preview pixels at actual pixel size.                                       | Actual size, pixel view            |
-| **Desktop Reduced Preview Notice** | A desktop-only overlay that says the on-screen preview is reduced while export remains full size.         | Preview only, warning banner       |
-| **Preview Refinement**             | A follow-up **Preview Job** that replaces a fast **Reduced Preview** with a larger preview buffer.        | Final preview, preview catch-up    |
-| **Processing Preview**             | The visible state where a **Preview Job** is queued or running while the previous preview remains usable. | Loading preview, rendering state   |
-| **Preview Only Notice**            | A visible notice that the current on-screen preview is not the full export-quality **Full Output**.       | Preview only, preview-only state   |
+| Term                               | Definition                                                                                                 | Aliases to avoid                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Preview**                        | The on-screen rendering of the **Source Image**, **Processed Image**, or both.                             | Canvas view, display, preview mode |
+| **Compare Mode**                   | The preview selection among processed-only, original-only, and slide comparison.                           | Preview mode, split mode           |
+| **Processed View**                 | A **Compare Mode** that shows only the **Processed Image**.                                                | Result view, output view           |
+| **Original View**                  | A **Compare Mode** that shows only the **Source Image**.                                                   | Source view, before view           |
+| **Slide Compare**                  | A **Compare Mode** that overlays source and processed images in one frame with a draggable divider.        | Split compare, before-after slider |
+| **Slide Divider**                  | The draggable vertical control that sets the reveal boundary in **Slide Compare**.                         | Slider, handle, divider            |
+| **View Scale**                     | The desktop preview sizing mode, currently fit or 1:1.                                                     | Zoom mode, scale mode              |
+| **Fit View**                       | A **View Scale** that fits the preview within the available preview area.                                  | Fit, fit to screen                 |
+| **1:1 View**                       | A **View Scale** that displays preview pixels at actual pixel size.                                        | Actual size, pixel view            |
+| **Display Frame**                  | The actual on-screen rectangle used to display a **Preview Surface**.                                      | Preview pane, container, frame     |
+| **Fit Inset**                      | The spacing subtracted from the measured preview area before sizing a **Display Frame** in **Fit View**.   | Padding, margin, frame gap         |
+| **CSS Pixel Preview Target**       | A **Preview Target Override** expressed in CSS pixels rather than device pixels.                           | DPR target, retina preview target  |
+| **Screen-Sized Preview**           | The behavior where **Fit View** generates a **Screen Preview** instead of browser-scaling **Full Output**. | Screen preview mode, fit render    |
+| **Desktop Reduced Preview Notice** | A desktop-only overlay that says the on-screen preview is reduced while export remains full size.          | Preview only, warning banner       |
+| **Preview Refinement**             | A follow-up **Preview Job** that replaces a fast **Reduced Preview** with a larger preview buffer.         | Final preview, preview catch-up    |
+| **Processing Preview**             | The visible state where a **Preview Job** is queued or running while the previous preview remains usable.  | Loading preview, rendering state   |
+| **Preview Only Notice**            | A visible notice that the current on-screen preview is not the full export-quality **Full Output**.        | Preview only, preview-only state   |
 
 ## Runtime Responsiveness
 
-| Term                       | Definition                                                                                                      | Aliases to avoid                         |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Direct Slider Movement** | The property that a slider thumb follows pointer movement without waiting for React or worker work.             | Smooth slider, fast slider, instant drag |
-| **Draft Slider Value**     | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.             | Temporary setting, live setting          |
-| **Committed Settings**     | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.    | Real settings, saved settings            |
-| **Commit-on-Release**      | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur. | Debounce, delayed update                 |
-| **Reset Commit**           | A slider reset action that immediately writes the slider default into **Committed Settings**.                   | Reset draft, default click               |
-| **Native Range Slider**    | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.       | Custom slider, Radix slider              |
-| **Slider Primitive**       | A general-purpose UI slider component that owns accessibility and composition behavior beyond this editor need. | Native slider, browser slider            |
-| **Hot Drag Path**          | The work executed repeatedly while the pointer is moving a slider thumb.                                        | Drag handler, input loop                 |
-| **Render Boundary**        | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                 | Memo wrapper, render fix                 |
-| **Preview Stage**          | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.   | Preview card, canvas area                |
-| **Preview Presentation**   | The UI layer that displays preview surfaces without changing image processing semantics.                        | Preview rendering, canvas rendering      |
-| **Preview Surface**        | A visible canvas or placeholder inside **Preview Presentation**.                                                | Canvas, preview component                |
-| **Canvas Redraw Boundary** | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                          | Canvas memo, draw optimization           |
-| **Ready Preview Surface**  | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                  | Ready canvas, stable canvas              |
-| **Preview Placeholder**    | A **Preview Surface** shown while a processed buffer is missing.                                                | Empty preview, loading canvas            |
-| **Status-only Update**     | A **Processing Status** change that does not include a new **Pixel Buffer**.                                    | Status render, worker ping               |
-| **Processing Status**      | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                      | Status, job state                        |
-| **Worker Status Update**   | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.               | Worker update, worker render             |
-| **Control Tree**           | The rendered settings controls that should update only from control-relevant state.                             | Control panel render tree, sidebar tree  |
-| **View-local State**       | Interaction state owned by a view and not persisted in **Editor Settings**.                                     | Local state, UI state                    |
+| Term                            | Definition                                                                                                      | Aliases to avoid                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Direct Slider Movement**      | The property that a slider thumb follows pointer movement without waiting for React or worker work.             | Smooth slider, fast slider, instant drag |
+| **Draft Slider Value**          | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.             | Temporary setting, live setting          |
+| **Committed Settings**          | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.    | Real settings, saved settings            |
+| **Commit-on-Release**           | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur. | Debounce, delayed update                 |
+| **Reset Commit**                | A slider reset action that immediately writes the slider default into **Committed Settings**.                   | Reset draft, default click               |
+| **Native Range Slider**         | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.       | Custom slider, Radix slider              |
+| **Slider Primitive**            | A general-purpose UI slider component that owns accessibility and composition behavior beyond this editor need. | Native slider, browser slider            |
+| **Hot Drag Path**               | The work executed repeatedly while the pointer is moving a slider thumb.                                        | Drag handler, input loop                 |
+| **Render Boundary**             | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                 | Memo wrapper, render fix                 |
+| **Preview Stage**               | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.   | Preview card, canvas area                |
+| **Preview Presentation**        | The UI layer that displays preview surfaces without changing image processing semantics.                        | Preview rendering, canvas rendering      |
+| **Preview Surface**             | A visible canvas or placeholder inside **Preview Presentation**.                                                | Canvas, preview component                |
+| **Canvas Redraw Boundary**      | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                          | Canvas memo, draw optimization           |
+| **Ready Preview Surface**       | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                  | Ready canvas, stable canvas              |
+| **Preview Placeholder**         | A **Preview Surface** shown while a processed buffer is missing.                                                | Empty preview, loading canvas            |
+| **Status-only Update**          | A **Processing Status** change that does not include a new **Pixel Buffer**.                                    | Status render, worker ping               |
+| **Processing Status**           | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                      | Status, job state                        |
+| **Worker Status Update**        | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.               | Worker update, worker render             |
+| **Control Tree**                | The rendered settings controls that should update only from control-relevant state.                             | Control panel render tree, sidebar tree  |
+| **View-local State**            | Interaction state owned by a view and not persisted in **Editor Settings**.                                     | Local state, UI state                    |
+| **Preview Display Measurement** | The debounced observation of **Display Frame** size used to restart **Screen-Sized Preview** work.              | Resize tracking, frame measurement       |
+| **Resize Threshold**            | The minimum **Display Frame** size change required before restarting preview processing.                        | Resize debounce, resize tolerance        |
 
 ## Editor Experience
 
@@ -131,9 +139,12 @@
 ## Relationships
 
 - A **Source Image** produces zero or one current **Processed Image** for the active **Editor Settings**.
-- A **Processed Image** may be rendered as **Reduced Preview** or **Full Output**.
-- **Export PNG** must be encoded from **Full Output**, not from **Reduced Preview**.
+- A **Processed Image** may be rendered as **Reduced Preview**, **Screen Preview**, or **Full Output**.
+- **Export PNG** must be encoded from **Full Output**, not from **Reduced Preview** or **Screen Preview**.
+- **Export PNG** must ignore **Preview Target Override**.
 - **Reduced Preview** may differ in dimensions from **Output Size**.
+- **Screen Preview** may differ in dimensions from **Output Size**.
+- **Screen Preview** must not exceed **Full Output** dimensions.
 - **Output Size** must stay within the **Output Cap**.
 - **Source Intake** produces either an accepted **Source Image** or a rejected source.
 - **Source Intake** may produce a **Source Notice**.
@@ -151,11 +162,17 @@
 - **Settings JSON** contains one versioned **Editor Settings** object.
 - **Mobile Experience** always uses **Mobile Fit Preview**.
 - **Desktop Experience** may use **Fit View** or **1:1 View**.
+- **Fit View** may use **Screen-Sized Preview**.
+- **1:1 View** displays **Full Output** pixels subject to preview budget behavior.
+- A **CSS Pixel Preview Target** must account for the **Fit Inset** so the processed buffer matches the **Display Frame**.
 - **Desktop Reduced Preview Notice** may appear only in **Desktop Experience**.
-- **Slide Compare** uses one **Source Image** layer and one **Processed Image** layer in the same displayed frame.
+- **Slide Compare** uses one **Source Image** layer and one **Processed Image** layer in the same **Display Frame**.
+- **Slide Compare** should draw the source layer into the same **Display Frame** dimensions as the processed layer when **Screen Preview** is ready.
 - A **Preview Job** may be cancelled by newer **Settings Transitions**.
 - A **Preview Job** may include one **Preview Refinement**.
+- A **Preview Job** may use one **Preview Target Override**.
 - A **Preview Cycle** begins with one **Settings Transition** and may produce **Processing Preview**, **Reduced Preview**, and **Preview Refinement** states.
+- **Preview Display Measurement** may start a new **Preview Cycle** only when the **Resize Threshold** is met.
 - **Processing Preview** should preserve **Responsive Editing** for the **Control Panel** and **Slide Compare**.
 - **Worker Source Cache** may hold one or more accepted **Source Images** to reduce repeated **Pixel Buffer** transfer.
 - An **Export Job** should ignore preview-size shortcuts and produce **Export PNG** at **Output Size**.
@@ -174,21 +191,21 @@
 
 ## Example Dialogue
 
-> **Dev:** "When brightness changes, should every **Draft Slider Value** start a new **Preview Job**?"
+> **Dev:** "In **Fit View**, should the **Preview Job** render the selected **Output Size** and let CSS scale it down?"
 >
-> **Domain expert:** "No. During **Direct Slider Movement**, the slider stays in the **Hot Drag Path**. Only **Commit-on-Release** or **Reset Commit** turns that value into **Committed Settings**."
+> **Domain expert:** "No. **Fit View** uses **Screen-Sized Preview**: the job receives a **CSS Pixel Preview Target** that matches the **Display Frame**."
 >
-> **Dev:** "Should the preview redraw while the user drags?"
+> **Dev:** "Does that change **Editor Settings** or the **Export PNG**?"
 >
-> **Domain expert:** "No. A **Ready Preview Surface** stays stable until a new **Pixel Buffer** arrives. A **Status-only Update** can change a **Preview Placeholder**, but it should not cross the **Canvas Redraw Boundary**."
+> **Domain expert:** "No. The **Preview Target Override** is temporary. **Export PNG** is still encoded from **Full Output** at **Output Size**."
 >
-> **Dev:** "Why did the **Slider Primitive** cause lag if the preview was isolated?"
+> **Dev:** "Why do we subtract the **Fit Inset** from the measured area?"
 >
-> **Domain expert:** "It still lived inside the **Hot Drag Path**. For this editor, a **Native Range Slider** better satisfies **Direct Slider Movement** because the browser owns thumb motion."
+> **Domain expert:** "Because the **Display Frame** is smaller than the outer preview area. If the **CSS Pixel Preview Target** ignores the **Fit Inset**, the browser still downscales the dithered canvas."
 >
-> **Dev:** "Where should drop state and slide divider state live?"
+> **Dev:** "What happens in **Slide Compare**?"
 >
-> **Domain expert:** "They are **View-local State**, so they belong in **Preview Stage**, not in **Editor Settings**."
+> **Domain expert:** "The **Source Image** layer is drawn into the same **Display Frame** dimensions as the processed **Screen Preview**, so the **Slide Divider** compares aligned geometry."
 
 ## Flagged Ambiguities
 
@@ -206,6 +223,10 @@
 - "Preview Only" sounded like a broken app state. Canonical terms: **Reduced Preview** for the image state and **Desktop Reduced Preview Notice** for the desktop overlay.
 - "Processing Preview" and "Preview Only" were used as if they were separate blockers. Use **Processing Preview** for queued or running preview work and **Preview Only Notice** when the screen is showing a reduced or non-export-quality preview.
 - "Preview" was used for displayed canvas, reduced buffer, and compare selection. Canonical terms: **Preview**, **Reduced Preview**, and **Compare Mode**.
+- "Screen preview" and "preview target" can sound like persistent settings. Use **Screen Preview** for the generated image and **Preview Target Override** for the temporary processing size; neither belongs in **Settings JSON**.
+- "Display size", "frame size", and "container size" overlap. Use **Display Frame** for the actual on-screen image rectangle and **Preview Display Measurement** for observing it.
+- "CSS pixels" and device pixels overlap in high-DPI discussion. Use **CSS Pixel Preview Target** for this feature; do not imply device-pixel-ratio scaling unless the product decision changes.
+- "Inset", "padding", and "margin" can hide the sizing rule. Use **Fit Inset** for the spacing subtracted before computing a **CSS Pixel Preview Target**.
 - "Output" was used for processed pixels and downloaded file. Canonical terms: **Processed Image**, **Full Output**, and **Export PNG**.
 - "Cap", "limit", "budget", and "ready %" overlapped in UI and architecture discussion. Use **Output Cap** for the pixel budget and **Output Size** for the selected dimensions.
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.
