@@ -47,6 +47,30 @@ describe("editor store settings transitions", () => {
       "[OUTPUT CLAMPED: 4000x3000 / 12MP]"
     )
   })
+
+  it("stores export preferences separately from editor settings", () => {
+    useEditorStore.setState({
+      exportFormat: "png",
+      exportQuality: 0.92,
+      settings: DEFAULT_SETTINGS,
+    })
+
+    useEditorStore.getState().setExportFormat("webp")
+    useEditorStore.getState().setExportQuality(0.5)
+    useEditorStore.getState().transitionSettings({
+      type: "apply-settings",
+      settings: DEFAULT_SETTINGS,
+    })
+
+    expect(useEditorStore.getState().exportFormat).toBe("webp")
+    expect(useEditorStore.getState().exportQuality).toBe(0.5)
+    expect(useEditorStore.getState().settings).not.toHaveProperty(
+      "exportFormat"
+    )
+    expect(useEditorStore.getState().settings).not.toHaveProperty(
+      "exportQuality"
+    )
+  })
 })
 
 function createMemoryStorage(): Storage {

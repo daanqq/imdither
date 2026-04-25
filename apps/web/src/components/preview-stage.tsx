@@ -10,6 +10,14 @@ import {
 } from "@workspace/ui/components/empty"
 import { Input } from "@workspace/ui/components/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@workspace/ui/components/select"
+import { Slider } from "@workspace/ui/components/slider"
+import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
@@ -22,6 +30,14 @@ import {
   type CanvasPanelProps,
 } from "@/components/preview-render-boundaries"
 import { drawPixelBuffer } from "@/lib/image"
+import {
+  EXPORT_FORMAT_OPTIONS,
+  EXPORT_QUALITY_STEP,
+  MAX_EXPORT_QUALITY,
+  MIN_EXPORT_QUALITY,
+  getExportFormatOption,
+  type ExportFormat,
+} from "@/lib/export-image"
 import { getPreviewFrameStyle } from "@/lib/preview-frame"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
 import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
@@ -36,7 +52,11 @@ export type PreviewStageProps = {
   previewTargetHeight: number
   previewTargetWidth: number
   viewScale: ViewScale
-  onExportPng: () => void
+  exportFormat: ExportFormat
+  exportQuality: number
+  onExport: () => void
+  onExportFormatChange: (format: ExportFormat) => void
+  onExportQualityChange: (quality: number) => void
   onFileSelected: (file: File) => void | Promise<void>
   onInvalidDrop: (message: string) => void
   onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
@@ -53,7 +73,11 @@ export const PreviewStage = React.memo(function PreviewStage({
   previewTargetWidth,
   status,
   viewScale,
-  onExportPng,
+  exportFormat,
+  exportQuality,
+  onExport,
+  onExportFormatChange,
+  onExportQualityChange,
   onFileSelected,
   onInvalidDrop,
   onPreviewDisplaySizeChange,
@@ -74,6 +98,11 @@ export const PreviewStage = React.memo(function PreviewStage({
     : false
   const busy =
     status === "queued" || status === "processing" || status === "exporting"
+  const selectedExportFormat = getExportFormatOption(exportFormat)
+  const displayedExportQuality = selectedExportFormat.supportsQuality
+    ? exportQuality
+    : 1
+  const exportQualityPercent = Math.round(displayedExportQuality * 100)
   const previewDisplayRef = usePreviewDisplayMeasurement(
     onPreviewDisplaySizeChange
   )
@@ -178,7 +207,7 @@ export const PreviewStage = React.memo(function PreviewStage({
             )}
           </div>
           <div className="mx-3 mb-3 grid shrink-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-            <div className="order-1 flex min-w-0 items-center gap-2 md:order-2 md:justify-center">
+            <div className="order-1 grid min-w-0 grid-cols-2 items-center gap-2 md:relative md:order-2 md:flex md:min-h-9 md:justify-center">
               <Input
                 ref={fileInputRef}
                 className="sr-only"
@@ -186,22 +215,69 @@ export const PreviewStage = React.memo(function PreviewStage({
                 accept="image/*"
                 onChange={handleFileInput}
               />
-              <Button
-                className="min-w-0 flex-1 md:w-36 md:flex-none"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <UploadIcon data-icon="inline-start" />
-                Upload
-              </Button>
-              <Button
-                className="min-w-0 flex-1 md:w-36 md:flex-none"
-                disabled={!original || status === "exporting"}
-                onClick={onExportPng}
-              >
-                <DownloadIcon data-icon="inline-start" />
-                {status === "exporting" ? "[EXPORTING]" : "Export PNG"}
-              </Button>
+              <div className="contents md:grid md:grid-cols-[9rem_9rem] md:gap-2">
+                <Button
+                  className="min-w-0"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <UploadIcon data-icon="inline-start" />
+                  Upload
+                </Button>
+                <Button
+                  className="min-w-0"
+                  disabled={!original || status === "exporting"}
+                  onClick={onExport}
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  {status === "exporting" ? "[EXPORTING]" : "Export"}
+                </Button>
+              </div>
+              <div className="col-span-2 grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-2 md:absolute md:top-1/2 md:left-[calc(50%+9.75rem)] md:w-80 md:-translate-y-1/2">
+                <Select
+                  value={exportFormat}
+                  onValueChange={(value) =>
+                    onExportFormatChange(value as ExportFormat)
+                  }
+                >
+                  <SelectTrigger
+                    aria-label="Export format"
+                    className="h-9 w-full"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPORT_FORMAT_OPTIONS.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="min-w-0">
+                  <label className="flex h-9 min-w-0 items-center gap-2 font-mono text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+                    <span>Quality</span>
+                    <Slider
+                      aria-label="Export quality"
+                      className="min-w-0 flex-1"
+                      disabled={!selectedExportFormat.supportsQuality}
+                      max={MAX_EXPORT_QUALITY}
+                      min={MIN_EXPORT_QUALITY}
+                      step={EXPORT_QUALITY_STEP}
+                      value={[displayedExportQuality]}
+                      onValueChange={
+                        selectedExportFormat.supportsQuality
+                          ? (value) =>
+                              onExportQualityChange(value[0] ?? exportQuality)
+                          : undefined
+                      }
+                    />
+                    <span className="w-[4ch] text-right tabular-nums">
+                      {exportQualityPercent}%
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
             <ToggleGroup
               type="single"
@@ -309,13 +385,13 @@ function ProcessingOverlay({
 
   const title =
     status === "exporting"
-      ? "EXPORTING PNG"
+      ? "EXPORTING"
       : busy
         ? "PROCESSING PREVIEW"
         : "PREVIEW ONLY"
   const detail =
     status === "exporting"
-      ? "Preparing full-size PNG export."
+      ? "Preparing full-size export."
       : previewReduced
         ? `Showing reduced preview while full ${algorithm} output catches up.`
         : status === "queued"

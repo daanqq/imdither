@@ -57,7 +57,7 @@ export type ProcessingMetadata = {
   paletteSize: number
   algorithmName: string
   processingTimeMs: number
-  exportFormat: "PNG"
+  exportFormat: "PNG" | "WebP" | "JPEG"
 }
 
 export type ProcessImageResult = {

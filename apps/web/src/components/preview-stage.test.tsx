@@ -3,6 +3,8 @@ import type * as React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { PixelBuffer } from "@workspace/core"
 
+import type { ExportFormat } from "@/lib/export-image"
+
 import { areCanvasPanelPropsEqual } from "./preview-render-boundaries"
 import { PreviewStage } from "./preview-stage"
 
@@ -14,6 +16,14 @@ type InputMockProps = React.ComponentProps<"input">
 
 const buttonRenders: ButtonMockProps[] = []
 const inputRenders: InputMockProps[] = []
+const sliderRenders: Array<{
+  disabled?: boolean
+  max?: number
+  min?: number
+  step?: number
+  value?: number[]
+  onValueChange?: (value: number[]) => void
+}> = []
 
 vi.mock("@workspace/ui/components/button", () => ({
   Button: (props: ButtonMockProps) => {
@@ -29,6 +39,53 @@ vi.mock("@workspace/ui/components/input", () => ({
   },
 }))
 
+vi.mock("@workspace/ui/components/slider", () => ({
+  Slider: (props: {
+    disabled?: boolean
+    max?: number
+    min?: number
+    step?: number
+    value?: number[]
+    onValueChange?: (value: number[]) => void
+  }) => {
+    sliderRenders.push(props)
+    return <div role="slider" />
+  },
+}))
+
+vi.mock("@workspace/ui/components/select", () => ({
+  Select: ({
+    children,
+    onValueChange,
+    value,
+  }: {
+    children: React.ReactNode
+    onValueChange?: (value: string) => void
+    value?: string
+  }) => (
+    <select
+      value={value}
+      onChange={(event) => onValueChange?.(event.currentTarget.value)}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  SelectItem: ({
+    children,
+    value,
+  }: {
+    children: React.ReactNode
+    value: string
+  }) => <option value={value}>{children}</option>,
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  SelectValue: () => null,
+}))
+
 const buffer: PixelBuffer = {
   data: new Uint8ClampedArray([0, 0, 0, 255]),
   height: 1,
@@ -39,6 +96,7 @@ describe("PreviewStage", () => {
   beforeEach(() => {
     buttonRenders.length = 0
     inputRenders.length = 0
+    sliderRenders.length = 0
   })
 
   it("keeps upload and export side effects behind callbacks", () => {
@@ -56,7 +114,11 @@ describe("PreviewStage", () => {
         previewTargetWidth={1}
         status="ready"
         viewScale="fit"
-        onExportPng={onExportPng}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={onExportPng}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
         onFileSelected={onFileSelected}
         onInvalidDrop={vi.fn()}
         onPreviewDisplaySizeChange={vi.fn()}
@@ -67,7 +129,7 @@ describe("PreviewStage", () => {
     const file = new File(["x"], "source.png", { type: "image/png" })
     const fileInput = inputRenders.at(-1)
     const exportButton = buttonRenders.find((button) =>
-      button.children?.toString().includes("Export PNG")
+      button.children?.toString().includes("Export")
     )
 
     fileInput?.onChange?.({
@@ -78,6 +140,54 @@ describe("PreviewStage", () => {
     expect(onFileSelected).toHaveBeenCalledTimes(1)
     expect(onFileSelected).toHaveBeenCalledWith(file)
     expect(onExportPng).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps quality visible and disables it for PNG export", () => {
+    const onExportFormatChange = vi.fn()
+    const onExportQualityChange = vi.fn()
+    const baseProps = {
+      algorithm: "floyd-steinberg",
+      compareMode: "processed",
+      isDesktopViewScale: true,
+      original: buffer,
+      preview: buffer,
+      previewTargetHeight: 1,
+      previewTargetWidth: 1,
+      status: "ready",
+      viewScale: "fit",
+      exportQuality: 0.75,
+      onExport: vi.fn(),
+      onExportFormatChange,
+      onExportQualityChange,
+      onFileSelected: vi.fn(),
+      onInvalidDrop: vi.fn(),
+      onPreviewDisplaySizeChange: vi.fn(),
+      onViewScaleChange: vi.fn(),
+    } as const
+
+    const render = (exportFormat: ExportFormat) =>
+      renderToStaticMarkup(
+        <PreviewStage {...baseProps} exportFormat={exportFormat} />
+      )
+
+    expect(render("png")).toContain("Quality")
+    expect(render("png")).toContain("100%")
+    expect(sliderRenders.at(-1)).toMatchObject({
+      disabled: true,
+      value: [1],
+    })
+    expect(render("webp")).toContain("Quality")
+    expect(render("webp")).toContain("75%")
+    expect(render("jpeg")).toContain("Quality")
+    expect(inputRenders.some((input) => input.type === "range")).toBe(false)
+    expect(sliderRenders.at(-1)).toMatchObject({
+      max: 1,
+      min: 0.1,
+      step: 0.05,
+      value: [0.75],
+    })
+    sliderRenders.at(-1)?.onValueChange?.([0.8])
+    expect(onExportQualityChange).toHaveBeenLastCalledWith(0.8)
   })
 
   it("keeps ready canvas presentation stable across status-only updates", () => {
@@ -140,7 +250,11 @@ describe("PreviewStage", () => {
         previewTargetWidth={2000}
         status="ready"
         viewScale="actual"
-        onExportPng={vi.fn()}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
         onFileSelected={vi.fn()}
         onInvalidDrop={vi.fn()}
         onPreviewDisplaySizeChange={vi.fn()}

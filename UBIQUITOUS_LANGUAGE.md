@@ -10,14 +10,35 @@
 | **Reduced Preview**  | A lower-resolution **Processed Image** used for responsive on-screen editing.                       | Preview only, draft output, temporary output  |
 | **Screen Preview**   | A **Processed Image** sized for the current on-screen **Display Frame** in **Fit View**.            | Fit output, screen output, display output     |
 | **Full Output**      | The **Processed Image** at the selected **Output Size**.                                            | Full preview, final render, full-size preview |
-| **Export PNG**       | The downloaded PNG encoded from the **Full Output**.                                                | Download, export file, final image            |
-| **Output Size**      | The selected width and height used for **Full Output** and **Export PNG**.                          | Resolution, dimensions, image size            |
+| **Export File**      | The downloaded image file encoded from the **Full Output** using the selected **Export Format**.    | Download, export PNG, final image             |
+| **Output Size**      | The selected width and height used for **Full Output** and **Export File**.                         | Resolution, dimensions, image size            |
 | **Output Cap**       | The maximum allowed browser pixel budget for **Output Size**.                                       | Ready %, capacity, render cap, limit          |
 | **Source Intake**    | The decision flow that accepts or rejects a **Source Image** before processing.                     | Upload handling, import pipeline              |
 | **Source Notice**    | A short user-facing message about **Source Intake** or **Output Size** policy changes.              | Status badge, toast, alert                    |
 | **Pixel Buffer**     | The in-memory pixel data and dimensions used for local processing and preview rendering.            | Image data, typed array, buffer blob          |
 | **Alpha Flattening** | The stage that composites transparent source pixels onto an **Alpha Background** before processing. | Transparency handling, alpha removal          |
 | **Alpha Background** | The black or white background used during **Alpha Flattening**.                                     | Matte color, flatten color                    |
+
+## Export
+
+| Term                           | Definition                                                                                              | Aliases to avoid                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Export Preferences**         | Persisted editor UI preferences that control how **Full Output** is encoded into an **Export File**.    | Export settings, output settings   |
+| **Export Format**              | The selected file format for an **Export File**, currently PNG, WebP, or JPEG.                          | File type, download type           |
+| **Export Format Option**       | A selectable **Export Format** entry with stable id, label, MIME type, extension, and quality support.  | Format item, select option         |
+| **Export Quality**             | The shared lossy encoder quality used for WebP and JPEG **Export Files**.                               | Compression, quality setting       |
+| **Quality Control**            | The **Preview Stage** control that changes **Export Quality** when the **Export Format** supports it.   | Quality slider, compression slider |
+| **Quality Slot**               | The reserved **Preview Stage** layout area for **Quality Control**, kept stable even when hidden.       | Slider area, quality wrapper       |
+| **Format Selector**            | The **Preview Stage** control that changes **Export Format**.                                           | Format dropdown, export dropdown   |
+| **Export Action**              | The format-neutral editor command that starts an **Export Job** and downloads an **Export File**.       | Export PNG button, download button |
+| **Export Layer**               | The browser-side layer that encodes a **Pixel Buffer** into an **Export File**.                         | Image helper, canvas helper        |
+| **Browser Encoder**            | The browser canvas encoder used by the **Export Layer** to create a file blob for an **Export Format**. | Canvas export, toBlob path         |
+| **Encoder Failure**            | The explicit failure state when a **Browser Encoder** cannot produce the requested **Export Format**.   | Fallback, silent PNG fallback      |
+| **JPEG Alpha Flattening**      | The export-time alpha compositing used before JPEG encoding because JPEG has no alpha channel.          | JPEG transparency handling         |
+| **Export Metadata Format**     | The actual **Export Format** recorded in **Processing Metadata** for the most recent **Export File**.   | Metadata format, output format     |
+| **Export Controls**            | The **Preview Stage** group containing **Export Action**, **Format Selector**, and **Quality Control**. | Export toolbar, download controls  |
+| **Centered Export Actions**    | The layout rule that **Upload** and **Export Action** stay centered relative to the **Preview**.        | Centered buttons, main actions     |
+| **Export Preference Controls** | The right-side **Preview Stage** controls for **Format Selector** and **Quality Slot**.                 | Format and quality controls        |
 
 ## Processing
 
@@ -51,7 +72,7 @@
 | **Preprocessing**              | Tone and color adjustment applied before palette mapping and dithering.                          | Adjustment, correction, filters              |
 | **Resize Fit**                 | The rule that maps source dimensions into output dimensions using contain, cover, or stretch.    | Crop mode, fit mode                          |
 | **Resize Mode**                | The sampling method used by resize, currently bilinear or nearest-neighbor.                      | Resample mode, scaling mode                  |
-| **Processing Metadata**        | The export-facing facts that describe the processing result.                                     | Export details, render metadata              |
+| **Processing Metadata**        | The export-facing facts that describe the processing result and last **Export Metadata Format**. | Export details, render metadata              |
 | **Preview Target Override**    | A temporary processing size used by a **Preview Job** without changing **Editor Settings**.      | Preview settings, screen settings            |
 
 ## Algorithm Registry
@@ -103,30 +124,30 @@
 
 ## Runtime Responsiveness
 
-| Term                            | Definition                                                                                                      | Aliases to avoid                         |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Direct Slider Movement**      | The property that a slider thumb follows pointer movement without waiting for React or worker work.             | Smooth slider, fast slider, instant drag |
-| **Draft Slider Value**          | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.             | Temporary setting, live setting          |
-| **Committed Settings**          | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.    | Real settings, saved settings            |
-| **Commit-on-Release**           | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur. | Debounce, delayed update                 |
-| **Reset Commit**                | A slider reset action that immediately writes the slider default into **Committed Settings**.                   | Reset draft, default click               |
-| **Native Range Slider**         | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.       | Custom slider, Radix slider              |
-| **Slider Primitive**            | A general-purpose UI slider component that owns accessibility and composition behavior beyond this editor need. | Native slider, browser slider            |
-| **Hot Drag Path**               | The work executed repeatedly while the pointer is moving a slider thumb.                                        | Drag handler, input loop                 |
-| **Render Boundary**             | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                 | Memo wrapper, render fix                 |
-| **Preview Stage**               | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.   | Preview card, canvas area                |
-| **Preview Presentation**        | The UI layer that displays preview surfaces without changing image processing semantics.                        | Preview rendering, canvas rendering      |
-| **Preview Surface**             | A visible canvas or placeholder inside **Preview Presentation**.                                                | Canvas, preview component                |
-| **Canvas Redraw Boundary**      | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                          | Canvas memo, draw optimization           |
-| **Ready Preview Surface**       | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                  | Ready canvas, stable canvas              |
-| **Preview Placeholder**         | A **Preview Surface** shown while a processed buffer is missing.                                                | Empty preview, loading canvas            |
-| **Status-only Update**          | A **Processing Status** change that does not include a new **Pixel Buffer**.                                    | Status render, worker ping               |
-| **Processing Status**           | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                      | Status, job state                        |
-| **Worker Status Update**        | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.               | Worker update, worker render             |
-| **Control Tree**                | The rendered settings controls that should update only from control-relevant state.                             | Control panel render tree, sidebar tree  |
-| **View-local State**            | Interaction state owned by a view and not persisted in **Editor Settings**.                                     | Local state, UI state                    |
-| **Preview Display Measurement** | The debounced observation of **Display Frame** size used to restart **Screen-Sized Preview** work.              | Resize tracking, frame measurement       |
-| **Resize Threshold**            | The minimum **Display Frame** size change required before restarting preview processing.                        | Resize debounce, resize tolerance        |
+| Term                            | Definition                                                                                                               | Aliases to avoid                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| **Direct Slider Movement**      | The property that a slider thumb follows pointer movement without waiting for React or worker work.                      | Smooth slider, fast slider, instant drag |
+| **Draft Slider Value**          | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.                      | Temporary setting, live setting          |
+| **Committed Settings**          | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.             | Real settings, saved settings            |
+| **Commit-on-Release**           | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur.          | Debounce, delayed update                 |
+| **Reset Commit**                | A slider reset action that immediately writes the slider default into **Committed Settings**.                            | Reset draft, default click               |
+| **Native Range Slider**         | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.                | Custom slider, Radix slider              |
+| **Slider Primitive**            | A general-purpose UI slider component that owns accessibility and composition behavior for non-hot-path slider controls. | Native slider, browser slider            |
+| **Hot Drag Path**               | The work executed repeatedly while the pointer is moving a slider thumb.                                                 | Drag handler, input loop                 |
+| **Render Boundary**             | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                          | Memo wrapper, render fix                 |
+| **Preview Stage**               | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.            | Preview card, canvas area                |
+| **Preview Presentation**        | The UI layer that displays preview surfaces without changing image processing semantics.                                 | Preview rendering, canvas rendering      |
+| **Preview Surface**             | A visible canvas or placeholder inside **Preview Presentation**.                                                         | Canvas, preview component                |
+| **Canvas Redraw Boundary**      | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                                   | Canvas memo, draw optimization           |
+| **Ready Preview Surface**       | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                           | Ready canvas, stable canvas              |
+| **Preview Placeholder**         | A **Preview Surface** shown while a processed buffer is missing.                                                         | Empty preview, loading canvas            |
+| **Status-only Update**          | A **Processing Status** change that does not include a new **Pixel Buffer**.                                             | Status render, worker ping               |
+| **Processing Status**           | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                               | Status, job state                        |
+| **Worker Status Update**        | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.                        | Worker update, worker render             |
+| **Control Tree**                | The rendered settings controls that should update only from control-relevant state.                                      | Control panel render tree, sidebar tree  |
+| **View-local State**            | Interaction state owned by a view and not persisted in **Editor Settings**.                                              | Local state, UI state                    |
+| **Preview Display Measurement** | The debounced observation of **Display Frame** size used to restart **Screen-Sized Preview** work.                       | Resize tracking, frame measurement       |
+| **Resize Threshold**            | The minimum **Display Frame** size change required before restarting preview processing.                                 | Resize debounce, resize tolerance        |
 
 ## Editor Experience
 
@@ -140,7 +161,7 @@
 | **Processing Job**     | A browser processing run that produces a **Processed Image** for preview or export.                                                   | Worker job, render job                     |
 | **Preview Job**        | A cancellable **Processing Job** that updates the on-screen **Preview**.                                                              | Worker job, render job                     |
 | **Preview Cycle**      | The user-visible sequence from a **Settings Transition** through **Processing Preview** to an updated **Preview**.                    | Render cycle, processing cycle             |
-| **Export Job**         | A **Processing Job** that produces **Export PNG** from **Full Output**.                                                               | Download job, final job                    |
+| **Export Job**         | A **Processing Job** that produces **Full Output** for an **Export File**.                                                            | Download job, final job                    |
 | **Clipboard Settings** | The copy/paste flow that transfers **Settings JSON** through the system clipboard.                                                    | Settings file, import/export file          |
 | **Responsive Editing** | The property that editor controls remain interactive during **Source Intake**, **Preview Jobs**, and **Export Jobs** where practical. | Non-blocking UI, smooth UI                 |
 
@@ -160,8 +181,20 @@
 
 - A **Source Image** produces zero or one current **Processed Image** for the active **Editor Settings**.
 - A **Processed Image** may be rendered as **Reduced Preview**, **Screen Preview**, or **Full Output**.
-- **Export PNG** must be encoded from **Full Output**, not from **Reduced Preview** or **Screen Preview**.
-- **Export PNG** must ignore **Preview Target Override**.
+- An **Export File** must be encoded from **Full Output**, not from **Reduced Preview** or **Screen Preview**.
+- An **Export File** must ignore **Preview Target Override**.
+- **Export Preferences** are persisted editor UI state, not **Editor Settings**.
+- **Settings JSON** must not contain **Export Preferences**, **Export Format**, or **Export Quality**.
+- Applying **Settings JSON** must not change **Export Preferences**.
+- **Export Format** determines one **Export Format Option**.
+- **Export Format Option** determines file extension, MIME type, label, and whether **Quality Control** is meaningful.
+- **Export Quality** applies to WebP and JPEG **Export Files**, not PNG **Export Files**.
+- **JPEG Alpha Flattening** uses **Alpha Background** at export time.
+- **Encoder Failure** must not silently produce a different **Export Format**.
+- **Export Metadata Format** records the **Export Format** actually downloaded by the last **Export Action**.
+- **Export Controls** live in **Preview Stage**, not in **Control Panel**.
+- **Centered Export Actions** must not move when **Quality Control** appears or disappears.
+- **Export Preference Controls** may sit beside **Centered Export Actions** but must not participate in their centering.
 - **Reduced Preview** may differ in dimensions from **Output Size**.
 - **Screen Preview** may differ in dimensions from **Output Size**.
 - **Screen Preview** must not exceed **Full Output** dimensions.
@@ -207,13 +240,14 @@
 - **Preview Display Measurement** may start a new **Preview Cycle** only when the **Resize Threshold** is met.
 - **Processing Preview** should preserve **Responsive Editing** for the **Control Panel** and **Slide Compare**.
 - **Worker Source Cache** may hold one or more accepted **Source Images** to reduce repeated **Pixel Buffer** transfer.
-- An **Export Job** should ignore preview-size shortcuts and produce **Export PNG** at **Output Size**.
+- An **Export Job** should ignore preview-size shortcuts and produce **Full Output** at **Output Size**.
 - A **Trace Capture** can reveal a **Main Thread Freeze** even when the **Processing Job** itself runs in a worker.
 - **Dev Instrumentation** must not define domain behavior, but it can expose performance risks when **Pixel Buffer** data is passed through the editor.
 - **Direct Slider Movement** happens inside the **Hot Drag Path**.
 - A **Draft Slider Value** must not become **Committed Settings** until **Commit-on-Release** or **Reset Commit**.
 - **Committed Settings** are the only slider values that may start **Preview Jobs**.
 - A **Native Range Slider** may replace a **Slider Primitive** when **Direct Slider Movement** is the primary requirement.
+- **Quality Control** may use a **Slider Primitive** because changing **Export Quality** does not start **Preview Jobs**.
 - **Preview Stage** owns **Preview Presentation** and **View-local State** for drop affordance and **Slide Divider** position.
 - A **Preview Stage** contains one or more **Preview Surfaces**.
 - A **Ready Preview Surface** should ignore a **Status-only Update**.
@@ -223,25 +257,25 @@
 
 ## Example Dialogue
 
-> **Dev:** "If the user chooses **Fine Mono Bayer** in the **Recipe Selector**, do we store that **Processing Preset Id** in **Settings JSON**?"
+> **Dev:** "When the user chooses WebP in the **Format Selector**, should that update **Editor Settings** or **Settings JSON**?"
 >
-> **Domain expert:** "No. A **Processing Preset** is only a shortcut. The **Settings Transition** writes the actual **Editor Settings**: **Palette Preset**, **Dither Algorithm**, **Bayer Size**, and **Color Mode**."
+> **Domain expert:** "No. WebP is an **Export Format**, so it belongs to **Export Preferences**. **Editor Settings** still describe how to produce the **Processed Image**."
 >
-> **Dev:** "Then how does the selector know whether **Fine Mono Bayer** is active after paste?"
+> **Dev:** "Does changing **Export Quality** restart the **Preview Job**?"
 >
-> **Domain expert:** "It derives **Active Recipe** by matching **Recipe-Controlled Fields** against the **Processing Preset Registry**. If any field differs, the selector shows **Custom Recipe State**."
+> **Domain expert:** "No. **Export Quality** only affects the **Browser Encoder** when the **Export Action** creates an **Export File** from **Full Output**."
 >
-> **Dev:** "Should a **Non-Bayer Recipe** reset **Bayer Size**?"
+> **Dev:** "Why do we keep a **Quality Slot** visible for PNG if PNG has no **Quality Control**?"
 >
-> **Domain expert:** "No. Only a **Bayer Recipe** controls **Bayer Size**. A **Non-Bayer Recipe** preserves the user's last Bayer preference."
+> **Domain expert:** "The slot is reserved so **Centered Export Actions** stay centered relative to the **Preview** when switching between PNG, WebP, and JPEG."
 >
-> **Dev:** "Why is **Fine Mono Bayer** first?"
+> **Dev:** "If JPEG is selected and the image has transparency, where is alpha handled?"
 >
-> **Domain expert:** "Because **Default Settings** match that **Default Processing Preset**, and the registry order should reflect the startup recipe."
+> **Domain expert:** "**JPEG Alpha Flattening** happens in the **Export Layer** using the current **Alpha Background**, then **Export Metadata Format** records JPEG for the downloaded **Export File**."
 
 ## Flagged Ambiguities
 
-- "Slider" was used for both **Native Range Slider**, **Slider Primitive**, and **Slide Divider**. Use **Native Range Slider** for the browser input, **Slider Primitive** for the general UI component, and **Slide Divider** for before/after comparison.
+- "Slider" was used for **Native Range Slider**, **Slider Primitive**, **Quality Control**, and **Slide Divider**. Use **Native Range Slider** for hot-path committed settings controls, **Slider Primitive** for general UI slider composition, **Quality Control** for export compression UI, and **Slide Divider** for before/after comparison.
 - "Live value" can mean **Draft Slider Value** or **Committed Settings**. Use **Draft Slider Value** during drag and **Committed Settings** after **Commit-on-Release**.
 - "Lag" should be described through the affected path: **Direct Slider Movement** when the thumb lags, **Main Thread Freeze** when the browser stalls, or slow **Preview Job** when processing output is late.
 - "Rerender" is too broad by itself. Use **Render Boundary** for protected component isolation and **Canvas Redraw Boundary** for image surface redraw semantics.
@@ -259,7 +293,13 @@
 - "Display size", "frame size", and "container size" overlap. Use **Display Frame** for the actual on-screen image rectangle and **Preview Display Measurement** for observing it.
 - "CSS pixels" and device pixels overlap in high-DPI discussion. Use **CSS Pixel Preview Target** for this feature; do not imply device-pixel-ratio scaling unless the product decision changes.
 - "Inset", "padding", and "margin" can hide the sizing rule. Use **Fit Inset** for the spacing subtracted before computing a **CSS Pixel Preview Target**.
-- "Output" was used for processed pixels and downloaded file. Canonical terms: **Processed Image**, **Full Output**, and **Export PNG**.
+- "Output" was used for processed pixels and downloaded file. Canonical terms: **Processed Image**, **Full Output**, and **Export File**.
+- "Export settings" sounds like processing state. Use **Export Preferences** for persisted file-encoding choices and **Editor Settings** for processing choices.
+- "Quality" can mean visual quality or encoder compression. Use **Export Quality** only for WebP/JPEG encoding, not for preview or dithering quality.
+- "Download" and "export" overlapped after adding multiple formats. Use **Export Action** for the user command and **Export File** for the downloaded artifact.
+- "Export format" and "metadata format" overlap. Use **Export Format** for the selected preference and **Export Metadata Format** for the value recorded after a completed export.
+- "Fallback" is misleading for unsupported encoders. Use **Encoder Failure**; the app must not silently create a different **Export Format**.
+- "Centered buttons" should be named **Centered Export Actions** when the rule is about keeping Upload and Export centered relative to **Preview**.
 - "Cap", "limit", "budget", and "ready %" overlapped in UI and architecture discussion. Use **Output Cap** for the pixel budget and **Output Size** for the selected dimensions.
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.
 - "Fit" was used for both preview zoom and resize fitting. Use **Fit View** for preview sizing and **Resize Fit** for contain / cover / stretch.

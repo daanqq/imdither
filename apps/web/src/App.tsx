@@ -6,7 +6,12 @@ import { MoonIcon, SunIcon } from "lucide-react"
 import { ControlPanel } from "@/components/control-panel"
 import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
-import { downloadBlob, pixelBufferToPngBlob } from "@/lib/image"
+import {
+  encodePixelBuffer,
+  getExportFormatOption,
+  makeExportName,
+} from "@/lib/export-image"
+import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import { getScreenPreviewTarget } from "@/lib/screen-preview"
 import {
@@ -25,11 +30,15 @@ export function App() {
   const settings = useEditorStore((state) => state.settings)
   const compareMode = useEditorStore((state) => state.compareMode)
   const viewScale = useEditorStore((state) => state.viewScale)
+  const exportFormat = useEditorStore((state) => state.exportFormat)
+  const exportQuality = useEditorStore((state) => state.exportQuality)
   const advancedOpen = useEditorStore((state) => state.advancedOpen)
   const status = useEditorStore((state) => state.status)
   const transitionSettings = useEditorStore((state) => state.transitionSettings)
   const setCompareMode = useEditorStore((state) => state.setCompareMode)
   const setViewScale = useEditorStore((state) => state.setViewScale)
+  const setExportFormat = useEditorStore((state) => state.setExportFormat)
+  const setExportQuality = useEditorStore((state) => state.setExportQuality)
   const setAdvancedOpen = useEditorStore((state) => state.setAdvancedOpen)
   const setStatus = useEditorStore((state) => state.setStatus)
   const setError = useEditorStore((state) => state.setError)
@@ -237,7 +246,7 @@ export function App() {
     [setError]
   )
 
-  const handleExportPng = React.useCallback(async () => {
+  const handleExport = React.useCallback(async () => {
     if (!source) {
       return
     }
@@ -250,9 +259,16 @@ export function App() {
         image: source.buffer,
         settings,
       })
-      const blob = await pixelBufferToPngBlob(result.image)
-      downloadBlob(blob, makeExportName(source.name, "png"))
-      setMetadata(result.metadata)
+      const blob = await encodePixelBuffer(result.image, {
+        alphaBackground: settings.alphaBackground,
+        format: exportFormat,
+        quality: exportQuality,
+      })
+      downloadBlob(blob, makeExportName(source.name, exportFormat))
+      setMetadata({
+        ...result.metadata,
+        exportFormat: getExportFormatOption(exportFormat).label,
+      })
       setError(null)
       setStatus("ready")
     } catch (exportError) {
@@ -261,7 +277,16 @@ export function App() {
       )
       setStatus("error")
     }
-  }, [processingJobs, setError, setMetadata, setStatus, settings, source])
+  }, [
+    exportFormat,
+    exportQuality,
+    processingJobs,
+    setError,
+    setMetadata,
+    setStatus,
+    settings,
+    source,
+  ])
 
   const handleCopySettings = React.useCallback(async () => {
     try {
@@ -358,7 +383,11 @@ export function App() {
             previewTargetWidth={previewTarget?.width ?? settings.resize.width}
             status={status}
             viewScale={viewScale}
-            onExportPng={handleExportPng}
+            exportFormat={exportFormat}
+            exportQuality={exportQuality}
+            onExport={handleExport}
+            onExportFormatChange={setExportFormat}
+            onExportQualityChange={setExportQuality}
             onFileSelected={handleFile}
             onInvalidDrop={handleInvalidDrop}
             onPreviewDisplaySizeChange={setPreviewDisplaySize}
@@ -427,14 +456,4 @@ function greatestCommonDivisor(left: number, right: number): number {
   }
 
   return Math.max(1, a)
-}
-
-function makeExportName(sourceName: string, extension: "png" | "json") {
-  const base = sourceName
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^a-z0-9]+/gi, "-")
-    .replace(/^-|-$/g, "")
-    .toLowerCase()
-
-  return `imdither-${base || "export"}.${extension}`
 }

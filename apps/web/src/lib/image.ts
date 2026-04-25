@@ -60,22 +60,6 @@ export function drawPixelBufferToCanvasSize(
   context.drawImage(source, 0, 0, width, height)
 }
 
-export async function pixelBufferToPngBlob(buffer: PixelBuffer): Promise<Blob> {
-  const canvas = document.createElement("canvas")
-  drawPixelBuffer(canvas, buffer)
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("PNG export failed"))
-        return
-      }
-
-      resolve(blob)
-    }, "image/png")
-  })
-}
-
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
