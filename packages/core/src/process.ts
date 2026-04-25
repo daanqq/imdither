@@ -1,16 +1,11 @@
 import { hashPixelBuffer } from "./cache"
+import {
+  getDitherAlgorithmMetadataLabel,
+  processWithDitherAlgorithm,
+} from "./algorithm-registry"
 import { resolvePalette } from "./palettes"
 import { normalizeSettings } from "./settings"
-import {
-  applyPreprocess,
-  ditherAtkinson,
-  ditherFloydSteinberg,
-  ditherMattParker,
-  ditherOrdered,
-  flattenAlpha,
-  mapToPalette,
-  resizeImage,
-} from "./stages"
+import { applyPreprocess, flattenAlpha, resizeImage } from "./stages"
 import type {
   EditorSettings,
   PixelBuffer,
@@ -49,7 +44,7 @@ export function processImage(
     () => applyPreprocess(resized, settings.preprocess)
   )
 
-  const image = applyAlgorithm(preprocessed, settings, palette)
+  const image = processWithDitherAlgorithm(preprocessed, settings, palette)
 
   return {
     image,
@@ -59,46 +54,12 @@ export function processImage(
       outputWidth: settings.resize.width,
       outputHeight: settings.resize.height,
       paletteSize: palette.colors.length,
-      algorithmName: algorithmLabel(settings),
+      algorithmName: getDitherAlgorithmMetadataLabel(settings),
       processingTimeMs: Date.now() - startedAt,
       exportFormat: "PNG",
     },
     settings,
     palette,
-  }
-}
-
-function applyAlgorithm(
-  input: PixelBuffer,
-  settings: EditorSettings,
-  palette: ReturnType<typeof resolvePalette>
-): PixelBuffer {
-  switch (settings.algorithm) {
-    case "none":
-      return mapToPalette(input, palette)
-    case "bayer":
-      return ditherOrdered(input, palette, settings.bayerSize)
-    case "matt-parker":
-      return ditherMattParker(input, palette)
-    case "floyd-steinberg":
-      return ditherFloydSteinberg(input, palette)
-    case "atkinson":
-      return ditherAtkinson(input, palette)
-  }
-}
-
-function algorithmLabel(settings: EditorSettings): string {
-  switch (settings.algorithm) {
-    case "none":
-      return "None"
-    case "bayer":
-      return `Bayer ${settings.bayerSize}x${settings.bayerSize}`
-    case "matt-parker":
-      return "Matt Parker"
-    case "floyd-steinberg":
-      return "Floyd-Steinberg"
-    case "atkinson":
-      return "Atkinson"
   }
 }
 

@@ -1,6 +1,8 @@
 import * as React from "react"
 import {
+  DITHER_ALGORITHM_OPTIONS,
   PRESET_PALETTES,
+  getDitherAlgorithmOption,
   safeNormalizeSettings,
   type AlphaBackground,
   type BayerSize,
@@ -629,6 +631,8 @@ function ControlPanel({
   onSettingsTransition: (transition: SettingsTransition) => void
   resolutionAspectLabel: string
 }) {
+  const selectedAlgorithmOption = getDitherAlgorithmOption(settings.algorithm)
+
   return (
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 overflow-hidden border-border bg-card py-3">
@@ -677,19 +681,17 @@ function ControlPanel({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="bayer">Bayer</SelectItem>
-                      <SelectItem value="matt-parker">Matt Parker</SelectItem>
-                      <SelectItem value="floyd-steinberg">
-                        Floyd-Steinberg
-                      </SelectItem>
-                      <SelectItem value="atkinson">Atkinson</SelectItem>
+                      {DITHER_ALGORITHM_OPTIONS.map((algorithm) => (
+                        <SelectItem key={algorithm.id} value={algorithm.id}>
+                          {algorithm.label}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </Field>
 
-              {settings.algorithm === "bayer" && (
+              {selectedAlgorithmOption.capabilities.bayerSize && (
                 <Field>
                   <FieldLabel>Bayer Matrix</FieldLabel>
                   <ToggleGroup

@@ -1,3 +1,10 @@
+export {
+  DITHER_ALGORITHM_IDS,
+  DITHER_ALGORITHM_OPTIONS,
+  getDitherAlgorithmMetadataLabel,
+  getDitherAlgorithmOption,
+  processWithDitherAlgorithm,
+} from "./algorithm-registry"
 export { createStageCache, hashPixelBuffer } from "./cache"
 export { PRESET_PALETTES, hexToRgb, resolvePalette } from "./palettes"
 export { processImage, type ProcessImageOptions } from "./process"
@@ -25,10 +32,14 @@ export {
   resizeImage,
 } from "./stages"
 export type {
+  DitherAlgorithm,
+  DitherAlgorithmCapabilities,
+  DitherAlgorithmOption,
+} from "./algorithm-registry"
+export type {
   AlphaBackground,
   BayerSize,
   ColorMode,
-  DitherAlgorithm,
   EditorSettings,
   Palette,
   PaletteColor,

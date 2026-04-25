@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { DITHER_ALGORITHM_IDS } from "./algorithm-registry"
 import type { EditorSettings } from "./types"
 
 export const MAX_SOURCE_DIMENSION = 4096
@@ -11,13 +12,7 @@ const hexColorSchema = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
 
 export const editorSettingsSchema = z.object({
   schemaVersion: z.literal(1),
-  algorithm: z.enum([
-    "none",
-    "bayer",
-    "matt-parker",
-    "floyd-steinberg",
-    "atkinson",
-  ]),
+  algorithm: z.enum(DITHER_ALGORITHM_IDS),
   bayerSize: z.union([z.literal(2), z.literal(4), z.literal(8)]),
   paletteId: z.string().min(1),
   customPalette: z.array(hexColorSchema).min(2).max(256).optional(),

@@ -1,3 +1,5 @@
+import type { DitherAlgorithm } from "./algorithm-registry"
+
 export type PixelBuffer = {
   width: number
   height: number
@@ -18,13 +20,6 @@ export type Palette = {
   colors: PaletteColor[]
   defaultColorMode: ColorMode
 }
-
-export type DitherAlgorithm =
-  | "none"
-  | "bayer"
-  | "matt-parker"
-  | "floyd-steinberg"
-  | "atkinson"
 
 export type BayerSize = 2 | 4 | 8
 export type ResizeMode = "bilinear" | "nearest"
