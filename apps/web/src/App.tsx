@@ -1,8 +1,6 @@
 import * as React from "react"
 import {
-  DEFAULT_SETTINGS,
   PRESET_PALETTES,
-  clampOutputSize,
   safeNormalizeSettings,
   type AlphaBackground,
   type BayerSize,
@@ -82,6 +80,7 @@ import {
   type LoadedSource,
   type SourceIntakeResult,
 } from "@/lib/source-intake"
+import type { SettingsTransition } from "@/lib/editor-settings-transition"
 import {
   useEditorStore,
   type CompareMode,
@@ -97,10 +96,7 @@ export function App() {
     viewScale,
     advancedOpen,
     status,
-    setSettings,
-    patchSettings,
-    patchResize,
-    patchPreprocess,
+    transitionSettings,
     setCompareMode,
     setViewScale,
     setAdvancedOpen,
@@ -127,38 +123,17 @@ export function App() {
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
-  const sourceAspectRatio =
-    source && source.buffer.width > 0
-      ? source.buffer.height / source.buffer.width
-      : settings.resize.height / settings.resize.width
   const aspectLabel = source
     ? formatAspectRatio(source.buffer.width, source.buffer.height)
     : formatAspectRatio(settings.resize.width, settings.resize.height)
-  const aspectLockedResize = React.useCallback(
-    (width: number) => getAspectLockedResize(width, sourceAspectRatio),
-    [sourceAspectRatio]
+  const transitionContext = React.useMemo(
+    () => ({
+      sourceDimensions: source
+        ? { width: source.buffer.width, height: source.buffer.height }
+        : null,
+    }),
+    [source]
   )
-  const patchResolutionWidth = React.useCallback(
-    (width: number) => {
-      patchResize(aspectLockedResize(width))
-    },
-    [aspectLockedResize, patchResize]
-  )
-  const setAspectLockedSettings = React.useCallback(
-    (nextSettings: EditorSettings) => {
-      setSettings({
-        ...nextSettings,
-        resize: {
-          ...nextSettings.resize,
-          ...aspectLockedResize(nextSettings.resize.width),
-        },
-      })
-    },
-    [aspectLockedResize, setSettings]
-  )
-  const resetAspectLockedSettings = React.useCallback(() => {
-    setAspectLockedSettings(DEFAULT_SETTINGS)
-  }, [setAspectLockedSettings])
 
   const applySourceIntake = React.useCallback(
     (result: SourceIntakeResult) => {
@@ -172,35 +147,15 @@ export function App() {
       setPreview(null)
       setError(null)
       setSourceNotice(formatSourceNotices(result.notices))
-      patchResize({
+      transitionSettings({
+        type: "set-output-size",
         width: result.outputSize.width,
         height: result.outputSize.height,
       })
       return true
     },
-    [patchResize, setError, setSourceNotice, setStatus]
+    [setError, setSourceNotice, setStatus, transitionSettings]
   )
-
-  React.useEffect(() => {
-    if (!source) {
-      return
-    }
-
-    const nextResize = aspectLockedResize(settings.resize.width)
-
-    if (
-      nextResize.width !== settings.resize.width ||
-      nextResize.height !== settings.resize.height
-    ) {
-      patchResize(nextResize)
-    }
-  }, [
-    aspectLockedResize,
-    patchResize,
-    settings.resize.height,
-    settings.resize.width,
-    source,
-  ])
 
   React.useEffect(() => {
     if (!source) {
@@ -362,9 +317,16 @@ export function App() {
         throw new Error("Clipboard JSON does not match settings schema v1")
       }
 
-      setAspectLockedSettings(parsed)
+      const result = transitionSettings(
+        { type: "apply-settings", settings: parsed },
+        transitionContext
+      )
       setError(null)
-      setSourceNotice("[SETTINGS PASTED FROM CLIPBOARD]")
+      setSourceNotice(
+        result.sourceNotice
+          ? `[SETTINGS PASTED FROM CLIPBOARD] ${result.sourceNotice}`
+          : "[SETTINGS PASTED FROM CLIPBOARD]"
+      )
     } catch (settingsError) {
       setError(
         settingsError instanceof Error
@@ -380,9 +342,6 @@ export function App() {
     ? preview.width !== settings.resize.width ||
       preview.height !== settings.resize.height
     : false
-  const palette = PRESET_PALETTES.find(
-    (preset) => preset.id === settings.paletteId
-  )
   const busy =
     status === "queued" || status === "processing" || status === "exporting"
 
@@ -541,18 +500,23 @@ export function App() {
           <ControlPanel
             advancedOpen={advancedOpen}
             compareMode={compareMode}
-            paletteDefaultMode={palette?.defaultColorMode ?? "grayscale-first"}
             settings={settings}
             onAdvancedOpenChange={setAdvancedOpen}
             onCompareModeChange={setCompareMode}
             onCopySettings={handleCopySettings}
             onPasteSettings={handlePasteSettings}
-            onPatchPreprocess={patchPreprocess}
-            onPatchResize={patchResize}
-            onPatchSettings={patchSettings}
-            onResolutionWidthChange={patchResolutionWidth}
-            onReset={resetAspectLockedSettings}
-            onSetSettings={setAspectLockedSettings}
+            onResolutionWidthChange={(width) =>
+              transitionSettings(
+                { type: "set-output-width", width },
+                transitionContext
+              )
+            }
+            onReset={() =>
+              transitionSettings({ type: "reset-defaults" }, transitionContext)
+            }
+            onSettingsTransition={(transition) =>
+              transitionSettings(transition, transitionContext)
+            }
             resolutionAspectLabel={aspectLabel}
           />
         </section>
@@ -643,34 +607,26 @@ function ThemeToggle() {
 function ControlPanel({
   advancedOpen,
   compareMode,
-  paletteDefaultMode,
   settings,
   onAdvancedOpenChange,
   onCompareModeChange,
   onCopySettings,
   onPasteSettings,
-  onPatchPreprocess,
-  onPatchResize,
-  onPatchSettings,
   onResolutionWidthChange,
   onReset,
-  onSetSettings,
+  onSettingsTransition,
   resolutionAspectLabel,
 }: {
   advancedOpen: boolean
   compareMode: CompareMode
-  paletteDefaultMode: ColorMode
   settings: EditorSettings
   onAdvancedOpenChange: (open: boolean) => void
   onCompareModeChange: (mode: CompareMode) => void
   onCopySettings: () => void
   onPasteSettings: () => void
-  onPatchPreprocess: (patch: Partial<EditorSettings["preprocess"]>) => void
-  onPatchResize: (patch: Partial<EditorSettings["resize"]>) => void
-  onPatchSettings: (patch: Partial<EditorSettings>) => void
   onResolutionWidthChange: (width: number) => void
   onReset: () => void
-  onSetSettings: (settings: EditorSettings) => void
+  onSettingsTransition: (transition: SettingsTransition) => void
   resolutionAspectLabel: string
 }) {
   return (
@@ -686,20 +642,9 @@ function ControlPanel({
                 <FieldLabel htmlFor="palette">Palette</FieldLabel>
                 <Select
                   value={settings.paletteId}
-                  onValueChange={(paletteId) => {
-                    const preset = PRESET_PALETTES.find(
-                      (item) => item.id === paletteId
-                    )
-                    onSetSettings({
-                      ...settings,
-                      paletteId,
-                      preprocess: {
-                        ...settings.preprocess,
-                        colorMode:
-                          preset?.defaultColorMode ?? paletteDefaultMode,
-                      },
-                    })
-                  }}
+                  onValueChange={(paletteId) =>
+                    onSettingsTransition({ type: "set-palette", paletteId })
+                  }
                 >
                   <SelectTrigger id="palette" className="w-full">
                     <SelectValue />
@@ -721,7 +666,10 @@ function ControlPanel({
                 <Select
                   value={settings.algorithm}
                   onValueChange={(algorithm) =>
-                    onPatchSettings({ algorithm: algorithm as DitherAlgorithm })
+                    onSettingsTransition({
+                      type: "set-algorithm",
+                      algorithm: algorithm as DitherAlgorithm,
+                    })
                   }
                 >
                   <SelectTrigger id="algorithm" className="w-full">
@@ -751,7 +699,8 @@ function ControlPanel({
                     className="w-full"
                     onValueChange={(value) => {
                       if (value) {
-                        onPatchSettings({
+                        onSettingsTransition({
+                          type: "set-bayer-size",
                           bayerSize: Number(value) as BayerSize,
                         })
                       }
@@ -823,7 +772,12 @@ function ControlPanel({
                 min={-100}
                 step={1}
                 value={settings.preprocess.brightness}
-                onChange={(brightness) => onPatchPreprocess({ brightness })}
+                onChange={(brightness) =>
+                  onSettingsTransition({
+                    type: "set-preprocess",
+                    patch: { brightness },
+                  })
+                }
               />
               <SliderField
                 label="Contrast"
@@ -831,7 +785,12 @@ function ControlPanel({
                 min={-100}
                 step={1}
                 value={settings.preprocess.contrast}
-                onChange={(contrast) => onPatchPreprocess({ contrast })}
+                onChange={(contrast) =>
+                  onSettingsTransition({
+                    type: "set-preprocess",
+                    patch: { contrast },
+                  })
+                }
               />
 
               <Field>
@@ -839,7 +798,10 @@ function ControlPanel({
                 <Select
                   value={settings.resize.fit}
                   onValueChange={(fit) =>
-                    onPatchResize({ fit: fit as ResizeFit })
+                    onSettingsTransition({
+                      type: "set-resize-fit",
+                      fit: fit as ResizeFit,
+                    })
                   }
                 >
                   <SelectTrigger id="fit" className="w-full">
@@ -886,7 +848,10 @@ function ControlPanel({
                       className="w-full"
                       onValueChange={(value) => {
                         if (value) {
-                          onPatchResize({ mode: value as ResizeMode })
+                          onSettingsTransition({
+                            type: "set-resize-mode",
+                            mode: value as ResizeMode,
+                          })
                         }
                       }}
                     >
@@ -907,7 +872,8 @@ function ControlPanel({
                       className="w-full"
                       onValueChange={(value) => {
                         if (value) {
-                          onPatchSettings({
+                          onSettingsTransition({
+                            type: "set-alpha-background",
                             alphaBackground: value as AlphaBackground,
                           })
                         }
@@ -930,7 +896,10 @@ function ControlPanel({
                       className="w-full"
                       onValueChange={(value) => {
                         if (value) {
-                          onPatchPreprocess({ colorMode: value as ColorMode })
+                          onSettingsTransition({
+                            type: "set-color-mode",
+                            colorMode: value as ColorMode,
+                          })
                         }
                       }}
                     >
@@ -954,7 +923,12 @@ function ControlPanel({
                     min={0.2}
                     step={0.05}
                     value={settings.preprocess.gamma}
-                    onChange={(gamma) => onPatchPreprocess({ gamma })}
+                    onChange={(gamma) =>
+                      onSettingsTransition({
+                        type: "set-preprocess",
+                        patch: { gamma },
+                      })
+                    }
                   />
                   <Field orientation="horizontal">
                     <FieldContent>
@@ -969,7 +943,10 @@ function ControlPanel({
                       id="invert"
                       checked={settings.preprocess.invert}
                       onCheckedChange={(invert) =>
-                        onPatchPreprocess({ invert })
+                        onSettingsTransition({
+                          type: "set-preprocess",
+                          patch: { invert },
+                        })
                       }
                     />
                   </Field>
@@ -994,7 +971,7 @@ function ControlPanel({
                     <Button
                       variant="destructive"
                       className="min-w-0 justify-start"
-                      onClick={() => onSetSettings(DEFAULT_SETTINGS)}
+                      onClick={onReset}
                     >
                       <RotateCcwIcon data-icon="inline-start" />
                       Defaults
@@ -1192,18 +1169,6 @@ function SliderField({
       />
     </Field>
   )
-}
-
-function getAspectLockedResize(width: number, aspectRatio: number) {
-  const safeAspectRatio =
-    Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1
-  const height = Math.max(1, Math.round(width * safeAspectRatio))
-  const size = clampOutputSize(width, height)
-
-  return {
-    width: size.width,
-    height: size.height,
-  }
 }
 
 function formatAspectRatio(width: number, height: number): string {

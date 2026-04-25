@@ -1,13 +1,19 @@
 import {
   DEFAULT_SETTINGS,
   PRESET_PALETTES,
-  clampOutputSize,
   normalizeSettings,
   type EditorSettings,
   type ProcessingMetadata,
 } from "@workspace/core"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
+
+import {
+  applySettingsTransition,
+  type SettingsTransition,
+  type SettingsTransitionContext,
+  type SettingsTransitionResult,
+} from "../lib/editor-settings-transition"
 
 export type CompareMode = "processed" | "original" | "slide"
 export type ViewScale = "fit" | "actual"
@@ -28,10 +34,10 @@ type EditorState = {
   error: string | null
   sourceNotice: string | null
   metadata: ProcessingMetadata | null
-  setSettings: (settings: EditorSettings) => void
-  patchSettings: (patch: Partial<EditorSettings>) => void
-  patchResize: (patch: Partial<EditorSettings["resize"]>) => void
-  patchPreprocess: (patch: Partial<EditorSettings["preprocess"]>) => void
+  transitionSettings: (
+    transition: SettingsTransition,
+    context?: SettingsTransitionContext
+  ) => SettingsTransitionResult
   setCompareMode: (mode: CompareMode) => void
   setViewScale: (scale: ViewScale) => void
   setAdvancedOpen: (open: boolean) => void
@@ -39,7 +45,6 @@ type EditorState = {
   setError: (error: string | null) => void
   setSourceNotice: (notice: string | null) => void
   setMetadata: (metadata: ProcessingMetadata | null) => void
-  resetSettings: () => void
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -53,46 +58,31 @@ export const useEditorStore = create<EditorState>()(
       error: null,
       sourceNotice: null,
       metadata: null,
-      setSettings: (settings) => set({ settings }),
-      patchSettings: (patch) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            ...patch,
-          },
-        })),
-      patchResize: (patch) =>
+      transitionSettings: (transition, context) => {
+        let transitionResult: SettingsTransitionResult | null = null
+
         set((state) => {
-          const size = clampOutputSize(
-            patch.width ?? state.settings.resize.width,
-            patch.height ?? state.settings.resize.height
+          const result = applySettingsTransition(
+            state.settings,
+            transition,
+            context
           )
+          transitionResult = result
 
           return {
-            sourceNotice: size.downscaled
-              ? `[OUTPUT CLAMPED: ${size.width}x${size.height} / 12MP]`
-              : state.sourceNotice,
-            settings: {
-              ...state.settings,
-              resize: {
-                ...state.settings.resize,
-                ...patch,
-                width: size.width,
-                height: size.height,
-              },
-            },
+            settings: result.settings,
+            ...(result.sourceNotice !== undefined
+              ? { sourceNotice: result.sourceNotice }
+              : {}),
           }
-        }),
-      patchPreprocess: (patch) =>
-        set((state) => ({
-          settings: {
-            ...state.settings,
-            preprocess: {
-              ...state.settings.preprocess,
-              ...patch,
-            },
-          },
-        })),
+        })
+
+        if (!transitionResult) {
+          throw new Error("Settings transition did not produce a result")
+        }
+
+        return transitionResult
+      },
       setCompareMode: (compareMode) => set({ compareMode }),
       setViewScale: (viewScale) => set({ viewScale }),
       setAdvancedOpen: (advancedOpen) => set({ advancedOpen }),
@@ -100,7 +90,6 @@ export const useEditorStore = create<EditorState>()(
       setError: (error) => set({ error }),
       setSourceNotice: (sourceNotice) => set({ sourceNotice }),
       setMetadata: (metadata) => set({ metadata }),
-      resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: "imdither-editor",
