@@ -35,8 +35,8 @@ export const editorSettingsSchema = z.object({
 export const DEFAULT_SETTINGS: EditorSettings = {
   schemaVersion: 1,
   algorithm: "bayer",
-  bayerSize: 4,
-  paletteId: "black-white",
+  bayerSize: 8,
+  paletteId: "gray-4",
   alphaBackground: "white",
   resize: {
     mode: "bilinear",

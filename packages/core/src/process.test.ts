@@ -22,7 +22,7 @@ describe("core pipeline", () => {
     ])
   })
 
-  it("maps colors to the nearest preset palette color", () => {
+  it("maps colors to the nearest palette color", () => {
     const blackWhite = PRESET_PALETTES[0]
 
     expect(nearestPaletteColor([12, 12, 12], blackWhite)).toEqual([0, 0, 0])
@@ -31,7 +31,7 @@ describe("core pipeline", () => {
     ])
   })
 
-  it("keeps preset palette ids unique and processable", () => {
+  it("keeps palette ids unique and processable", () => {
     const ids = PRESET_PALETTES.map((palette) => palette.id)
     const uniqueIds = new Set(ids)
 

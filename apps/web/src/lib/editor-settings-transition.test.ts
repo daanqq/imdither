@@ -164,4 +164,72 @@ describe("Editor Settings transitions", () => {
       `[OUTPUT CLAMPED: ${expectedSize.width}x${expectedSize.height} / 12MP]`
     )
   })
+
+  it("applies a Bayer processing recipe atomically and clears custom palette colors", () => {
+    const current = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "atkinson" as const,
+      bayerSize: 2 as const,
+      paletteId: "custom-source",
+      customPalette: ["#000000", "#ffffff"],
+      alphaBackground: "black" as const,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        mode: "nearest" as const,
+        width: 1200,
+        height: 900,
+      },
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        brightness: 20,
+        contrast: -10,
+        gamma: 1.4,
+        invert: true,
+        colorMode: "color-preserve" as const,
+      },
+    }
+
+    const result = applySettingsTransition(current, {
+      type: "apply-processing-preset",
+      presetId: "fine-mono-bayer",
+    })
+
+    expect(result.settings).toEqual({
+      ...current,
+      customPalette: undefined,
+      paletteId: "gray-4",
+      algorithm: "bayer",
+      bayerSize: 8,
+      preprocess: {
+        ...current.preprocess,
+        colorMode: "grayscale-first",
+      },
+    })
+  })
+
+  it("applies a non-Bayer processing recipe without erasing the current Bayer preference", () => {
+    const current = {
+      ...DEFAULT_SETTINGS,
+      bayerSize: 8 as const,
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        colorMode: "grayscale-first" as const,
+      },
+    }
+
+    const result = applySettingsTransition(current, {
+      type: "apply-processing-preset",
+      presetId: "sea-glass-atkinson",
+    })
+
+    expect(result.settings).toMatchObject({
+      paletteId: "sea-glass",
+      algorithm: "atkinson",
+      bayerSize: 8,
+      preprocess: {
+        ...current.preprocess,
+        colorMode: "color-preserve",
+      },
+    })
+  })
 })

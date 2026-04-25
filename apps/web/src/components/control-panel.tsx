@@ -3,12 +3,15 @@ import {
   DITHER_ALGORITHM_OPTIONS,
   DEFAULT_SETTINGS,
   PRESET_PALETTES,
+  PROCESSING_PRESET_OPTIONS,
   getDitherAlgorithmOption,
+  matchProcessingPreset,
   type AlphaBackground,
   type BayerSize,
   type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
+  type ProcessingPresetId,
   type ResizeMode,
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
@@ -81,6 +84,7 @@ export const ControlPanel = React.memo(function ControlPanel({
   resolutionAspectLabel,
 }: ControlPanelProps) {
   const selectedAlgorithmOption = getDitherAlgorithmOption(settings.algorithm)
+  const matchedProcessingPreset = matchProcessingPreset(settings)
 
   return (
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
@@ -91,6 +95,35 @@ export const ControlPanel = React.memo(function ControlPanel({
         <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0">
           <div className="h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]">
             <FieldGroup className="min-w-0 gap-4 pb-1">
+              <Field>
+                <FieldLabel htmlFor="processing-preset">Recipe</FieldLabel>
+                <Select
+                  value={matchedProcessingPreset?.id ?? "custom"}
+                  onValueChange={(presetId) => {
+                    if (presetId !== "custom") {
+                      onSettingsTransition({
+                        type: "apply-processing-preset",
+                        presetId: presetId as ProcessingPresetId,
+                      })
+                    }
+                  }}
+                >
+                  <SelectTrigger id="processing-preset" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="custom">Custom</SelectItem>
+                      {PROCESSING_PRESET_OPTIONS.map((preset) => (
+                        <SelectItem key={preset.id} value={preset.id}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+
               <Field>
                 <FieldLabel htmlFor="palette">Palette</FieldLabel>
                 <Select

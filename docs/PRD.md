@@ -135,7 +135,7 @@ Rules:
 
 ### 8.5 Palettes
 
-v1 supports preset palettes only.
+v1 supports palettes only.
 
 Examples:
 
@@ -218,7 +218,7 @@ Persisted items:
 - last used settings
 - selected theme
 - compare mode
-- last chosen preset palette
+- last chosen palette
 
 ### 8.11 Metadata
 
@@ -425,7 +425,7 @@ Included in MVP-1:
 - demo image
 - upload, drop, paste
 - local worker-based processing
-- preset palettes
+- palettes
 - algorithms: none, Bayer, Floyd-Steinberg, Atkinson
 - resize and preprocessing controls
 - compare modes

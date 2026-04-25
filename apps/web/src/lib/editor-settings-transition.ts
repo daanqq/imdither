@@ -2,11 +2,14 @@ import {
   DEFAULT_SETTINGS,
   PRESET_PALETTES,
   clampOutputSize,
+  getProcessingPreset,
+  getProcessingPresetColorMode,
   type ColorMode,
   type AlphaBackground,
   type BayerSize,
   type DitherAlgorithm,
   type EditorSettings,
+  type ProcessingPresetId,
   type ResizeMode,
 } from "@workspace/core"
 
@@ -52,6 +55,10 @@ export type SettingsTransition =
   | {
       type: "set-resize-mode"
       mode: ResizeMode
+    }
+  | {
+      type: "apply-processing-preset"
+      presetId: ProcessingPresetId
     }
   | {
       type: "apply-settings"
@@ -151,6 +158,24 @@ export function applySettingsTransition(
           },
         },
       }
+    case "apply-processing-preset": {
+      const preset = getProcessingPreset(transition.presetId)
+      const { recipe } = preset
+
+      return {
+        settings: {
+          ...current,
+          customPalette: undefined,
+          paletteId: recipe.paletteId,
+          algorithm: recipe.algorithm,
+          bayerSize: recipe.bayerSize ?? current.bayerSize,
+          preprocess: {
+            ...current.preprocess,
+            colorMode: getProcessingPresetColorMode(recipe),
+          },
+        },
+      }
+    }
     case "apply-settings":
       return withAspectLockedWidth(
         transition.settings,

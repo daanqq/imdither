@@ -7,6 +7,13 @@ export {
 } from "./algorithm-registry"
 export { createStageCache, hashPixelBuffer } from "./cache"
 export { PRESET_PALETTES, hexToRgb, resolvePalette } from "./palettes"
+export {
+  PROCESSING_PRESET_OPTIONS,
+  findProcessingPreset,
+  getProcessingPreset,
+  getProcessingPresetColorMode,
+  matchProcessingPreset,
+} from "./processing-presets"
 export { processImage, type ProcessImageOptions } from "./process"
 export {
   DEFAULT_OUTPUT_HEIGHT,
@@ -41,6 +48,11 @@ export type {
   DitherAlgorithmCapabilities,
   DitherAlgorithmOption,
 } from "./algorithm-registry"
+export type {
+  ProcessingPresetId,
+  ProcessingPresetOption,
+  ProcessingPresetRecipe,
+} from "./processing-presets"
 export type {
   AlphaBackground,
   BayerSize,
