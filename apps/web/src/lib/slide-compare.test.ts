@@ -5,6 +5,7 @@ import {
   SLIDE_COMPARE_MAX,
   SLIDE_COMPARE_MIN,
   clampSlideDivider,
+  getSlideCompareDisplaySize,
   getSlideDividerFromClientX,
   getSlideDividerFromKey,
 } from "./slide-compare"
@@ -30,5 +31,31 @@ describe("slide compare math", () => {
     expect(getSlideDividerFromKey(50, "Home")).toBe(SLIDE_COMPARE_MIN)
     expect(getSlideDividerFromKey(50, "End")).toBe(SLIDE_COMPARE_MAX)
     expect(getSlideDividerFromKey(50, "Tab")).toBeNull()
+  })
+
+  it("fits the slide frame inside the viewport while preserving image aspect ratio", () => {
+    expect(
+      getSlideCompareDisplaySize({
+        containerHeight: 70,
+        containerWidth: 220,
+        fitInset: 20,
+        sourceHeight: 100,
+        sourceWidth: 200,
+        viewScale: "fit",
+      })
+    ).toEqual({ height: 50, width: 100 })
+  })
+
+  it("keeps actual view at image dimensions", () => {
+    expect(
+      getSlideCompareDisplaySize({
+        containerHeight: 120,
+        containerWidth: 220,
+        fitInset: 20,
+        sourceHeight: 100,
+        sourceWidth: 200,
+        viewScale: "actual",
+      })
+    ).toEqual({ height: 100, width: 200 })
   })
 })

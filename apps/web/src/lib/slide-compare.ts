@@ -48,3 +48,45 @@ export function getSlideDividerFromKey(
 
   return null
 }
+
+export function getSlideCompareDisplaySize({
+  containerHeight,
+  containerWidth,
+  fitInset = 0,
+  sourceHeight,
+  sourceWidth,
+  viewScale,
+}: {
+  containerHeight?: number
+  containerWidth?: number
+  fitInset?: number
+  sourceHeight: number
+  sourceWidth: number
+  viewScale: "fit" | "actual"
+}): { height: number; width: number } {
+  const safeSourceWidth = Math.max(1, sourceWidth)
+  const safeSourceHeight = Math.max(1, sourceHeight)
+
+  if (
+    viewScale === "actual" ||
+    containerHeight === undefined ||
+    containerWidth === undefined
+  ) {
+    return {
+      height: safeSourceHeight,
+      width: safeSourceWidth,
+    }
+  }
+
+  const safeContainerWidth = Math.max(1, containerWidth - fitInset)
+  const safeContainerHeight = Math.max(1, containerHeight - fitInset)
+  const scale = Math.min(
+    safeContainerWidth / safeSourceWidth,
+    safeContainerHeight / safeSourceHeight
+  )
+
+  return {
+    height: Math.max(1, Math.floor(safeSourceHeight * scale)),
+    width: Math.max(1, Math.floor(safeSourceWidth * scale)),
+  }
+}
