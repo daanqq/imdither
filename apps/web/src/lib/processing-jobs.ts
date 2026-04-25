@@ -138,10 +138,12 @@ function createPreviewJob(
     previewSettings,
     dependencies.timings.interactivePixelBudget
   )
-  const refinedSettings = settingsWithinPixelBudget(
-    previewSettings,
-    dependencies.timings.previewPixelBudget
-  )
+  const refinedSettings = params.previewTarget
+    ? settingsWithinPixelBudget(
+        previewSettings,
+        dependencies.timings.previewPixelBudget
+      )
+    : previewSettings
   const shouldRefine =
     quickSettings.resize.width !== refinedSettings.resize.width ||
     quickSettings.resize.height !== refinedSettings.resize.height

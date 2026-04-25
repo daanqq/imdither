@@ -134,6 +134,39 @@ describe("processing jobs", () => {
     })
   })
 
+  it("refines 1:1 Preview Jobs to Full Output size", async () => {
+    const settings = resizeSettings(100, 80)
+    const events: PreviewJobEvent[] = []
+    const runJob = vi.fn(async (params) =>
+      createResult(params.jobId, params.settings)
+    )
+    const jobs = createProcessingJobs({ runJob, timings: instantTimings })
+
+    jobs.startPreviewJob({
+      ...source,
+      settings,
+      onEvent: (event) => events.push(event),
+    })
+
+    await wait(20)
+
+    expect(runJob).toHaveBeenCalledTimes(2)
+    expect(runJob.mock.calls[0]?.[0].settings.resize).toMatchObject({
+      height: 8,
+      width: 11,
+    })
+    expect(runJob.mock.calls[1]?.[0].settings.resize).toMatchObject({
+      height: 80,
+      width: 100,
+    })
+    expect(events.map((event) => event.type)).toEqual([
+      "queued",
+      "processing",
+      "reduced-preview-ready",
+      "refined-preview-ready",
+    ])
+  })
+
   it("cancels stale Preview Jobs before their worker call starts", async () => {
     const firstEvents: PreviewJobEvent[] = []
     const secondEvents: PreviewJobEvent[] = []

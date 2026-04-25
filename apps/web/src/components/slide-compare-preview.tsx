@@ -184,7 +184,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
           className={cn(
             "relative overflow-hidden bg-background ring-1 ring-foreground/10",
             processedReady && "cursor-ew-resize",
-            viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none"
+            viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none shrink-0"
           )}
           style={frameStyle}
           onPointerDown={(event) => {
