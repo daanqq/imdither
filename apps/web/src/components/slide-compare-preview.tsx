@@ -7,12 +7,10 @@ import {
   SLIDE_COMPARE_MAX,
   SLIDE_COMPARE_MIN,
   clampSlideDivider,
-  getSlideCompareDisplaySize,
   getSlideDividerFromClientX,
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
-
-const SLIDE_COMPARE_FIT_INSET = 12
+import { getPreviewFrameStyle } from "@/lib/preview-frame"
 
 export type SlideCompareViewScale = "fit" | "actual"
 
@@ -33,7 +31,6 @@ export function SlideComparePreview({
 }) {
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
-  const viewportRef = React.useRef<HTMLDivElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
   const dividerLineRef = React.useRef<HTMLDivElement>(null)
   const dividerHandleRef = React.useRef<HTMLButtonElement>(null)
@@ -44,14 +41,7 @@ export function SlideComparePreview({
   const frameWidth = processed?.width ?? original.width
   const frameHeight = processed?.height ?? original.height
   const clampedDivider = clampSlideDivider(dividerPercent)
-  const [viewportSize, setViewportSize] = React.useState<{
-    height: number
-    width: number
-  } | null>(null)
-  const displaySize = getSlideCompareDisplaySize({
-    containerHeight: viewportSize?.height,
-    containerWidth: viewportSize?.width,
-    fitInset: SLIDE_COMPARE_FIT_INSET,
+  const frameStyle = getPreviewFrameStyle({
     sourceHeight: frameHeight,
     sourceWidth: frameWidth,
     viewScale,
@@ -85,45 +75,6 @@ export function SlideComparePreview({
       if (dividerAnimationFrameRef.current !== null) {
         cancelAnimationFrame(dividerAnimationFrameRef.current)
       }
-    }
-  }, [])
-
-  React.useLayoutEffect(() => {
-    const viewport = viewportRef.current
-
-    if (!viewport || typeof ResizeObserver === "undefined") {
-      return
-    }
-
-    const updateViewportSize = () => {
-      const rect = viewport.getBoundingClientRect()
-      setViewportSize((current) => {
-        const next = {
-          height: Math.floor(rect.height),
-          width: Math.floor(rect.width),
-        }
-
-        if (
-          current &&
-          current.height === next.height &&
-          current.width === next.width
-        ) {
-          return current
-        }
-
-        return next
-      })
-    }
-
-    updateViewportSize()
-    const frameId = requestAnimationFrame(updateViewportSize)
-
-    const observer = new ResizeObserver(updateViewportSize)
-    observer.observe(viewport)
-
-    return () => {
-      cancelAnimationFrame(frameId)
-      observer.disconnect()
     }
   }, [])
 
@@ -217,12 +168,12 @@ export function SlideComparePreview({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
       <div
-        ref={viewportRef}
         className={cn(
           "flex min-h-0 min-w-0 flex-1 items-center justify-center",
           viewScale === "fit" ? "overflow-hidden" : "overflow-auto",
           viewScale === "actual" && "items-start justify-start"
         )}
+        style={viewScale === "fit" ? { containerType: "size" } : undefined}
       >
         <div
           ref={frameRef}
@@ -231,10 +182,7 @@ export function SlideComparePreview({
             processedReady && "cursor-ew-resize",
             viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none"
           )}
-          style={{
-            height: `${displaySize.height}px`,
-            width: `${displaySize.width}px`,
-          }}
+          style={frameStyle}
           onPointerDown={(event) => {
             if (!processedReady) {
               return

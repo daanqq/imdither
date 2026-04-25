@@ -72,6 +72,7 @@ import {
   drawPixelBuffer,
   pixelBufferToPngBlob,
 } from "@/lib/image"
+import { getPreviewFrameStyle } from "@/lib/preview-frame"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
 import {
@@ -90,7 +91,6 @@ import {
 } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
-
 export function App() {
   const {
     settings,
@@ -340,6 +340,8 @@ export function App() {
 
   const showOriginal = compareMode === "original"
   const showProcessed = compareMode === "processed"
+  const comparisonFrameWidth = preview?.width ?? source?.buffer.width
+  const comparisonFrameHeight = preview?.height ?? source?.buffer.height
   const previewReduced = preview
     ? preview.width !== settings.resize.width ||
       preview.height !== settings.resize.height
@@ -404,15 +406,7 @@ export function App() {
                       </EmptyHeader>
                     </Empty>
                   ) : (
-                    <div
-                      className={cn(
-                        "grid h-full min-h-0 w-full gap-3",
-                        viewScale === "fit" &&
-                          (compareMode === "slide"
-                            ? "items-stretch"
-                            : "items-center")
-                      )}
-                    >
+                    <div className="grid h-full min-h-0 w-full items-stretch gap-3">
                       {compareMode === "slide" ? (
                         <SlideComparePreview
                           dividerPercent={slideDividerPercent}
@@ -427,8 +421,12 @@ export function App() {
                         <CanvasPanel
                           buffer={source.buffer}
                           label="Original"
-                          expectedHeight={source.buffer.height}
-                          expectedWidth={source.buffer.width}
+                          expectedHeight={
+                            comparisonFrameHeight ?? source.buffer.height
+                          }
+                          expectedWidth={
+                            comparisonFrameWidth ?? source.buffer.width
+                          }
                           viewScale={viewScale}
                         />
                       ) : null}
@@ -1010,6 +1008,11 @@ function CanvasPanel({
   viewScale: ViewScale
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
+  const frameStyle = getPreviewFrameStyle({
+    sourceHeight: expectedHeight,
+    sourceWidth: expectedWidth,
+    viewScale,
+  })
 
   React.useEffect(() => {
     if (!buffer || !canvasRef.current) {
@@ -1020,34 +1023,39 @@ function CanvasPanel({
   }, [buffer])
 
   return (
-    <div className="m-1 flex min-h-0 min-w-0 flex-col gap-2">
-      <div className="flex items-center font-mono text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
-        <span>{label}</span>
-      </div>
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto",
+          "flex min-h-0 min-w-0 flex-1 items-center justify-center",
+          viewScale === "fit" ? "overflow-hidden" : "overflow-auto",
           viewScale === "actual" && "items-start justify-start"
         )}
+        style={viewScale === "fit" ? { containerType: "size" } : undefined}
       >
-        {missing ? (
-          <PreviewPlaceholder
-            height={expectedHeight}
-            status={status}
-            viewScale={viewScale}
-            width={expectedWidth}
-          />
-        ) : (
-          <canvas
-            ref={canvasRef}
-            className={cn(
-              "block bg-background",
-              viewScale === "fit"
-                ? "max-h-[68vh] max-w-full object-contain"
-                : "max-w-none"
-            )}
-          />
-        )}
+        <div
+          className={cn(
+            "relative shrink-0 overflow-hidden bg-background ring-1 ring-foreground/10",
+            missing && "border border-dashed border-border ring-0",
+            viewScale === "actual" && "h-fit w-fit max-w-none"
+          )}
+          style={frameStyle}
+        >
+          {missing ? (
+            <PreviewPlaceholder
+              height={expectedHeight}
+              status={status}
+              width={expectedWidth}
+            />
+          ) : (
+            <canvas
+              ref={canvasRef}
+              className="absolute inset-0 block size-full bg-background"
+            />
+          )}
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center font-mono text-[10px] tracking-[0.1em] text-foreground/80 uppercase">
+            <span className="bg-background/80 px-1.5 py-0.5">{label}</span>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -1056,26 +1064,14 @@ function CanvasPanel({
 function PreviewPlaceholder({
   height,
   status,
-  viewScale,
   width,
 }: {
   height: number
   status?: string
-  viewScale: ViewScale
   width: number
 }) {
   return (
-    <div
-      className={cn(
-        "dot-grid-subtle flex items-center justify-center border border-dashed border-border bg-background text-center",
-        viewScale === "fit" ? "max-h-[68vh] max-w-full" : "max-w-none"
-      )}
-      style={{
-        aspectRatio: `${width} / ${height}`,
-        height: viewScale === "actual" ? `${height}px` : undefined,
-        width: viewScale === "actual" ? `${width}px` : "min(100%, 100vh)",
-      }}
-    >
+    <div className="dot-grid-subtle flex size-full items-center justify-center bg-background text-center">
       <div className="flex flex-col gap-1 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
         <span>[{status ?? "processing"}]</span>
         <span>
