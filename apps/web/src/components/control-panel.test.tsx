@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DEFAULT_SETTINGS } from "@workspace/core"
 
+import { getRandomDifferentValue } from "@/lib/random-options"
+
 import { ControlPanel } from "./control-panel"
 import type { CommittedSliderFieldProps } from "./committed-slider-field"
 
@@ -115,6 +117,9 @@ describe("ControlPanel", () => {
     )
 
     expect(markup).toContain("Recipe")
+    expect(markup).toContain("Random recipe")
+    expect(markup).toContain("Random palette")
+    expect(markup).toContain("Random algorithm")
     expect(markup).toContain("Custom")
     expect(markup).toContain("Sea Glass Atkinson")
     expect(selectRenders[0]?.value).toBe("fine-mono-bayer")
@@ -124,5 +129,14 @@ describe("ControlPanel", () => {
       type: "apply-processing-preset",
       presetId: "sea-glass-atkinson",
     })
+  })
+
+  it("chooses a random option without repeating the current value when possible", () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
+
+    expect(getRandomDifferentValue(["a", "b", "c"], "a")).toBe("b")
+    expect(getRandomDifferentValue(["a"], "a")).toBe("a")
+
+    randomSpy.mockRestore()
   })
 })

@@ -50,10 +50,16 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@workspace/ui/components/toggle-group"
-import { ClipboardIcon, RotateCcwIcon, UploadIcon } from "lucide-react"
+import {
+  ClipboardIcon,
+  RotateCcwIcon,
+  ShuffleIcon,
+  UploadIcon,
+} from "lucide-react"
 
 import { CommittedSliderField } from "@/components/committed-slider-field"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
+import { getRandomDifferentValue } from "@/lib/random-options"
 import type { CompareMode } from "@/store/editor-store"
 
 export type ControlPanelProps = {
@@ -85,6 +91,7 @@ export const ControlPanel = React.memo(function ControlPanel({
 }: ControlPanelProps) {
   const selectedAlgorithmOption = getDitherAlgorithmOption(settings.algorithm)
   const matchedProcessingPreset = matchProcessingPreset(settings)
+  const processingPresetId = matchedProcessingPreset?.id ?? "custom"
 
   return (
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
@@ -97,80 +104,127 @@ export const ControlPanel = React.memo(function ControlPanel({
             <FieldGroup className="min-w-0 gap-4 pb-1">
               <Field>
                 <FieldLabel htmlFor="processing-preset">Recipe</FieldLabel>
-                <Select
-                  value={matchedProcessingPreset?.id ?? "custom"}
-                  onValueChange={(presetId) => {
-                    if (presetId !== "custom") {
+                <div className="flex min-w-0 items-center gap-2">
+                  <Select
+                    value={processingPresetId}
+                    onValueChange={(presetId) => {
+                      if (presetId !== "custom") {
+                        onSettingsTransition({
+                          type: "apply-processing-preset",
+                          presetId: presetId as ProcessingPresetId,
+                        })
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="processing-preset"
+                      className="min-w-0 flex-1"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="custom">Custom</SelectItem>
+                        {PROCESSING_PRESET_OPTIONS.map((preset) => (
+                          <SelectItem key={preset.id} value={preset.id}>
+                            {preset.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <RandomizeButton
+                    label="Random recipe"
+                    onClick={() =>
                       onSettingsTransition({
                         type: "apply-processing-preset",
-                        presetId: presetId as ProcessingPresetId,
+                        presetId: getRandomDifferentValue(
+                          PROCESSING_PRESET_OPTIONS.map((preset) => preset.id),
+                          processingPresetId
+                        ),
                       })
                     }
-                  }}
-                >
-                  <SelectTrigger id="processing-preset" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="custom">Custom</SelectItem>
-                      {PROCESSING_PRESET_OPTIONS.map((preset) => (
-                        <SelectItem key={preset.id} value={preset.id}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  />
+                </div>
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="palette">Palette</FieldLabel>
-                <Select
-                  value={settings.paletteId}
-                  onValueChange={(paletteId) =>
-                    onSettingsTransition({ type: "set-palette", paletteId })
-                  }
-                >
-                  <SelectTrigger id="palette" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {PRESET_PALETTES.map((preset) => (
-                        <SelectItem key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Select
+                    value={settings.paletteId}
+                    onValueChange={(paletteId) =>
+                      onSettingsTransition({ type: "set-palette", paletteId })
+                    }
+                  >
+                    <SelectTrigger id="palette" className="min-w-0 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {PRESET_PALETTES.map((preset) => (
+                          <SelectItem key={preset.id} value={preset.id}>
+                            {preset.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <RandomizeButton
+                    label="Random palette"
+                    onClick={() =>
+                      onSettingsTransition({
+                        type: "set-palette",
+                        paletteId: getRandomDifferentValue(
+                          PRESET_PALETTES.map((preset) => preset.id),
+                          settings.paletteId
+                        ),
+                      })
+                    }
+                  />
+                </div>
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="algorithm">Algorithm</FieldLabel>
-                <Select
-                  value={settings.algorithm}
-                  onValueChange={(algorithm) =>
-                    onSettingsTransition({
-                      type: "set-algorithm",
-                      algorithm: algorithm as DitherAlgorithm,
-                    })
-                  }
-                >
-                  <SelectTrigger id="algorithm" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {DITHER_ALGORITHM_OPTIONS.map((algorithm) => (
-                        <SelectItem key={algorithm.id} value={algorithm.id}>
-                          {algorithm.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Select
+                    value={settings.algorithm}
+                    onValueChange={(algorithm) =>
+                      onSettingsTransition({
+                        type: "set-algorithm",
+                        algorithm: algorithm as DitherAlgorithm,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="algorithm" className="min-w-0 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {DITHER_ALGORITHM_OPTIONS.map((algorithm) => (
+                          <SelectItem key={algorithm.id} value={algorithm.id}>
+                            {algorithm.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <RandomizeButton
+                    label="Random algorithm"
+                    onClick={() =>
+                      onSettingsTransition({
+                        type: "set-algorithm",
+                        algorithm: getRandomDifferentValue(
+                          DITHER_ALGORITHM_OPTIONS.map(
+                            (algorithm) => algorithm.id
+                          ),
+                          settings.algorithm
+                        ),
+                      })
+                    }
+                  />
+                </div>
               </Field>
 
               {selectedAlgorithmOption.capabilities.bayerSize && (
@@ -500,5 +554,26 @@ function NumberField({
       />
       {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>
+  )
+}
+
+function RandomizeButton({
+  label,
+  onClick,
+}: {
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      aria-label={label}
+      title={label}
+      type="button"
+      variant="outline"
+      size="icon"
+      onClick={onClick}
+    >
+      <ShuffleIcon />
+    </Button>
   )
 }
