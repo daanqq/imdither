@@ -52,6 +52,21 @@ describe("SlideComparePreview", () => {
     expect(html).not.toContain("[processing]")
   })
 
+  it("keeps mobile drag gestures reserved for slide comparison", () => {
+    const html = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={37}
+        original={makePixelBuffer(4, 3)}
+        processed={makePixelBuffer(4, 3)}
+        status="ready"
+        viewScale="fit"
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(html.match(/touch-action:none/g)).toHaveLength(2)
+  })
+
   it("keeps ready slide canvases stable across status-only updates", () => {
     const original = makePixelBuffer(4, 3)
     const processed = makePixelBuffer(4, 3)

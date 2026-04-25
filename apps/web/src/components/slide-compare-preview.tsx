@@ -186,7 +186,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             processedReady && "cursor-ew-resize",
             viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none shrink-0"
           )}
-          style={frameStyle}
+          style={{ ...frameStyle, touchAction: "none" }}
           onPointerDown={(event) => {
             if (!processedReady) {
               return
@@ -246,7 +246,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                 aria-valuenow={Math.round(clampedDivider)}
                 className="absolute top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-background font-mono text-[10px] text-foreground ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 role="slider"
-                style={{ left: `${clampedDivider}%` }}
+                style={{ left: `${clampedDivider}%`, touchAction: "none" }}
                 onKeyDown={handleKeyDown}
                 onPointerDown={(event) => {
                   event.stopPropagation()
