@@ -75,6 +75,31 @@
 | **Processing Preview**             | The visible state where a **Preview Job** is queued or running while the previous preview remains usable. | Loading preview, rendering state   |
 | **Preview Only Notice**            | A visible notice that the current on-screen preview is not the full export-quality **Full Output**.       | Preview only, preview-only state   |
 
+## Runtime Responsiveness
+
+| Term                       | Definition                                                                                                      | Aliases to avoid                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Direct Slider Movement** | The property that a slider thumb follows pointer movement without waiting for React or worker work.             | Smooth slider, fast slider, instant drag |
+| **Draft Slider Value**     | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.             | Temporary setting, live setting          |
+| **Committed Settings**     | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.    | Real settings, saved settings            |
+| **Commit-on-Release**      | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur. | Debounce, delayed update                 |
+| **Reset Commit**           | A slider reset action that immediately writes the slider default into **Committed Settings**.                   | Reset draft, default click               |
+| **Native Range Slider**    | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.       | Custom slider, Radix slider              |
+| **Slider Primitive**       | A general-purpose UI slider component that owns accessibility and composition behavior beyond this editor need. | Native slider, browser slider            |
+| **Hot Drag Path**          | The work executed repeatedly while the pointer is moving a slider thumb.                                        | Drag handler, input loop                 |
+| **Render Boundary**        | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                 | Memo wrapper, render fix                 |
+| **Preview Stage**          | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.   | Preview card, canvas area                |
+| **Preview Presentation**   | The UI layer that displays preview surfaces without changing image processing semantics.                        | Preview rendering, canvas rendering      |
+| **Preview Surface**        | A visible canvas or placeholder inside **Preview Presentation**.                                                | Canvas, preview component                |
+| **Canvas Redraw Boundary** | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                          | Canvas memo, draw optimization           |
+| **Ready Preview Surface**  | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                  | Ready canvas, stable canvas              |
+| **Preview Placeholder**    | A **Preview Surface** shown while a processed buffer is missing.                                                | Empty preview, loading canvas            |
+| **Status-only Update**     | A **Processing Status** change that does not include a new **Pixel Buffer**.                                    | Status render, worker ping               |
+| **Processing Status**      | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                      | Status, job state                        |
+| **Worker Status Update**   | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.               | Worker update, worker render             |
+| **Control Tree**           | The rendered settings controls that should update only from control-relevant state.                             | Control panel render tree, sidebar tree  |
+| **View-local State**       | Interaction state owned by a view and not persisted in **Editor Settings**.                                     | Local state, UI state                    |
+
 ## Editor Experience
 
 | Term                   | Definition                                                                                                                            | Aliases to avoid                           |
@@ -136,27 +161,44 @@
 - An **Export Job** should ignore preview-size shortcuts and produce **Export PNG** at **Output Size**.
 - A **Trace Capture** can reveal a **Main Thread Freeze** even when the **Processing Job** itself runs in a worker.
 - **Dev Instrumentation** must not define domain behavior, but it can expose performance risks when **Pixel Buffer** data is passed through the editor.
+- **Direct Slider Movement** happens inside the **Hot Drag Path**.
+- A **Draft Slider Value** must not become **Committed Settings** until **Commit-on-Release** or **Reset Commit**.
+- **Committed Settings** are the only slider values that may start **Preview Jobs**.
+- A **Native Range Slider** may replace a **Slider Primitive** when **Direct Slider Movement** is the primary requirement.
+- **Preview Stage** owns **Preview Presentation** and **View-local State** for drop affordance and **Slide Divider** position.
+- A **Preview Stage** contains one or more **Preview Surfaces**.
+- A **Ready Preview Surface** should ignore a **Status-only Update**.
+- A **Preview Placeholder** should reflect a **Status-only Update** because its visible text depends on **Processing Status**.
+- A **Canvas Redraw Boundary** depends on **Pixel Buffer** identity, not on **Processing Status**.
+- **Worker Status Updates** should not rebuild the **Control Tree** unless the controls display that status.
 
 ## Example Dialogue
 
-> **Dev:** "When brightness changes, is the freeze part of the **Dither Algorithm**?"
+> **Dev:** "When brightness changes, should every **Draft Slider Value** start a new **Preview Job**?"
 >
-> **Domain expert:** "Not necessarily. A **Trace Capture** can show whether the **Processing Job** is slow or whether the browser hits a **Main Thread Freeze** while committing a **Pixel Buffer** to the **Preview**."
+> **Domain expert:** "No. During **Direct Slider Movement**, the slider stays in the **Hot Drag Path**. Only **Commit-on-Release** or **Reset Commit** turns that value into **Committed Settings**."
 >
-> **Dev:** "So during **Processing Preview**, **Slide Compare** and the **Control Panel** should still respond?"
+> **Dev:** "Should the preview redraw while the user drags?"
 >
-> **Domain expert:** "Yes. That is **Responsive Editing**. The previous **Preview** stays usable while the next **Preview Job** runs."
+> **Domain expert:** "No. A **Ready Preview Surface** stays stable until a new **Pixel Buffer** arrives. A **Status-only Update** can change a **Preview Placeholder**, but it should not cross the **Canvas Redraw Boundary**."
 >
-> **Dev:** "Should a new **Settings Transition** resend the whole **Source Image** to the worker?"
+> **Dev:** "Why did the **Slider Primitive** cause lag if the preview was isolated?"
 >
-> **Domain expert:** "Only when the worker lacks the source. The **Worker Source Cache** should avoid repeated **Pixel Buffer** transfer during a **Preview Cycle**."
+> **Domain expert:** "It still lived inside the **Hot Drag Path**. For this editor, a **Native Range Slider** better satisfies **Direct Slider Movement** because the browser owns thumb motion."
 >
-> **Dev:** "If **Dev Instrumentation** makes the app freeze, is that product behavior?"
+> **Dev:** "Where should drop state and slide divider state live?"
 >
-> **Domain expert:** "No, but the app should avoid exposing huge enumerable **Pixel Buffer** data through React props because it breaks **Responsive Editing** in development."
+> **Domain expert:** "They are **View-local State**, so they belong in **Preview Stage**, not in **Editor Settings**."
 
 ## Flagged Ambiguities
 
+- "Slider" was used for both **Native Range Slider**, **Slider Primitive**, and **Slide Divider**. Use **Native Range Slider** for the browser input, **Slider Primitive** for the general UI component, and **Slide Divider** for before/after comparison.
+- "Live value" can mean **Draft Slider Value** or **Committed Settings**. Use **Draft Slider Value** during drag and **Committed Settings** after **Commit-on-Release**.
+- "Lag" should be described through the affected path: **Direct Slider Movement** when the thumb lags, **Main Thread Freeze** when the browser stalls, or slow **Preview Job** when processing output is late.
+- "Rerender" is too broad by itself. Use **Render Boundary** for protected component isolation and **Canvas Redraw Boundary** for image surface redraw semantics.
+- "Status update" can mean visible placeholder text or background worker progress. Use **Status-only Update** when no **Pixel Buffer** changes and **Worker Status Update** when it originates from worker orchestration.
+- "Preview rendering" was used for both **Preview Presentation** and image processing. Use **Preview Presentation** for UI surfaces and **Preview Job** for producing a processed buffer.
+- "Local state" should be narrowed to **View-local State** when it is UI interaction state and **Draft Slider Value** when it is transient slider input.
 - "Algorithm" was used for ids, labels, UI options, and execution. Use **Dither Algorithm** for the method, **Dither Algorithm Id** for persisted settings, **Dither Algorithm Option** for UI selection, and **Algorithm Metadata Label** for export-facing text.
 - "Registry" can sound like a UI list. In this domain, **Dither Algorithm Registry** is the core source of truth for selection, execution, capabilities, and metadata.
 - "None" is a UI label and stable id, but the domain behavior is **No Dither**: direct palette mapping without spatial dithering.
