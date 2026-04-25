@@ -121,6 +121,11 @@ export function App() {
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
   )
+  const [isDesktopViewScale, setIsDesktopViewScale] = React.useState(() =>
+    typeof window === "undefined"
+      ? true
+      : window.matchMedia(DESKTOP_VIEW_SCALE_QUERY).matches
+  )
   const [slideDividerPercent, setSlideDividerPercent] = React.useState(
     SLIDE_COMPARE_DEFAULT
   )
@@ -336,6 +341,8 @@ export function App() {
   React.useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_VIEW_SCALE_QUERY)
     const enforceMobileFit = () => {
+      setIsDesktopViewScale(mediaQuery.matches)
+
       if (!mediaQuery.matches) {
         setViewScale("fit")
       }
@@ -500,7 +507,7 @@ export function App() {
               <ProcessingOverlay
                 algorithm={settings.algorithm}
                 busy={busy}
-                previewReduced={previewReduced}
+                previewReduced={isDesktopViewScale && previewReduced}
                 status={status}
               />
               <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
