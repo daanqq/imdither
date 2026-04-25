@@ -101,16 +101,6 @@ describe("Editor Settings transitions", () => {
       },
     }
 
-    const fitResult = applySettingsTransition(current, {
-      type: "set-resize-fit",
-      fit: "cover",
-    })
-    expect(fitResult.settings.resize).toEqual({
-      ...current.resize,
-      fit: "cover",
-    })
-    expect(fitResult.settings.preprocess).toEqual(current.preprocess)
-
     const brightnessResult = applySettingsTransition(current, {
       type: "set-preprocess",
       patch: { brightness: -20 },

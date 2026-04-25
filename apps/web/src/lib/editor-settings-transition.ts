@@ -7,7 +7,6 @@ import {
   type BayerSize,
   type DitherAlgorithm,
   type EditorSettings,
-  type ResizeFit,
   type ResizeMode,
 } from "@workspace/core"
 
@@ -33,10 +32,6 @@ export type SettingsTransition =
   | {
       type: "set-color-mode"
       colorMode: ColorMode
-    }
-  | {
-      type: "set-resize-fit"
-      fit: ResizeFit
     }
   | {
       type: "set-preprocess"
@@ -112,16 +107,6 @@ export function applySettingsTransition(
           preprocess: {
             ...current.preprocess,
             colorMode: transition.colorMode,
-          },
-        },
-      }
-    case "set-resize-fit":
-      return {
-        settings: {
-          ...current,
-          resize: {
-            ...current.resize,
-            fit: transition.fit,
           },
         },
       }

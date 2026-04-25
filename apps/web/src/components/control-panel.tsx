@@ -9,7 +9,6 @@ import {
   type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
-  type ResizeFit,
   type ResizeMode,
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
@@ -246,30 +245,6 @@ export const ControlPanel = React.memo(function ControlPanel({
                   })
                 }
               />
-
-              <Field>
-                <FieldLabel htmlFor="fit">Fit</FieldLabel>
-                <Select
-                  value={settings.resize.fit}
-                  onValueChange={(fit) =>
-                    onSettingsTransition({
-                      type: "set-resize-fit",
-                      fit: fit as ResizeFit,
-                    })
-                  }
-                >
-                  <SelectTrigger id="fit" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="contain">Contain</SelectItem>
-                      <SelectItem value="cover">Cover</SelectItem>
-                      <SelectItem value="stretch">Stretch</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
 
               <Separator />
 
