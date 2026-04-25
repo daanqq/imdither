@@ -127,4 +127,36 @@ describe("PreviewStage", () => {
       })
     ).toBe(false)
   })
+
+  it("keeps slide compare 1:1 frame at the selected output size while preview is reduced", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="slide"
+        isDesktopViewScale
+        original={makeBuffer(960, 640)}
+        preview={makeBuffer(480, 320)}
+        previewTargetHeight={1333}
+        previewTargetWidth={2000}
+        status="ready"
+        viewScale="actual"
+        onExportPng={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onViewScaleChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("height:1333px")
+    expect(html).toContain("width:2000px")
+  })
 })
+
+function makeBuffer(width: number, height: number): PixelBuffer {
+  return {
+    data: new Uint8ClampedArray(width * height * 4),
+    height,
+    width,
+  }
+}
