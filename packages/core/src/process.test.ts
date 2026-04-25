@@ -31,6 +31,18 @@ describe("core pipeline", () => {
     ])
   })
 
+  it("keeps preset palette ids unique and processable", () => {
+    const ids = PRESET_PALETTES.map((palette) => palette.id)
+    const uniqueIds = new Set(ids)
+
+    expect(uniqueIds.size).toBe(PRESET_PALETTES.length)
+
+    for (const palette of PRESET_PALETTES) {
+      expect(palette.colors.length).toBeGreaterThanOrEqual(2)
+      expect(palette.colors.every((color) => color.rgb.length === 3)).toBe(true)
+    }
+  })
+
   it("normalizes partial settings into schema version 1", () => {
     expect(
       normalizeSettings({

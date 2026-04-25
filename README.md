@@ -23,8 +23,10 @@ the browser; the app does not upload source images to a server.
 
 - Algorithms: None, Bayer, Matt Parker, Floyd-Steinberg, and Atkinson.
 - Bayer matrix sizes: 2x2, 4x4, and 8x8.
-- Preset palettes: Black / White, 4 Gray, Game Boy, Amber Terminal, CGA Pop,
-  Redline, and Sea Glass.
+- Preset palettes: Black / White, 4 Gray, 6 Gray, Warm Mono, Blue Ink,
+  Game Boy, DawnBringer 16, DawnBringer 32, Sweetie 16, AAP-16, Endesga 32,
+  PICO-8, C64, EGA 16, Amber Terminal, Green Phosphor, Thermal, CGA Pop,
+  Soft 8, Poster 12, Risograph, Redline, Screenprint 16, and Sea Glass.
 - Color modes: grayscale-first and color-preserve.
 - Preprocessing: brightness, contrast, gamma, invert, and alpha flattening
   against black or white.
