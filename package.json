@@ -5,6 +5,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "preview": "bun run build && bun run --cwd apps/web preview",
     "lint": "turbo lint",
     "test": "turbo test",
     "format": "turbo format",
