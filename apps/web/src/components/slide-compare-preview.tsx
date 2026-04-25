@@ -1,5 +1,4 @@
 import * as React from "react"
-import type { PixelBuffer } from "@workspace/core"
 import { cn } from "@workspace/ui/lib/utils"
 
 import { drawPixelBuffer } from "@/lib/image"
@@ -11,24 +10,19 @@ import {
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
 import { getPreviewFrameStyle } from "@/lib/preview-frame"
+import {
+  areSlideComparePreviewPropsEqual,
+  type SlideComparePreviewProps,
+} from "@/components/preview-render-boundaries"
 
-export type SlideCompareViewScale = "fit" | "actual"
-
-export function SlideComparePreview({
+export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
   original,
   processed,
   status,
   viewScale,
   onDividerChange,
-}: {
-  dividerPercent: number
-  original: PixelBuffer
-  processed: PixelBuffer | null
-  status?: string
-  viewScale: SlideCompareViewScale
-  onDividerChange: (percent: number) => void
-}) {
+}: SlideComparePreviewProps) {
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
@@ -279,4 +273,4 @@ export function SlideComparePreview({
       </div>
     </div>
   )
-}
+}, areSlideComparePreviewPropsEqual)

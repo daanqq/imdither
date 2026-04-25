@@ -3,6 +3,7 @@ import type * as React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { PixelBuffer } from "@workspace/core"
 
+import { areCanvasPanelPropsEqual } from "./preview-render-boundaries"
 import { PreviewStage } from "./preview-stage"
 
 type ButtonMockProps = React.ComponentProps<"button"> & {
@@ -76,5 +77,53 @@ describe("PreviewStage", () => {
     expect(onFileSelected).toHaveBeenCalledTimes(1)
     expect(onFileSelected).toHaveBeenCalledWith(file)
     expect(onExportPng).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps ready canvas presentation stable across status-only updates", () => {
+    const baseProps = {
+      buffer,
+      expectedHeight: 1,
+      expectedWidth: 1,
+      label: "Processed",
+      missing: false,
+      status: "ready",
+      viewScale: "fit",
+    } as const
+
+    expect(
+      areCanvasPanelPropsEqual(baseProps, {
+        ...baseProps,
+        status: "processing",
+      })
+    ).toBe(true)
+
+    expect(
+      areCanvasPanelPropsEqual(baseProps, {
+        ...baseProps,
+        buffer: {
+          ...buffer,
+          data: new Uint8ClampedArray(buffer.data),
+        },
+      })
+    ).toBe(false)
+  })
+
+  it("keeps placeholder status updates visible while processed output is missing", () => {
+    const baseProps = {
+      buffer: null,
+      expectedHeight: 1,
+      expectedWidth: 1,
+      label: "Processed",
+      missing: true,
+      status: "queued",
+      viewScale: "fit",
+    } as const
+
+    expect(
+      areCanvasPanelPropsEqual(baseProps, {
+        ...baseProps,
+        status: "processing",
+      })
+    ).toBe(false)
   })
 })

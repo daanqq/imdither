@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import type { PixelBuffer } from "@workspace/core"
 import { describe, expect, it } from "vitest"
 
+import { areSlideComparePreviewPropsEqual } from "./preview-render-boundaries"
 import { SlideComparePreview } from "./slide-compare-preview"
 
 function makePixelBuffer(width: number, height: number): PixelBuffer {
@@ -49,5 +50,53 @@ describe("SlideComparePreview", () => {
     expect(html).toContain('aria-valuemin="2"')
     expect(html).toContain('aria-valuemax="98"')
     expect(html).not.toContain("[processing]")
+  })
+
+  it("keeps ready slide canvases stable across status-only updates", () => {
+    const original = makePixelBuffer(4, 3)
+    const processed = makePixelBuffer(4, 3)
+    const onDividerChange = () => {}
+    const baseProps = {
+      dividerPercent: 37,
+      original,
+      processed,
+      status: "ready",
+      viewScale: "fit",
+      onDividerChange,
+    } as const
+
+    expect(
+      areSlideComparePreviewPropsEqual(baseProps, {
+        ...baseProps,
+        status: "processing",
+      })
+    ).toBe(true)
+
+    expect(
+      areSlideComparePreviewPropsEqual(baseProps, {
+        ...baseProps,
+        processed: makePixelBuffer(4, 3),
+      })
+    ).toBe(false)
+  })
+
+  it("keeps missing-processed status updates visible", () => {
+    const original = makePixelBuffer(4, 3)
+    const onDividerChange = () => {}
+    const baseProps = {
+      dividerPercent: 37,
+      original,
+      processed: null,
+      status: "queued",
+      viewScale: "fit",
+      onDividerChange,
+    } as const
+
+    expect(
+      areSlideComparePreviewPropsEqual(baseProps, {
+        ...baseProps,
+        status: "processing",
+      })
+    ).toBe(false)
   })
 })

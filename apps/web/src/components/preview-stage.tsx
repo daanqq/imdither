@@ -17,6 +17,10 @@ import { cn } from "@workspace/ui/lib/utils"
 import { DownloadIcon, UploadIcon } from "lucide-react"
 
 import { SlideComparePreview } from "@/components/slide-compare-preview"
+import {
+  areCanvasPanelPropsEqual,
+  type CanvasPanelProps,
+} from "@/components/preview-render-boundaries"
 import { drawPixelBuffer } from "@/lib/image"
 import { getPreviewFrameStyle } from "@/lib/preview-frame"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
@@ -274,7 +278,7 @@ function ProcessingOverlay({
   )
 }
 
-function CanvasPanel({
+const CanvasPanel = React.memo(function CanvasPanel({
   buffer,
   expectedHeight,
   expectedWidth,
@@ -282,15 +286,7 @@ function CanvasPanel({
   missing = false,
   status,
   viewScale,
-}: {
-  buffer: PixelBuffer | null
-  expectedHeight: number
-  expectedWidth: number
-  label: string
-  missing?: boolean
-  status?: string
-  viewScale: ViewScale
-}) {
+}: CanvasPanelProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: expectedHeight,
@@ -343,7 +339,7 @@ function CanvasPanel({
       </div>
     </div>
   )
-}
+}, areCanvasPanelPropsEqual)
 
 function PreviewPlaceholder({
   height,
