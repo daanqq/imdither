@@ -49,7 +49,6 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { Separator } from "@workspace/ui/components/separator"
-import { Slider } from "@workspace/ui/components/slider"
 import { Switch } from "@workspace/ui/components/switch"
 import {
   ToggleGroup,
@@ -65,6 +64,7 @@ import {
   UploadIcon,
 } from "lucide-react"
 
+import { CommittedSliderField } from "@/components/committed-slider-field"
 import { SlideComparePreview } from "@/components/slide-compare-preview"
 import { useTheme } from "@/components/theme-provider"
 import {
@@ -768,26 +768,26 @@ function ControlPanel({
                 onChange={onResolutionWidthChange}
               />
 
-              <SliderField
+              <CommittedSliderField
                 label="Brightness"
                 max={100}
                 min={-100}
                 step={1}
                 value={settings.preprocess.brightness}
-                onChange={(brightness) =>
+                onCommit={(brightness) =>
                   onSettingsTransition({
                     type: "set-preprocess",
                     patch: { brightness },
                   })
                 }
               />
-              <SliderField
+              <CommittedSliderField
                 label="Contrast"
                 max={100}
                 min={-100}
                 step={1}
                 value={settings.preprocess.contrast}
-                onChange={(contrast) =>
+                onCommit={(contrast) =>
                   onSettingsTransition({
                     type: "set-preprocess",
                     patch: { contrast },
@@ -919,13 +919,13 @@ function ControlPanel({
                       </ToggleGroupItem>
                     </ToggleGroup>
                   </FieldSet>
-                  <SliderField
+                  <CommittedSliderField
                     label="Gamma"
                     max={3}
                     min={0.2}
                     step={0.05}
                     value={settings.preprocess.gamma}
-                    onChange={(gamma) =>
+                    onCommit={(gamma) =>
                       onSettingsTransition({
                         type: "set-preprocess",
                         patch: { gamma },
@@ -1135,40 +1135,6 @@ function NumberField({
         }}
       />
       {description ? <FieldDescription>{description}</FieldDescription> : null}
-    </Field>
-  )
-}
-
-function SliderField({
-  label,
-  max,
-  min,
-  onChange,
-  step,
-  value,
-}: {
-  label: string
-  min: number
-  max: number
-  step: number
-  value: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <Field>
-      <div className="flex items-center justify-between gap-3">
-        <FieldLabel>{label}</FieldLabel>
-        <span className="font-mono text-xs text-muted-foreground">
-          {Number.isInteger(value) ? value : value.toFixed(2)}
-        </span>
-      </div>
-      <Slider
-        max={max}
-        min={min}
-        step={step}
-        value={[value]}
-        onValueChange={(nextValue) => onChange(nextValue[0] ?? value)}
-      />
     </Field>
   )
 }
