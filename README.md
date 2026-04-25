@@ -49,8 +49,27 @@ the browser; the app does not upload source images to a server.
 - `packages/core` - deterministic image processing, palettes, settings schema,
   and tests.
 - `packages/ui` - shared shadcn/ui primitive layer.
-- `docs/PRD.md` - main product requirements and implementation plan.
-- `docs/slide-before-after-preview/PRD.md` - slide compare requirements.
+- `docs/` - Product Requirements Documents (PRDs), architecture, etc.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  user["User Input<br/>Upload / Paste / Drop<br/>Controls<br/>Export"]
+  app["App Shell<br/>Source Image<br/>Preview Buffer<br/>Stable callbacks"]
+  store["Editor Store<br/>Committed Settings<br/>View State<br/>Job Status"]
+  worker["Worker Jobs<br/>Preview Job<br/>Preview Refinement<br/>Export Job"]
+  preview["Preview Stage<br/>Canvas Preview<br/>Slide Compare<br/>Local UI State"]
+  png["PNG Download"]
+
+  user --> app
+  app --> store
+  store --> worker
+  app --> worker
+  worker -->|preview buffer| preview
+  worker -->|full output| png
+  preview -. status-only updates do not redraw ready canvases .-> preview
+```
 
 ## Development
 
