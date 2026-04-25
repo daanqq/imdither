@@ -67,14 +67,9 @@ import {
 
 import { useTheme } from "@/components/theme-provider"
 import {
-  createDemoSource,
-  decodeImageFile,
   downloadBlob,
   drawPixelBuffer,
-  fitWithinOutputBudget,
-  pickImageFromClipboard,
   pixelBufferToPngBlob,
-  type LoadedSource,
 } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
@@ -85,6 +80,14 @@ import {
   getSlideDividerFromClientX,
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
+import {
+  createDemoSourceIntake,
+  formatSourceNotices,
+  intakeImageFile,
+  pickImageFromClipboard,
+  type LoadedSource,
+  type SourceIntakeResult,
+} from "@/lib/source-intake"
 import {
   useEditorStore,
   type CompareMode,
@@ -113,9 +116,10 @@ export function App() {
     setSourceNotice,
     setMetadata,
   } = useEditorStore()
-  const [source, setSource] = React.useState<LoadedSource | null>(() =>
-    createDemoSource()
-  )
+  const [source, setSource] = React.useState<LoadedSource | null>(() => {
+    const result = createDemoSourceIntake()
+    return result.type === "accepted" ? result.source : null
+  })
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
   )
@@ -163,31 +167,25 @@ export function App() {
     setAspectLockedSettings(DEFAULT_SETTINGS)
   }, [setAspectLockedSettings])
 
-  const loadSource = React.useCallback(
-    (nextSource: LoadedSource) => {
-      const outputSize = fitWithinOutputBudget(
-        nextSource.buffer.width,
-        nextSource.buffer.height
-      )
-      const notice = [
-        nextSource.notice,
-        outputSize.downscaled
-          ? `[OUTPUT AUTO-SIZED: ${outputSize.width}x${outputSize.height} / 12MP]`
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
+  const applySourceIntake = React.useCallback(
+    (result: SourceIntakeResult) => {
+      if (result.type === "rejected") {
+        setError(result.message)
+        setStatus("error")
+        return false
+      }
 
-      setSource(nextSource)
+      setSource(result.source)
       setPreview(null)
       setError(null)
-      setSourceNotice(notice || null)
+      setSourceNotice(formatSourceNotices(result.notices))
       patchResize({
-        width: outputSize.width,
-        height: outputSize.height,
+        width: result.outputSize.width,
+        height: result.outputSize.height,
       })
+      return true
     },
-    [patchResize, setError, setSourceNotice]
+    [patchResize, setError, setSourceNotice, setStatus]
   )
 
   React.useEffect(() => {
@@ -252,7 +250,7 @@ export function App() {
     async (file: File) => {
       try {
         setStatus("processing")
-        loadSource(await decodeImageFile(file))
+        applySourceIntake(await intakeImageFile(file))
       } catch (fileError) {
         setError(
           fileError instanceof Error ? fileError.message : "Image decode failed"
@@ -260,7 +258,7 @@ export function App() {
         setStatus("error")
       }
     },
-    [loadSource, setError, setStatus]
+    [applySourceIntake, setError, setStatus]
   )
 
   React.useEffect(() => {

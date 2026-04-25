@@ -8,6 +8,7 @@ Last updated: 2026-04-25
 IMDITHER is an open source web application for local image dithering. The product is built as a browser-first, single-page workstation for creative image processing and retro/palette-based output.
 
 Primary value:
+
 - upload an image
 - resize and prepare tones
 - choose a palette and dithering algorithm
@@ -60,6 +61,7 @@ The first release is optimized for desktop, remains usable on mobile, and perfor
 ## 7. How Dithering Works in IMDITHER
 
 At a high level:
+
 1. Decode the input image.
 2. Flatten transparency onto a chosen background color.
 3. Crop or fit the image to the desired frame.
@@ -70,6 +72,7 @@ At a high level:
 8. Render a preview and export the final PNG.
 
 Supported dithering families in v1:
+
 - No dithering: direct palette quantization.
 - Ordered dithering: Bayer matrices.
 - Error diffusion: Floyd-Steinberg and Atkinson.
@@ -79,6 +82,7 @@ Supported dithering families in v1:
 ### 8.1 Input
 
 The app must support:
+
 - drag and drop
 - file picker
 - paste image from clipboard
@@ -89,14 +93,16 @@ The app must not support remote URL import in v1.
 ### 8.2 Image Limits
 
 To keep processing predictable in the browser, v1 should enforce reasonable limits:
+
 - maximum source dimension: 4096px
 - maximum processed pixel count: target range 8-12 MP
 
-Oversized images should trigger an explicit auto-downscale path with user-facing messaging.
+Oversized source images should be rejected during source intake with clear user-facing messaging. Output size may still be auto-sized to stay within the browser output cap.
 
 ### 8.3 Pipeline Stages
 
 The processing pipeline must support:
+
 - alpha flattening to black or white
 - crop/fit handling
 - resizing
@@ -105,6 +111,7 @@ The processing pipeline must support:
 - dithering
 
 The pipeline must use a light stage cache keyed by relevant setting subsets:
+
 - decoded source
 - flattened source
 - resized image
@@ -113,12 +120,14 @@ The pipeline must use a light stage cache keyed by relevant setting subsets:
 ### 8.4 Algorithms
 
 v1 algorithms:
+
 - `none`
 - `bayer` with matrix sizes `2x2`, `4x4`, `8x8`
 - `floyd-steinberg`
 - `atkinson`
 
 Rules:
+
 - default Bayer size: `4x4`
 - error diffusion scan mode: serpentine, internal only
 - algorithms remain deterministic
@@ -129,6 +138,7 @@ Rules:
 v1 supports preset palettes only.
 
 Examples:
+
 - black and white
 - 4 gray
 - Game Boy-inspired
@@ -136,12 +146,14 @@ Examples:
 - limited creative multi-color sets
 
 Architectural requirement:
+
 - the engine must be palette-agnostic and accept an arbitrary palette array
 - the settings model must already allow a future `customPalette` field
 
 ### 8.6 Color Modes
 
 v1 supports:
+
 - `grayscale-first`
 - `color-preserve`
 
@@ -150,6 +162,7 @@ Presets may define a default color mode, but the user can override it.
 ### 8.7 Resize
 
 v1 resize modes:
+
 - `bilinear` as default
 - `nearest` as optional
 
@@ -158,6 +171,7 @@ Resize always happens before dithering.
 ### 8.8 Preprocessing
 
 v1 preprocessing controls:
+
 - brightness
 - contrast
 - gamma
@@ -165,12 +179,14 @@ v1 preprocessing controls:
 - grayscale-first toggle
 
 UI hierarchy:
+
 - basic controls shown by default
 - advanced controls collapsed by default
 
 ### 8.9 Preview and Compare
 
 v1 preview requirements:
+
 - original view
 - processed view
 - split comparison
@@ -178,6 +194,7 @@ v1 preview requirements:
 - `1:1`
 
 Interaction requirements:
+
 - preview updates live
 - UI debounces worker requests
 - stale jobs are canceled
@@ -187,14 +204,17 @@ Interaction requirements:
 ### 8.10 Export and Persistence
 
 v1 output:
+
 - PNG export as primary action
 - settings JSON import/export as secondary action
 
 Persistence:
+
 - save lightweight editor preferences to localStorage
 - do not persist source images in localStorage
 
 Persisted items:
+
 - last used settings
 - selected theme
 - compare mode
@@ -203,6 +223,7 @@ Persisted items:
 ### 8.11 Metadata
 
 The UI should expose concise technical metadata:
+
 - source dimensions
 - output dimensions
 - palette size
@@ -215,6 +236,7 @@ This metadata is informational, not a dashboard.
 ### 8.12 Accessibility
 
 Baseline accessibility for v1:
+
 - keyboard-accessible controls
 - visible focus states
 - semantic labels and aria support
@@ -229,6 +251,7 @@ Baseline accessibility for v1:
 IMDITHER v1 is a single-screen workstation, not a step-by-step wizard.
 
 High-level layout:
+
 - primary: preview area
 - secondary: control panel
 - tertiary: metadata and utility strip
@@ -236,6 +259,7 @@ High-level layout:
 ### 9.2 Visual Direction
 
 The interface is dark-first and Nothing-inspired:
+
 - OLED black background
 - white and gray hierarchy
 - red as a rare accent
@@ -244,6 +268,7 @@ The interface is dark-first and Nothing-inspired:
 - compact, instrument-like UI
 
 Fonts:
+
 - `Doto`
 - `Space Grotesk`
 - `Space Mono`
@@ -255,11 +280,13 @@ Light mode should exist later as a first-class theme, but dark mode is the initi
 The project will use `shadcn/ui` for accessible primitives and composition patterns.
 
 Important constraint:
+
 - `shadcn/ui` is a structural foundation, not the final visual language
 - components must be restyled to match IMDITHER tokens and the Nothing-inspired system
 - default shadcn appearance must not define the product identity
 
 Planned usage:
+
 - shared primitives live in `packages/ui`
 - the web app consumes them from `apps/web`
 - accessibility and interaction behavior come from the primitive layer
@@ -270,6 +297,7 @@ Planned usage:
 ### 10.1 Repository Structure
 
 The project uses a workspace layout:
+
 - `apps/web`: Vite + React application
 - `packages/core`: image-processing engine
 - `packages/ui`: shared UI primitives and tokens
@@ -295,6 +323,7 @@ Boundary adapters may convert to and from `ImageData`, but internal processing s
 Two layers are required.
 
 Low-level stage functions:
+
 - `flattenAlpha`
 - `resizeImage`
 - `applyPreprocess`
@@ -304,6 +333,7 @@ Low-level stage functions:
 - `ditherAtkinson`
 
 High-level orchestration:
+
 - `processImage(input, settings)`
 
 ### 10.4 Worker Model
@@ -311,6 +341,7 @@ High-level orchestration:
 The processing engine must run behind a dedicated Web Worker.
 
 Requirements:
+
 - typed message protocol
 - cancel stale jobs
 - keep large buffers out of the global Zustand store
@@ -321,6 +352,7 @@ Requirements:
 The app uses `zustand`, but narrowly.
 
 Zustand stores:
+
 - editor settings
 - theme
 - session metadata
@@ -360,16 +392,19 @@ type EditorSettings = {
 ## 11. Testing Strategy
 
 Tooling:
+
 - `Vitest` for unit and component tests
 - `Playwright` for end-to-end tests
 
 Test layers:
+
 - unit tests for pixel math, palette mapping, preprocessing, and kernels
 - golden tests for deterministic core output on small fixtures
 - component tests for editor state and interaction logic
 - 1-2 end-to-end happy-path tests
 
 Golden strategy:
+
 - exact matching for deterministic pure pipeline output
 - tolerant visual checks or smoke coverage for browser-level snapshots
 
@@ -378,6 +413,7 @@ Golden strategy:
 v1 is deployed as a static site.
 
 Implications:
+
 - no production backend required
 - hosting can be any static platform
 - Bun is used for package management and local developer workflow, not as a required production server
@@ -385,6 +421,7 @@ Implications:
 ## 13. MVP-1 Scope
 
 Included in MVP-1:
+
 - one-page editor
 - demo image
 - upload, drop, paste
@@ -400,6 +437,7 @@ Included in MVP-1:
 - deterministic tests across core and UI wiring
 
 Explicitly out of MVP-1:
+
 - custom palette editor
 - auto-palette extraction
 - undo/redo
@@ -461,6 +499,7 @@ Explicitly out of MVP-1:
 ## 15. Post-v1 Roadmap
 
 Candidates for later releases:
+
 - custom palette editor
 - auto-palette extraction
 - additional diffusion kernels
