@@ -3,19 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DEFAULT_SETTINGS } from "@workspace/core"
 
 import { ControlPanel } from "./control-panel"
+import type { CommittedSliderFieldProps } from "./committed-slider-field"
 
-type SliderMockProps = {
-  onValueChange?: (value: number[]) => void
-  onValueCommit?: (value: number[]) => void
-  value?: number[]
-}
+const sliderRenders: CommittedSliderFieldProps[] = []
 
-const sliderRenders: SliderMockProps[] = []
-
-vi.mock("@workspace/ui/components/slider", () => ({
-  Slider: (props: SliderMockProps) => {
+vi.mock("./committed-slider-field", () => ({
+  CommittedSliderField: (props: CommittedSliderFieldProps) => {
     sliderRenders.push(props)
-    return <div data-slot="slider">{props.value?.[0]}</div>
+    return <div data-slot="committed-slider-field">{props.value}</div>
   },
 }))
 
@@ -24,7 +19,7 @@ describe("ControlPanel", () => {
     sliderRenders.length = 0
   })
 
-  it("keeps slider draft changes away from committed settings transitions", () => {
+  it("wires slider commits to committed settings transitions", () => {
     const onSettingsTransition = vi.fn()
 
     renderToStaticMarkup(
@@ -46,10 +41,9 @@ describe("ControlPanel", () => {
     const brightnessSlider = sliderRenders[0]
     expect(brightnessSlider).toBeDefined()
 
-    brightnessSlider?.onValueChange?.([25])
     expect(onSettingsTransition).not.toHaveBeenCalled()
 
-    brightnessSlider?.onValueCommit?.([25])
+    brightnessSlider?.onCommit(25)
     expect(onSettingsTransition).toHaveBeenCalledTimes(1)
     expect(onSettingsTransition).toHaveBeenCalledWith({
       type: "set-preprocess",

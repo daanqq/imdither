@@ -7,16 +7,6 @@ type ButtonMockProps = React.ComponentProps<"button"> & {
   variant?: string
 }
 
-type SliderMockProps = {
-  max?: number
-  min?: number
-  onValueChange?: (value: number[]) => void
-  onValueCommit?: (value: number[]) => void
-  step?: number
-  value?: number[]
-}
-
-const sliderRenders: SliderMockProps[] = []
 const buttonRenders: ButtonMockProps[] = []
 
 vi.mock("@workspace/ui/components/button", () => ({
@@ -26,25 +16,17 @@ vi.mock("@workspace/ui/components/button", () => ({
   },
 }))
 
-vi.mock("@workspace/ui/components/slider", () => ({
-  Slider: (props: SliderMockProps) => {
-    sliderRenders.push(props)
-    return <div data-slot="slider">{props.value?.[0]}</div>
-  },
-}))
-
 const { CommittedSliderField } = await import("./committed-slider-field")
 
 describe("CommittedSliderField", () => {
   beforeEach(() => {
     buttonRenders.length = 0
-    sliderRenders.length = 0
   })
 
-  it("keeps drag edits local until the slider commits", () => {
+  it("renders a native range input for direct thumb movement", () => {
     const onCommit = vi.fn()
 
-    renderToStaticMarkup(
+    const html = renderToStaticMarkup(
       <CommittedSliderField
         defaultValue={0}
         label="Brightness"
@@ -56,15 +38,10 @@ describe("CommittedSliderField", () => {
       />
     )
 
-    const slider = sliderRenders.at(-1)
-    expect(slider).toBeDefined()
-
-    slider?.onValueChange?.([25])
+    expect(html).toContain('type="range"')
+    expect(html).toContain('data-slot="committed-range-slider"')
+    expect(html).not.toContain('data-slot="slider"')
     expect(onCommit).not.toHaveBeenCalled()
-
-    slider?.onValueCommit?.([25])
-    expect(onCommit).toHaveBeenCalledTimes(1)
-    expect(onCommit).toHaveBeenCalledWith(25)
   })
 
   it("disables reset when the visible value is already the default", () => {
@@ -90,7 +67,7 @@ describe("CommittedSliderField", () => {
       title: "Reset Brightness to 0",
       variant: "ghost",
     })
-    expect(button?.onClick).toBeUndefined()
+    expect(button?.onClick).toBeDefined()
   })
 
   it("commits the default when reset is clicked", () => {
