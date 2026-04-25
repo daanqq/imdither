@@ -1,5 +1,8 @@
 # Import and Processing Responsiveness PRD
 
+Status: done
+Last updated: 2026-04-25
+
 ## Problem Statement
 
 When an IMDITHER user imports a Source Image, the editor can become temporarily unresponsive while the app is decoding the image, converting it into a pixel buffer, sending data into processing, or presenting the result back onto the preview surface.
