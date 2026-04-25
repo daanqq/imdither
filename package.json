@@ -8,7 +8,9 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "format": "turbo format",
+    "format:check": "turbo format:check",
     "typecheck": "turbo typecheck",
+    "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },

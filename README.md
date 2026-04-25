@@ -85,9 +85,22 @@ Run the app locally:
 bun dev
 ```
 
-Run the standard checks:
+Format files:
 
 ```sh
+bun format
+```
+
+Run the standard verification after changes:
+
+```sh
+bun verify
+```
+
+Run individual checks:
+
+```sh
+bun format:check
 bun typecheck
 bun lint
 bun test
