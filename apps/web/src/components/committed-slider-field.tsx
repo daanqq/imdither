@@ -1,9 +1,12 @@
 import * as React from "react"
+import { Button } from "@workspace/ui/components/button"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { Slider } from "@workspace/ui/components/slider"
+import { RotateCcwIcon } from "lucide-react"
 
 type CommittedSliderFieldProps = {
   label: string
+  defaultValue: number
   min: number
   max: number
   step: number
@@ -12,6 +15,7 @@ type CommittedSliderFieldProps = {
 }
 
 export function CommittedSliderField({
+  defaultValue,
   label,
   max,
   min,
@@ -21,6 +25,8 @@ export function CommittedSliderField({
 }: CommittedSliderFieldProps) {
   const [draftValue, setDraftValue] = React.useState(value)
   const draggingRef = React.useRef(false)
+  const resetLabel = `Reset ${label} to ${formatSliderValue(defaultValue)}`
+  const canReset = Math.abs(draftValue - defaultValue) >= step / 2
 
   React.useEffect(() => {
     if (!draggingRef.current) {
@@ -41,9 +47,22 @@ export function CommittedSliderField({
     <Field>
       <div className="flex items-center justify-between gap-3">
         <FieldLabel>{label}</FieldLabel>
-        <span className="font-mono text-xs text-muted-foreground">
-          {Number.isInteger(draftValue) ? draftValue : draftValue.toFixed(2)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs text-muted-foreground">
+            {formatSliderValue(draftValue)}
+          </span>
+          <Button
+            aria-label={resetLabel}
+            disabled={!canReset}
+            size="icon-xs"
+            title={resetLabel}
+            type="button"
+            variant="ghost"
+            onClick={canReset ? () => commitValue(defaultValue) : undefined}
+          >
+            <RotateCcwIcon data-icon="inline-start" />
+          </Button>
+        </div>
       </div>
       <Slider
         max={max}
@@ -58,4 +77,8 @@ export function CommittedSliderField({
       />
     </Field>
   )
+}
+
+function formatSliderValue(value: number): string | number {
+  return Number.isInteger(value) ? value : value.toFixed(2)
 }

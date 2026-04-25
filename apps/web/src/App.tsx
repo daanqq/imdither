@@ -1,6 +1,7 @@
 import * as React from "react"
 import {
   DITHER_ALGORITHM_OPTIONS,
+  DEFAULT_SETTINGS,
   PRESET_PALETTES,
   getDitherAlgorithmOption,
   safeNormalizeSettings,
@@ -767,6 +768,7 @@ function ControlPanel({
               />
 
               <CommittedSliderField
+                defaultValue={DEFAULT_SETTINGS.preprocess.brightness}
                 label="Brightness"
                 max={100}
                 min={-100}
@@ -780,6 +782,7 @@ function ControlPanel({
                 }
               />
               <CommittedSliderField
+                defaultValue={DEFAULT_SETTINGS.preprocess.contrast}
                 label="Contrast"
                 max={100}
                 min={-100}
@@ -918,6 +921,7 @@ function ControlPanel({
                     </ToggleGroup>
                   </FieldSet>
                   <CommittedSliderField
+                    defaultValue={DEFAULT_SETTINGS.preprocess.gamma}
                     label="Gamma"
                     max={3}
                     min={0.2}
