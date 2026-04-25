@@ -358,11 +358,11 @@ export function App() {
   return (
     <main className="h-svh w-full overflow-hidden bg-background text-foreground">
       <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-3 overflow-hidden p-3">
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border pb-3">
+        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border pb-1.5 md:gap-3 md:pb-3">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="size-2 rounded-full bg-destructive" />
-              <h1 className="font-display text-3xl leading-none tracking-[-0.04em] md:text-4xl">
+            <div className="flex min-w-0 items-center gap-1.5 md:gap-3">
+              <span className="size-1 rounded-full bg-destructive md:size-2" />
+              <h1 className="font-display text-base leading-none tracking-[-0.04em] md:text-4xl">
                 IMDITHER
               </h1>
             </div>
@@ -423,7 +423,8 @@ function ThemeToggle() {
       type="button"
       aria-label={`Switch to ${nextTheme} theme`}
       aria-pressed={isLight}
-      className="font-mono text-xs uppercase"
+      className="!size-6 !min-h-6 gap-0 p-0 font-mono text-xs uppercase md:!h-8 md:!min-h-11 md:!w-auto md:gap-1.5 md:px-2.5"
+      size="icon-xs"
       variant="outline"
       onClick={() => setTheme(nextTheme)}
     >
@@ -432,7 +433,9 @@ function ThemeToggle() {
       ) : (
         <SunIcon data-icon="inline-start" />
       )}
-      {isLight ? "Dark theme" : "Light theme"}
+      <span className="hidden md:inline">
+        {isLight ? "Dark theme" : "Light theme"}
+      </span>
     </Button>
   )
 }
