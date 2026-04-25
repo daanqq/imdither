@@ -1,35 +1,66 @@
+import type { PixelBuffer } from "@workspace/core"
+
+import { hidePixelBufferData } from "./pixel-buffer-visibility"
 import {
-  MAX_SOURCE_DIMENSION,
-  clampOutputSize,
-  type PixelBuffer,
-} from "@workspace/core"
+  acceptLoadedSource,
+  createDemoSourceIntake as createCoreDemoSourceIntake,
+  formatSourceNotices,
+  isOversizedSource,
+  rejectOversizedSource,
+  type LoadedSource,
+  type SourceIntakeResult,
+  type SourceNotice,
+} from "./source-intake-core"
 
-export type LoadedSource = {
-  id: string
-  name: string
-  buffer: PixelBuffer
-  originalWidth: number
-  originalHeight: number
+export {
+  acceptLoadedSource,
+  formatSourceNotices,
+  type LoadedSource,
+  type SourceIntakeResult,
+  type SourceNotice,
 }
 
-export type SourceNotice = {
-  kind: "demo-loaded" | "output-auto-sized"
-  message: string
+type SourceIntakeWorkerRequest = {
+  type: "intake-image"
+  jobId: number
+  file: File
 }
 
-export type SourceIntakeResult =
+type SourceIntakeWorkerResponse =
   | {
-      type: "accepted"
-      source: LoadedSource
-      outputSize: ReturnType<typeof clampOutputSize>
-      notices: SourceNotice[]
+      type: "complete"
+      jobId: number
+      result: SourceIntakeResult
     }
   | {
-      type: "rejected"
+      type: "error"
+      jobId: number
       message: string
     }
 
+let nextIntakeJobId = 0
+
 export async function intakeImageFile(file: File): Promise<SourceIntakeResult> {
+  if (typeof Worker !== "undefined") {
+    try {
+      return prepareSourceIntakeResult(await runSourceIntakeWorkerJob(file))
+    } catch {
+      return prepareSourceIntakeResult(await intakeImageFileOnMainThread(file))
+    }
+  }
+
+  return prepareSourceIntakeResult(await intakeImageFileOnMainThread(file))
+}
+
+export function createDemoSourceIntake(): SourceIntakeResult {
+  return prepareSourceIntakeResult(createCoreDemoSourceIntake())
+}
+
+async function intakeImageFileOnMainThread(
+  file: File
+): Promise<SourceIntakeResult> {
+  await yieldBeforeMainThreadIntake()
+
   const bitmap = await createImageBitmap(file)
 
   try {
@@ -51,73 +82,48 @@ export async function intakeImageFile(file: File): Promise<SourceIntakeResult> {
   }
 }
 
-export function createDemoSourceIntake(): SourceIntakeResult {
-  const width = 960
-  const height = 640
-  const data = new Uint8ClampedArray(width * height * 4)
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = (y * width + x) * 4
-      const grid = (Math.floor(x / 32) + Math.floor(y / 32)) % 2
-      const radial = Math.hypot(x - width * 0.68, y - height * 0.44)
-      const diagonal = (x + y * 1.6) / (width + height * 1.6)
-      const circle = radial < 170 ? 1 : radial < 230 ? 0.55 : 0
-      const bar = x > 78 && x < 180 && y > 96 && y < height - 96 ? 0.32 : 0
-      const signal = y > 432 && y < 466 && x > 260 && x < 820 ? 0.75 : 0
-      const value = Math.max(
-        0,
-        Math.min(255, diagonal * 210 + grid * 18 + circle * 90 + bar * 70)
-      )
-
-      data[index] = signal ? 215 : value
-      data[index + 1] = signal ? 25 : Math.max(0, value - 18)
-      data[index + 2] = signal ? 33 : Math.max(0, value - 32)
-      data[index + 3] = 255
-    }
-  }
-
-  return acceptLoadedSource(
-    {
-      id: "demo",
-      name: "Bundled demo image",
-      buffer: { width, height, data },
-      originalWidth: width,
-      originalHeight: height,
-    },
-    [{ kind: "demo-loaded", message: "[DEMO SOURCE LOADED]" }]
+function runSourceIntakeWorkerJob(file: File): Promise<SourceIntakeResult> {
+  const jobId = createIntakeJobId()
+  const worker = new Worker(
+    new URL("../workers/source-intake.worker.ts", import.meta.url),
+    { type: "module" }
   )
-}
 
-export function acceptLoadedSource(
-  source: LoadedSource,
-  initialNotices: SourceNotice[] = []
-): SourceIntakeResult {
-  if (isOversizedSource(source.buffer.width, source.buffer.height)) {
-    return rejectOversizedSource(source.buffer.width, source.buffer.height)
-  }
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      worker.removeEventListener("message", handleMessage)
+      worker.removeEventListener("error", handleError)
+      worker.terminate()
+    }
 
-  const outputSize = clampOutputSize(source.buffer.width, source.buffer.height)
-  const notices = [...initialNotices]
+    const handleMessage = (event: MessageEvent<SourceIntakeWorkerResponse>) => {
+      if (event.data.jobId !== jobId) {
+        return
+      }
 
-  if (outputSize.downscaled) {
-    notices.push({
-      kind: "output-auto-sized",
-      message: `[OUTPUT AUTO-SIZED: ${outputSize.width}x${outputSize.height} / 12MP]`,
-    })
-  }
+      cleanup()
 
-  return {
-    type: "accepted",
-    source,
-    outputSize,
-    notices,
-  }
-}
+      if (event.data.type === "error") {
+        reject(new Error(event.data.message))
+        return
+      }
 
-export function formatSourceNotices(notices: SourceNotice[]): string | null {
-  const message = notices.map((notice) => notice.message).join(" ")
-  return message || null
+      resolve(event.data.result)
+    }
+
+    const handleError = (event: ErrorEvent) => {
+      cleanup()
+      reject(new Error(event.message || "Image intake worker failed"))
+    }
+
+    worker.addEventListener("message", handleMessage)
+    worker.addEventListener("error", handleError)
+    worker.postMessage({
+      type: "intake-image",
+      jobId,
+      file,
+    } satisfies SourceIntakeWorkerRequest)
+  })
 }
 
 export function pickImageFromClipboard(
@@ -134,20 +140,6 @@ export function pickImageFromClipboard(
   }
 
   return null
-}
-
-function isOversizedSource(width: number, height: number): boolean {
-  return width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION
-}
-
-function rejectOversizedSource(
-  width: number,
-  height: number
-): SourceIntakeResult {
-  return {
-    type: "rejected",
-    message: `Image is too large (${width}x${height}). Maximum source dimension is ${MAX_SOURCE_DIMENSION}px.`,
-  }
 }
 
 function bitmapToPixelBuffer(bitmap: ImageBitmap): PixelBuffer {
@@ -180,4 +172,25 @@ function createSourceId(): string {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function createIntakeJobId(): number {
+  nextIntakeJobId += 1
+  return nextIntakeJobId
+}
+
+function prepareSourceIntakeResult(
+  result: SourceIntakeResult
+): SourceIntakeResult {
+  if (result.type === "accepted") {
+    hidePixelBufferData(result.source.buffer)
+  }
+
+  return result
+}
+
+function yieldBeforeMainThreadIntake(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0)
+  })
 }

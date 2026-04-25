@@ -1,5 +1,6 @@
 import type { EditorSettings, PixelBuffer } from "@workspace/core"
 
+import { hidePixelBufferData } from "@/lib/pixel-buffer-visibility"
 import type {
   ProcessWorkerRequest,
   ProcessWorkerResponse,
@@ -156,6 +157,7 @@ function handleWorkerMessage(event: MessageEvent<ProcessWorkerResponse>) {
   if (event.data.type === "error") {
     rejectJob(job, new Error(event.data.message))
   } else {
+    hidePixelBufferData(event.data.image)
     resolveJob(job, event.data)
   }
 
