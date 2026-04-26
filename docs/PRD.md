@@ -287,7 +287,6 @@ Inspection controls:
 
 - pointer-drag pan in Manual mode
 - wheel zoom rounded to 50% percentage steps
-- optional pixel grid visible in Manual mode at 400% and above
 - optional pixel inspector with image coordinates and visible original/processed hex values
 
 Slide comparison:
@@ -624,7 +623,7 @@ Included:
 - commit-on-release slider behavior
 - original, processed, and slide compare modes
 - Fit and Manual preview viewport
-- zoom, pan, pixel grid, and pixel inspector UI state
+- zoom, pan, and pixel inspector UI state
 - screen-sized Fit preview
 - PNG, WebP, and JPEG export
 - settings JSON copy/paste for processing settings

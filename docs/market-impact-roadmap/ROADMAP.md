@@ -115,11 +115,10 @@ Success signal: shipped. Users can create, reuse, and exchange palettes without 
 - [x] Add recipe variants that demonstrate perceptual matching versus RGB matching.
 - [x] Add continuous zoom.
 - [x] Add pan.
-- [x] Add optional pixel grid.
 - [x] Add a cursor pixel inspector.
 - [x] Keep original and processed transforms locked during zoomed compare.
 
-Success signal: shipped. Users can intentionally control palette size, compare RGB versus Oklab matching, and inspect pixel-level output with zoom, pan, grid, and cursor pixel values.
+Success signal: shipped. Users can intentionally control palette size, compare RGB versus Oklab matching, and inspect pixel-level output with zoom, pan, and cursor pixel values.
 
 ### Phase 3: Look-Building Workflow
 

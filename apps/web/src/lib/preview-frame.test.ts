@@ -14,6 +14,13 @@ describe("preview frame style", () => {
       "--preview-aspect": "2",
       height:
         "max(1px, min(calc(100cqh - 12px), calc(calc(100cqw - 12px) / var(--preview-aspect))))",
+      left: "50%",
+      marginLeft:
+        "calc(max(1px, min(calc(100cqw - 12px), calc(calc(100cqh - 12px) * var(--preview-aspect)))) / -2)",
+      marginTop:
+        "calc(max(1px, min(calc(100cqh - 12px), calc(calc(100cqw - 12px) / var(--preview-aspect)))) / -2)",
+      position: "absolute",
+      top: "50%",
       width:
         "max(1px, min(calc(100cqw - 12px), calc(calc(100cqh - 12px) * var(--preview-aspect))))",
     })

@@ -141,10 +141,9 @@
 | **View Scale**                     | The legacy desktop preview sizing concept now represented by **Preview Viewport** mode.                                   | Zoom mode, scale mode              |
 | **Fit View**                       | A **View Scale** that fits the preview within the available preview area.                                                 | Fit, fit to screen                 |
 | **1:1 View**                       | The legacy preview sizing mode that migrates to **Manual View** at 100% zoom.                                             | Actual size, pixel view            |
-| **Preview Viewport**               | The view-local preview state containing mode, zoom, image-space center, pixel-grid preference, and inspector preference.  | View scale, zoom state             |
+| **Preview Viewport**               | The view-local preview state containing mode, zoom, image-space center, and inspector preference.                         | View scale, zoom state             |
 | **Manual View**                    | A **Preview Viewport** mode that uses numeric zoom and image-space center coordinates instead of fitting the whole image. | 1:1 view, actual mode              |
 | **Wheel Zoom Step**                | The wheel zoom rule that rounds the resulting zoom percentage to 50% increments.                                          | Zoom tick, mouse step              |
-| **Pixel Grid**                     | A preview-only overlay that marks pixel boundaries when enabled in **Manual View** at high zoom.                          | Grid, exported grid                |
 | **Pixel Inspector**                | A preview-local readout of image coordinates and visible original or processed hex values under the cursor.               | Loupe, eyedropper                  |
 | **Display Frame**                  | The actual on-screen rectangle used to display a **Preview Surface**.                                                     | Preview pane, container, frame     |
 | **Fit Inset**                      | The spacing subtracted from the measured preview area before sizing a **Display Frame** in **Fit View**.                  | Padding, margin, frame gap         |
@@ -278,7 +277,7 @@
 - **Preview Viewport** is **View-local State**, not **Editor Settings**.
 - **Preview Viewport** must not be serialized into **Settings JSON**.
 - **Wheel Zoom Step** applies to mouse-wheel zoom, not to the toolbar zoom slider.
-- **Pixel Grid** and **Pixel Inspector** must not affect **Processed Image**, **Full Output**, or **Export File**.
+- **Pixel Inspector** must not affect **Processed Image**, **Full Output**, or **Export File**.
 - A **CSS Pixel Preview Target** must account for the **Fit Inset** so the processed buffer matches the **Display Frame**.
 - **Desktop Reduced Preview Notice** may appear only in **Desktop Experience**.
 - **Slide Compare** uses one **Source Image** layer and one **Processed Image** layer in the same **Display Frame**.
@@ -376,7 +375,6 @@
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.
 - "Fit" was used for both preview zoom and resize fitting. Use **Fit View** for preview sizing and **Resize Fit** for contain / cover / stretch.
 - "1:1" was replaced by **Manual View** language for the current viewport model; use **Manual View** for zoom/pan inspection and reserve "100%" for the zoom value where one image pixel maps to one CSS pixel.
-- "Grid" should mean **Pixel Grid**, a preview-only overlay; it must not imply exported pixels or processing output.
 - "Loupe" was implemented as **Pixel Inspector** for coordinate and color readout, not as an optical magnifying sub-canvas.
 - "Full preview" suggested the screen should always catch up to full resolution. Use **Full Output** for selected output dimensions and keep it tied to export semantics.
 - "Split" and **Slide Compare** both referred to before/after comparison. Canonical term: **Slide Compare**; keep `split` only as legacy persisted state.

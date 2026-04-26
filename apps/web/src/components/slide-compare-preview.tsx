@@ -19,9 +19,10 @@ import {
   getAnchoredZoomViewport,
   getDisplayPointImageCoordinates,
   getFramePointImageCoordinates,
+  getManualViewportDisplayMetrics,
+  getManualViewportScale,
   getViewportPointImageCoordinates,
   getWheelZoom,
-  isPixelGridVisible,
 } from "@/lib/preview-viewport"
 import {
   areSlideComparePreviewPropsEqual,
@@ -34,7 +35,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   displayWidth,
   original,
   pixelInspectorEnabled = true,
-  pixelGridHidden = false,
   processed,
   previewViewport,
   status,
@@ -60,10 +60,34 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
     null
   )
+  const [viewportBox, setViewportBox] = React.useState<{
+    height: number
+    width: number
+  } | null>(null)
   const processedReady = Boolean(processed)
   const frameWidth = displayWidth ?? processed?.width ?? original.width
   const frameHeight = displayHeight ?? processed?.height ?? original.height
   const clampedDivider = clampSlideDivider(dividerPercent)
+  const manualScale =
+    previewViewport?.mode === "manual"
+      ? getManualViewportScale({
+          imageHeight: frameHeight,
+          imageWidth: frameWidth,
+          viewportHeight: viewportBox?.height ?? frameHeight,
+          viewportWidth: viewportBox?.width ?? frameWidth,
+          zoom: previewViewport.zoom,
+        })
+      : 1
+  const manualDisplayMetrics =
+    previewViewport?.mode === "manual"
+      ? getManualViewportDisplayMetrics({
+          imageHeight: frameHeight,
+          imageWidth: frameWidth,
+          viewportHeight: viewportBox?.height ?? frameHeight,
+          viewportWidth: viewportBox?.width ?? frameWidth,
+          zoom: previewViewport.zoom,
+        })
+      : null
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: frameHeight,
     sourceWidth: frameWidth,
@@ -72,13 +96,13 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const effectiveFrameStyle =
     previewViewport?.mode === "manual"
       ? {
-          height: `${Math.max(1, Math.round(frameHeight * previewViewport.zoom))}px`,
+          height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(frameHeight * manualScale))}px`,
           left: "50%",
-          marginLeft: `${-Math.round(previewViewport.center.x * previewViewport.zoom)}px`,
-          marginTop: `${-Math.round(previewViewport.center.y * previewViewport.zoom)}px`,
+          marginLeft: `${-Math.round(previewViewport.center.x * (manualDisplayMetrics?.pixelScaleX ?? manualScale))}px`,
+          marginTop: `${-Math.round(previewViewport.center.y * (manualDisplayMetrics?.pixelScaleY ?? manualScale))}px`,
           position: "absolute" as const,
           top: "50%",
-          width: `${Math.max(1, Math.round(frameWidth * previewViewport.zoom))}px`,
+          width: `${manualDisplayMetrics?.displayWidth ?? Math.max(1, Math.round(frameWidth * manualScale))}px`,
         }
       : frameStyle
 
@@ -135,10 +159,19 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         return
       }
 
-      frameRef.current.style.marginLeft = `${-Math.round(center.x * previewViewport.zoom)}px`
-      frameRef.current.style.marginTop = `${-Math.round(center.y * previewViewport.zoom)}px`
+      const viewportRect = getFrameViewportRect(frameRef.current)
+      const metrics = getManualViewportDisplayMetrics({
+        imageHeight: frameHeight,
+        imageWidth: frameWidth,
+        viewportHeight: viewportRect.height,
+        viewportWidth: viewportRect.width,
+        zoom: previewViewport.zoom,
+      })
+
+      frameRef.current.style.marginLeft = `${-Math.round(center.x * metrics.pixelScaleX)}px`
+      frameRef.current.style.marginTop = `${-Math.round(center.y * metrics.pixelScaleY)}px`
     },
-    [previewViewport]
+    [frameHeight, frameWidth, previewViewport]
   )
 
   const applyManualFrameViewport = React.useCallback(
@@ -147,24 +180,49 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         return
       }
 
-      frameRef.current.style.height = `${Math.max(1, Math.round(frameHeight * viewport.zoom))}px`
-      frameRef.current.style.left = "50%"
-      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * viewport.zoom)}px`
-      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * viewport.zoom)}px`
-      frameRef.current.style.position = "absolute"
-      frameRef.current.style.top = "50%"
-      frameRef.current.style.width = `${Math.max(1, Math.round(frameWidth * viewport.zoom))}px`
+      const viewportRect = getFrameViewportRect(frameRef.current)
+      const metrics = getManualViewportDisplayMetrics({
+        imageHeight: frameHeight,
+        imageWidth: frameWidth,
+        viewportHeight: viewportRect.height,
+        viewportWidth: viewportRect.width,
+        zoom: viewport.zoom,
+      })
+
+      frameRef.current.style.height = `${metrics.displayHeight}px`
+      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
+      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
+      frameRef.current.style.width = `${metrics.displayWidth}px`
     },
     [frameHeight, frameWidth]
   )
 
-  React.useEffect(() => {
-    viewportRef.current = previewViewport ?? null
+  React.useLayoutEffect(() => {
+    const viewportElement = frameRef.current?.parentElement
 
-    if (previewViewport?.mode === "manual") {
-      applyManualFrameViewport(previewViewport)
+    if (!viewportElement) {
+      return
     }
-  }, [applyManualFrameViewport, previewViewport])
+
+    const updateViewportBox = () => {
+      const rect = viewportElement.getBoundingClientRect()
+      setViewportBox({
+        height: Math.max(1, Math.round(rect.height)),
+        width: Math.max(1, Math.round(rect.width)),
+      })
+    }
+
+    updateViewportBox()
+
+    const observer = new ResizeObserver(updateViewportBox)
+    observer.observe(viewportElement)
+
+    return () => observer.disconnect()
+  }, [])
+
+  React.useLayoutEffect(() => {
+    viewportRef.current = previewViewport ?? null
+  }, [previewViewport])
 
   function scheduleManualFramePosition(center: { x: number; y: number }) {
     if (panAnimationFrameRef.current !== null) {
@@ -336,6 +394,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             frameTop: rect.top,
             imageHeight: frameHeight,
             imageWidth: frameWidth,
+            viewportHeight: getFrameViewportRect(frameRef.current).height,
+            viewportWidth: getFrameViewportRect(frameRef.current).width,
             zoom: previewViewport.zoom,
           })
         : getDisplayPointImageCoordinates({
@@ -417,16 +477,21 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                 const viewportRect =
                   event.currentTarget.parentElement?.getBoundingClientRect() ??
                   event.currentTarget.getBoundingClientRect()
+                const scale = getManualViewportScale({
+                  imageHeight: frameHeight,
+                  imageWidth: frameWidth,
+                  viewportHeight: viewportRect.height,
+                  viewportWidth: viewportRect.width,
+                  zoom: previewViewport.zoom,
+                })
                 const nextCenter = clampManualViewportCenter({
                   center: {
                     x:
                       panStateRef.current.center.x -
-                      (event.clientX - panStateRef.current.pointerX) /
-                        previewViewport.zoom,
+                      (event.clientX - panStateRef.current.pointerX) / scale,
                     y:
                       panStateRef.current.center.y -
-                      (event.clientY - panStateRef.current.pointerY) /
-                        previewViewport.zoom,
+                      (event.clientY - panStateRef.current.pointerY) / scale,
                   },
                   imageHeight: frameHeight,
                   imageWidth: frameWidth,
@@ -487,19 +552,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             <span className="bg-background/80 px-1.5 py-0.5">Original</span>
             <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
           </div>
-          {previewViewport &&
-          !pixelGridHidden &&
-          isPixelGridVisible(previewViewport) ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-45 mix-blend-difference"
-              style={{
-                backgroundImage:
-                  "linear-gradient(to right, rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.7) 1px, transparent 1px)",
-                backgroundSize: `${previewViewport.zoom}px ${previewViewport.zoom}px`,
-              }}
-            />
-          ) : null}
           {processedReady ? (
             <>
               <div
@@ -557,6 +609,15 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     </div>
   )
 }, areSlideComparePreviewPropsEqual)
+
+function getFrameViewportRect(frame: HTMLElement) {
+  const rect = frame.parentElement?.getBoundingClientRect()
+
+  return {
+    height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
+    width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
+  }
+}
 
 function PixelInspector({ sample }: { sample: PixelInspectorSample }) {
   return (

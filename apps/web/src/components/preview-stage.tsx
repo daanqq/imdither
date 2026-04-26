@@ -25,7 +25,6 @@ import { cn } from "@workspace/ui/lib/utils"
 import {
   CrosshairIcon,
   DownloadIcon,
-  Grid3X3Icon,
   MaximizeIcon,
   ScanSearchIcon,
   UploadIcon,
@@ -56,9 +55,10 @@ import {
   getAnchoredZoomViewport,
   getDisplayPointImageCoordinates,
   getFramePointImageCoordinates,
+  getManualViewportDisplayMetrics,
+  getManualViewportScale,
   getViewportPointImageCoordinates,
   getWheelZoom,
-  isPixelGridVisible,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
@@ -115,6 +115,14 @@ export const PreviewStage = React.memo(function PreviewStage({
   const viewScale: ViewScale = previewViewport.mode === "fit" ? "fit" : "actual"
   const comparisonFrameWidth = preview?.width ?? original?.width
   const comparisonFrameHeight = preview?.height ?? original?.height
+  const toolbarFrameWidth =
+    showOriginal && comparisonFrameWidth
+      ? comparisonFrameWidth
+      : previewTargetWidth
+  const toolbarFrameHeight =
+    showOriginal && comparisonFrameHeight
+      ? comparisonFrameHeight
+      : previewTargetHeight
   const previewReduced = preview
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
@@ -203,7 +211,6 @@ export const PreviewStage = React.memo(function PreviewStage({
                     dividerPercent={slideDividerPercent}
                     original={original}
                     pixelInspectorEnabled={isDesktopViewScale}
-                    pixelGridHidden={previewReduced}
                     processed={preview}
                     displayHeight={previewTargetHeight}
                     displayWidth={previewTargetWidth}
@@ -221,7 +228,6 @@ export const PreviewStage = React.memo(function PreviewStage({
                     expectedHeight={comparisonFrameHeight ?? original.height}
                     expectedWidth={comparisonFrameWidth ?? original.width}
                     pixelInspectorEnabled={isDesktopViewScale}
-                    pixelGridHidden={previewReduced}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
                     onViewportChange={onPreviewViewportChange}
@@ -235,7 +241,6 @@ export const PreviewStage = React.memo(function PreviewStage({
                     label="Processed"
                     missing={!preview}
                     pixelInspectorEnabled={isDesktopViewScale}
-                    pixelGridHidden={previewReduced}
                     status={status}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
@@ -343,6 +348,8 @@ export const PreviewStage = React.memo(function PreviewStage({
               </div>
             </div>
             <PreviewViewportToolbar
+              imageHeight={toolbarFrameHeight}
+              imageWidth={toolbarFrameWidth}
               pixelInspectorEnabled={isDesktopViewScale}
               viewport={previewViewport}
               onViewportChange={onPreviewViewportChange}
@@ -474,20 +481,33 @@ function ProcessingOverlay({
 }
 
 function PreviewViewportToolbar({
+  imageHeight,
+  imageWidth,
   pixelInspectorEnabled,
   viewport,
   onViewportChange,
 }: {
+  imageHeight: number
+  imageWidth: number
   pixelInspectorEnabled: boolean
   viewport: PreviewViewport
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }) {
   const zoomPercent = Math.round(viewport.zoom * 100)
+  const centeredViewport = React.useMemo(
+    () => ({
+      center: {
+        x: Math.max(1, imageWidth) / 2,
+        y: Math.max(1, imageHeight) / 2,
+      },
+      mode: "manual" as const,
+      zoom: 1,
+    }),
+    [imageHeight, imageWidth]
+  )
   const zoomControlsVisible = viewport.mode === "manual"
   const gridColumns = zoomControlsVisible
-    ? pixelInspectorEnabled
-      ? "grid-cols-[auto_auto_minmax(6rem,1fr)_auto_auto]"
-      : "grid-cols-[auto_auto_minmax(6rem,1fr)_auto]"
+    ? "grid-cols-[auto_auto_minmax(6rem,1fr)_auto]"
     : "grid-cols-[auto]"
 
   return (
@@ -508,7 +528,7 @@ function PreviewViewportToolbar({
           }
 
           if (value === "manual") {
-            onViewportChange({ mode: "manual", zoom: 1 })
+            onViewportChange(centeredViewport)
           }
         }}
       >
@@ -536,7 +556,7 @@ function PreviewViewportToolbar({
             aria-label="Set zoom to 100 percent"
             variant="outline"
             className="h-full min-w-10 px-2 font-mono text-[10px]"
-            onClick={() => onViewportChange({ mode: "manual", zoom: 1 })}
+            onClick={() => onViewportChange(centeredViewport)}
           >
             100%
           </Button>
@@ -557,18 +577,6 @@ function PreviewViewportToolbar({
             />
             <span className="text-right tabular-nums">{zoomPercent}%</span>
           </label>
-          <Button
-            type="button"
-            aria-label="Toggle pixel grid"
-            aria-pressed={viewport.gridEnabled}
-            variant={viewport.gridEnabled ? "default" : "outline"}
-            className="ml-1.5 h-full min-w-10 px-2"
-            onClick={() =>
-              onViewportChange({ gridEnabled: !viewport.gridEnabled })
-            }
-          >
-            <Grid3X3Icon data-icon="inline-start" />
-          </Button>
         </>
       ) : null}
       {zoomControlsVisible && pixelInspectorEnabled ? (
@@ -577,7 +585,7 @@ function PreviewViewportToolbar({
           aria-label="Toggle pixel inspector"
           aria-pressed={viewport.loupeEnabled}
           variant={viewport.loupeEnabled ? "default" : "outline"}
-          className="h-full min-w-10 px-2"
+          className="ml-1.5 h-full min-w-10 px-2"
           onClick={() =>
             onViewportChange({ loupeEnabled: !viewport.loupeEnabled })
           }
@@ -596,7 +604,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
   label,
   missing = false,
   pixelInspectorEnabled = true,
-  pixelGridHidden = false,
   previewViewport,
   status,
   viewScale,
@@ -618,6 +625,30 @@ const CanvasPanel = React.memo(function CanvasPanel({
   const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
     null
   )
+  const [viewportBox, setViewportBox] = React.useState<{
+    height: number
+    width: number
+  } | null>(null)
+  const manualScale =
+    previewViewport?.mode === "manual"
+      ? getManualViewportScale({
+          imageHeight: expectedHeight,
+          imageWidth: expectedWidth,
+          viewportHeight: viewportBox?.height ?? expectedHeight,
+          viewportWidth: viewportBox?.width ?? expectedWidth,
+          zoom: previewViewport.zoom,
+        })
+      : 1
+  const manualDisplayMetrics =
+    previewViewport?.mode === "manual"
+      ? getManualViewportDisplayMetrics({
+          imageHeight: expectedHeight,
+          imageWidth: expectedWidth,
+          viewportHeight: viewportBox?.height ?? expectedHeight,
+          viewportWidth: viewportBox?.width ?? expectedWidth,
+          zoom: previewViewport.zoom,
+        })
+      : null
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: expectedHeight,
     sourceWidth: expectedWidth,
@@ -626,13 +657,13 @@ const CanvasPanel = React.memo(function CanvasPanel({
   const manualFrameStyle =
     previewViewport?.mode === "manual"
       ? {
-          height: `${Math.max(1, Math.round(expectedHeight * previewViewport.zoom))}px`,
+          height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(expectedHeight * manualScale))}px`,
           left: "50%",
-          marginLeft: `${-Math.round(previewViewport.center.x * previewViewport.zoom)}px`,
-          marginTop: `${-Math.round(previewViewport.center.y * previewViewport.zoom)}px`,
+          marginLeft: `${-Math.round(previewViewport.center.x * (manualDisplayMetrics?.pixelScaleX ?? manualScale))}px`,
+          marginTop: `${-Math.round(previewViewport.center.y * (manualDisplayMetrics?.pixelScaleY ?? manualScale))}px`,
           position: "absolute" as const,
           top: "50%",
-          width: `${Math.max(1, Math.round(expectedWidth * previewViewport.zoom))}px`,
+          width: `${manualDisplayMetrics?.displayWidth ?? Math.max(1, Math.round(expectedWidth * manualScale))}px`,
         }
       : frameStyle
 
@@ -654,10 +685,19 @@ const CanvasPanel = React.memo(function CanvasPanel({
         return
       }
 
-      frameRef.current.style.marginLeft = `${-Math.round(center.x * previewViewport.zoom)}px`
-      frameRef.current.style.marginTop = `${-Math.round(center.y * previewViewport.zoom)}px`
+      const viewportRect = getFrameViewportRect(frameRef.current)
+      const metrics = getManualViewportDisplayMetrics({
+        imageHeight: expectedHeight,
+        imageWidth: expectedWidth,
+        viewportHeight: viewportRect.height,
+        viewportWidth: viewportRect.width,
+        zoom: previewViewport.zoom,
+      })
+
+      frameRef.current.style.marginLeft = `${-Math.round(center.x * metrics.pixelScaleX)}px`
+      frameRef.current.style.marginTop = `${-Math.round(center.y * metrics.pixelScaleY)}px`
     },
-    [previewViewport]
+    [expectedHeight, expectedWidth, previewViewport]
   )
 
   const applyManualFrameViewport = React.useCallback(
@@ -666,24 +706,49 @@ const CanvasPanel = React.memo(function CanvasPanel({
         return
       }
 
-      frameRef.current.style.height = `${Math.max(1, Math.round(expectedHeight * viewport.zoom))}px`
-      frameRef.current.style.left = "50%"
-      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * viewport.zoom)}px`
-      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * viewport.zoom)}px`
-      frameRef.current.style.position = "absolute"
-      frameRef.current.style.top = "50%"
-      frameRef.current.style.width = `${Math.max(1, Math.round(expectedWidth * viewport.zoom))}px`
+      const viewportRect = getFrameViewportRect(frameRef.current)
+      const metrics = getManualViewportDisplayMetrics({
+        imageHeight: expectedHeight,
+        imageWidth: expectedWidth,
+        viewportHeight: viewportRect.height,
+        viewportWidth: viewportRect.width,
+        zoom: viewport.zoom,
+      })
+
+      frameRef.current.style.height = `${metrics.displayHeight}px`
+      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
+      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
+      frameRef.current.style.width = `${metrics.displayWidth}px`
     },
     [expectedHeight, expectedWidth]
   )
 
-  React.useEffect(() => {
-    viewportRef.current = previewViewport ?? null
+  React.useLayoutEffect(() => {
+    const viewportElement = frameRef.current?.parentElement
 
-    if (previewViewport?.mode === "manual") {
-      applyManualFrameViewport(previewViewport)
+    if (!viewportElement) {
+      return
     }
-  }, [applyManualFrameViewport, previewViewport])
+
+    const updateViewportBox = () => {
+      const rect = viewportElement.getBoundingClientRect()
+      setViewportBox({
+        height: Math.max(1, Math.round(rect.height)),
+        width: Math.max(1, Math.round(rect.width)),
+      })
+    }
+
+    updateViewportBox()
+
+    const observer = new ResizeObserver(updateViewportBox)
+    observer.observe(viewportElement)
+
+    return () => observer.disconnect()
+  }, [])
+
+  React.useLayoutEffect(() => {
+    viewportRef.current = previewViewport ?? null
+  }, [previewViewport])
 
   React.useEffect(() => {
     return () => {
@@ -723,6 +788,8 @@ const CanvasPanel = React.memo(function CanvasPanel({
             frameTop: rect.top,
             imageHeight: expectedHeight,
             imageWidth: expectedWidth,
+            viewportHeight: getFrameViewportRect(frameRef.current).height,
+            viewportWidth: getFrameViewportRect(frameRef.current).width,
             zoom: previewViewport.zoom,
           })
         : getDisplayPointImageCoordinates({
@@ -839,16 +906,21 @@ const CanvasPanel = React.memo(function CanvasPanel({
           }
 
           const rect = event.currentTarget.getBoundingClientRect()
+          const scale = getManualViewportScale({
+            imageHeight: expectedHeight,
+            imageWidth: expectedWidth,
+            viewportHeight: rect.height,
+            viewportWidth: rect.width,
+            zoom: previewViewport.zoom,
+          })
           const nextCenter = clampManualViewportCenter({
             center: {
               x:
                 panStateRef.current.center.x -
-                (event.clientX - panStateRef.current.pointerX) /
-                  previewViewport.zoom,
+                (event.clientX - panStateRef.current.pointerX) / scale,
               y:
                 panStateRef.current.center.y -
-                (event.clientY - panStateRef.current.pointerY) /
-                  previewViewport.zoom,
+                (event.clientY - panStateRef.current.pointerY) / scale,
             },
             imageHeight: expectedHeight,
             imageWidth: expectedWidth,
@@ -908,11 +980,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
           <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center font-mono text-[10px] text-foreground/80">
             <span className="bg-background/80 px-1.5 py-0.5">{label}</span>
           </div>
-          {previewViewport &&
-          !pixelGridHidden &&
-          isPixelGridVisible(previewViewport) ? (
-            <PixelGridOverlay zoom={previewViewport.zoom} />
-          ) : null}
         </div>
         {pixelInspectorEnabled && inspector ? (
           <PixelInspector sample={inspector} />
@@ -922,18 +989,13 @@ const CanvasPanel = React.memo(function CanvasPanel({
   )
 }, areCanvasPanelPropsEqual)
 
-function PixelGridOverlay({ zoom }: { zoom: number }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 opacity-45 mix-blend-difference"
-      style={{
-        backgroundImage:
-          "linear-gradient(to right, rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.7) 1px, transparent 1px)",
-        backgroundSize: `${zoom}px ${zoom}px`,
-      }}
-    />
-  )
+function getFrameViewportRect(frame: HTMLElement) {
+  const rect = frame.parentElement?.getBoundingClientRect()
+
+  return {
+    height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
+    width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
+  }
 }
 
 function PixelInspector({ sample }: { sample: PixelInspectorSample }) {

@@ -1,3 +1,5 @@
+import { DEFAULT_FIT_INSET } from "@/lib/preview-frame"
+
 export type PreviewViewportMode = "fit" | "manual"
 
 export type PreviewViewport = {
@@ -23,7 +25,6 @@ export const DEFAULT_PREVIEW_VIEWPORT: PreviewViewport = {
 
 export const MIN_PREVIEW_ZOOM = 0.25
 export const MAX_PREVIEW_ZOOM = 16
-export const PIXEL_GRID_MIN_ZOOM = 4
 export const WHEEL_ZOOM_IN_FACTOR = 1.25
 export const WHEEL_ZOOM_OUT_FACTOR = 0.8
 export const WHEEL_ZOOM_PERCENT_STEP = 50
@@ -123,9 +124,95 @@ export function clampManualViewportCenter({
     center: ViewportCenter
     zoom: number
   }): ViewportCenter {
+  const scale = getManualViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+    zoom,
+  })
+
   return {
-    x: clampManualCenterAxis(center.x, imageWidth, viewportWidth, zoom),
-    y: clampManualCenterAxis(center.y, imageHeight, viewportHeight, zoom),
+    x: clampManualCenterAxis(center.x, imageWidth, viewportWidth, scale),
+    y: clampManualCenterAxis(center.y, imageHeight, viewportHeight, scale),
+  }
+}
+
+export function getFitViewportScale({
+  fitInset = DEFAULT_FIT_INSET,
+  imageHeight,
+  imageWidth,
+  viewportHeight,
+  viewportWidth,
+}: ImageDimensions &
+  ViewportBox & {
+    fitInset?: number
+  }): number {
+  const safeInset = Math.max(0, fitInset)
+
+  return Math.min(
+    Math.max(1, viewportWidth - safeInset) / Math.max(1, imageWidth),
+    Math.max(1, viewportHeight - safeInset) / Math.max(1, imageHeight)
+  )
+}
+
+export function getManualViewportScale({
+  fitInset,
+  imageHeight,
+  imageWidth,
+  viewportHeight,
+  viewportWidth,
+  zoom,
+}: ImageDimensions &
+  ViewportBox & {
+    fitInset?: number
+    zoom: number
+  }): number {
+  return (
+    getFitViewportScale({
+      fitInset,
+      imageHeight,
+      imageWidth,
+      viewportHeight,
+      viewportWidth,
+    }) * clampZoom(zoom)
+  )
+}
+
+export function getManualViewportDisplayMetrics({
+  imageHeight,
+  imageWidth,
+  viewportHeight,
+  viewportWidth,
+  zoom,
+}: ImageDimensions &
+  ViewportBox & {
+    zoom: number
+  }): {
+  displayHeight: number
+  displayWidth: number
+  pixelScaleX: number
+  pixelScaleY: number
+  scale: number
+} {
+  const safeImageWidth = Math.max(1, imageWidth)
+  const safeImageHeight = Math.max(1, imageHeight)
+  const scale = getManualViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+    zoom,
+  })
+  const displayWidth = Math.max(1, Math.round(safeImageWidth * scale))
+  const displayHeight = Math.max(1, Math.round(safeImageHeight * scale))
+
+  return {
+    displayHeight,
+    displayWidth,
+    pixelScaleX: displayWidth / safeImageWidth,
+    pixelScaleY: displayHeight / safeImageHeight,
+    scale,
   }
 }
 
@@ -141,23 +228,24 @@ export function getViewportDisplaySize({
   }): { height: number; width: number } {
   const safeImageWidth = Math.max(1, imageWidth)
   const safeImageHeight = Math.max(1, imageHeight)
+  const fitScale = getFitViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+  })
 
   if (viewport.mode === "manual") {
-    const zoom = clampZoom(viewport.zoom)
+    const scale = fitScale * clampZoom(viewport.zoom)
     return {
-      height: safeImageHeight * zoom,
-      width: safeImageWidth * zoom,
+      height: safeImageHeight * scale,
+      width: safeImageWidth * scale,
     }
   }
 
-  const scale = Math.min(
-    Math.max(1, viewportWidth) / safeImageWidth,
-    Math.max(1, viewportHeight) / safeImageHeight
-  )
-
   return {
-    height: Math.max(1, Math.round(safeImageHeight * scale)),
-    width: Math.max(1, Math.round(safeImageWidth * scale)),
+    height: Math.max(1, Math.round(safeImageHeight * fitScale)),
+    width: Math.max(1, Math.round(safeImageWidth * fitScale)),
   }
 }
 
@@ -171,23 +259,29 @@ export function getManualViewportTransform({
   ViewportBox & {
     viewport: PreviewViewport
   }) {
-  const zoom = clampZoom(viewport.zoom)
-  const displayWidth = Math.max(1, imageWidth) * zoom
-  const displayHeight = Math.max(1, imageHeight) * zoom
+  const scale = getManualViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+    zoom: viewport.zoom,
+  })
+  const displayWidth = Math.max(1, imageWidth) * scale
+  const displayHeight = Math.max(1, imageHeight) * scale
   const center = clampManualViewportCenter({
     center: viewport.center,
     imageHeight,
     imageWidth,
     viewportHeight,
     viewportWidth,
-    zoom,
+    zoom: viewport.zoom,
   })
 
   return {
     displayHeight,
     displayWidth,
-    translateX: viewportWidth / 2 - center.x * zoom,
-    translateY: viewportHeight / 2 - center.y * zoom,
+    translateX: viewportWidth / 2 - center.x * scale,
+    translateY: viewportHeight / 2 - center.y * scale,
   }
 }
 
@@ -217,11 +311,17 @@ export function getDisplayPointImageCoordinates({
       viewportHeight,
       viewportWidth,
     })
-    const zoom = clampZoom(viewport.zoom)
+    const scale = getManualViewportScale({
+      imageHeight,
+      imageWidth,
+      viewportHeight,
+      viewportWidth,
+      zoom: viewport.zoom,
+    })
     return clampViewportCenter(
       {
-        x: (clientX - frameLeft - transform.translateX) / zoom,
-        y: (clientY - frameTop - transform.translateY) / zoom,
+        x: (clientX - frameLeft - transform.translateX) / scale,
+        y: (clientY - frameTop - transform.translateY) / scale,
       },
       { height: imageHeight, width: imageWidth }
     )
@@ -262,11 +362,17 @@ export function getViewportPointImageCoordinates({
     viewportPoint: ViewportCenter
   }): ViewportCenter | null {
   if (viewport.mode === "manual") {
-    const zoom = clampZoom(viewport.zoom)
+    const scale = getManualViewportScale({
+      imageHeight,
+      imageWidth,
+      viewportHeight,
+      viewportWidth,
+      zoom: viewport.zoom,
+    })
     return clampViewportCenter(
       {
-        x: viewport.center.x + (viewportPoint.x - viewportWidth / 2) / zoom,
-        y: viewport.center.y + (viewportPoint.y - viewportHeight / 2) / zoom,
+        x: viewport.center.x + (viewportPoint.x - viewportWidth / 2) / scale,
+        y: viewport.center.y + (viewportPoint.y - viewportHeight / 2) / scale,
       },
       { height: imageHeight, width: imageWidth }
     )
@@ -298,17 +404,27 @@ export function getFramePointImageCoordinates({
   frameTop,
   imageHeight,
   imageWidth,
+  viewportHeight,
+  viewportWidth,
   zoom,
 }: ImageDimensions & {
   clientX: number
   clientY: number
   frameLeft: number
   frameTop: number
+  viewportHeight: number
+  viewportWidth: number
   zoom: number
 }): ViewportCenter | null {
-  const safeZoom = clampZoom(zoom)
-  const x = (clientX - frameLeft) / safeZoom
-  const y = (clientY - frameTop) / safeZoom
+  const scale = getManualViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+    zoom,
+  })
+  const x = (clientX - frameLeft) / scale
+  const y = (clientY - frameTop) / scale
 
   if (x < 0 || y < 0 || x >= imageWidth || y >= imageHeight) {
     return null
@@ -334,17 +450,35 @@ export function getAnchoredZoomViewport({
     viewport: PreviewViewport
   }): PreviewViewport {
   const zoom = clampZoom(nextZoom)
+  const scale = getManualViewportScale({
+    imageHeight,
+    imageWidth,
+    viewportHeight,
+    viewportWidth,
+    zoom,
+  })
   const viewportCenter = {
     x: viewportWidth / 2,
     y: viewportHeight / 2,
   }
   const anchorScreenPoint =
     anchorViewportPoint ??
-    getCurrentAnchorViewportPoint(anchorImagePoint, viewport, viewportCenter)
+    getCurrentAnchorViewportPoint(
+      anchorImagePoint,
+      viewport,
+      viewportCenter,
+      getManualViewportScale({
+        imageHeight,
+        imageWidth,
+        viewportHeight,
+        viewportWidth,
+        zoom: viewport.zoom,
+      })
+    )
   const center = clampManualViewportCenter({
     center: {
-      x: anchorImagePoint.x - (anchorScreenPoint.x - viewportCenter.x) / zoom,
-      y: anchorImagePoint.y - (anchorScreenPoint.y - viewportCenter.y) / zoom,
+      x: anchorImagePoint.x - (anchorScreenPoint.x - viewportCenter.x) / scale,
+      y: anchorImagePoint.y - (anchorScreenPoint.y - viewportCenter.y) / scale,
     },
     imageHeight,
     imageWidth,
@@ -364,24 +498,13 @@ export function getAnchoredZoomViewport({
 function getCurrentAnchorViewportPoint(
   anchorImagePoint: ViewportCenter,
   viewport: PreviewViewport,
-  viewportCenter: ViewportCenter
+  viewportCenter: ViewportCenter,
+  scale: number
 ) {
-  const currentZoom = clampZoom(viewport.zoom)
-
   return {
-    x:
-      viewportCenter.x + (anchorImagePoint.x - viewport.center.x) * currentZoom,
-    y:
-      viewportCenter.y + (anchorImagePoint.y - viewport.center.y) * currentZoom,
+    x: viewportCenter.x + (anchorImagePoint.x - viewport.center.x) * scale,
+    y: viewportCenter.y + (anchorImagePoint.y - viewport.center.y) * scale,
   }
-}
-
-export function isPixelGridVisible(viewport: PreviewViewport): boolean {
-  return (
-    viewport.gridEnabled &&
-    viewport.mode === "manual" &&
-    viewport.zoom >= PIXEL_GRID_MIN_ZOOM
-  )
 }
 
 function isPreviewViewportLike(value: unknown): value is {

@@ -115,7 +115,7 @@ The default behavior remains visually compatible with the current product: exist
 - Reordering preset palettes is out of scope unless a separate palette-quality pass is planned.
 - Destructive palette trimming when color depth changes is out of scope.
 - Dimming or disabling palette editor swatches beyond the active color-depth limit is out of scope for the first implementation slice.
-- Zoom, pan, pixel grid, and cursor loupe are out of scope for this subphase.
+- Zoom, pan, and cursor loupe are out of scope for this subphase.
 - Undo/history and shareable looks are out of scope.
 - Effect stack work is out of scope.
 - WASM/GPU acceleration is out of scope.

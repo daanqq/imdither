@@ -6,11 +6,11 @@ import {
   getAnchoredZoomViewport,
   getDisplayPointImageCoordinates,
   getFramePointImageCoordinates,
+  getManualViewportDisplayMetrics,
   getManualViewportTransform,
   getViewportPointImageCoordinates,
   getViewportDisplaySize,
   getWheelZoom,
-  isPixelGridVisible,
   migrateViewScaleToViewport,
 } from "./preview-viewport"
 
@@ -28,7 +28,7 @@ describe("preview viewport geometry", () => {
           center: { x: 500, y: 250 },
         }),
       })
-    ).toEqual({ height: 320, width: 640 })
+    ).toEqual({ height: 314, width: 628 })
   })
 
   it("calculates manual transforms from zoom and image-space center", () => {
@@ -45,10 +45,58 @@ describe("preview viewport geometry", () => {
         }),
       })
     ).toEqual({
-      displayHeight: 800,
-      displayWidth: 1200,
-      translateX: -250,
-      translateY: -100,
+      displayHeight: 376,
+      displayWidth: 564,
+      translateX: -38,
+      translateY: 0,
+    })
+  })
+
+  it("treats 100 percent manual zoom as the fitted display size", () => {
+    expect(
+      getViewportDisplaySize({
+        imageHeight: 500,
+        imageWidth: 1000,
+        viewportHeight: 480,
+        viewportWidth: 640,
+        viewport: viewport({
+          mode: "manual",
+          zoom: 1,
+          center: { x: 500, y: 250 },
+        }),
+      })
+    ).toEqual({ height: 314, width: 628 })
+  })
+
+  it("reports the effective pixel scale after manual frame rounding", () => {
+    expect(
+      getManualViewportDisplayMetrics({
+        imageHeight: 10,
+        imageWidth: 10,
+        viewportHeight: 22,
+        viewportWidth: 22,
+        zoom: 15.5,
+      })
+    ).toMatchObject({
+      displayHeight: 155,
+      displayWidth: 155,
+      pixelScaleX: 15.5,
+      pixelScaleY: 15.5,
+    })
+
+    expect(
+      getManualViewportDisplayMetrics({
+        imageHeight: 9,
+        imageWidth: 10,
+        viewportHeight: 21,
+        viewportWidth: 22,
+        zoom: 15.5,
+      })
+    ).toMatchObject({
+      displayHeight: 140,
+      displayWidth: 155,
+      pixelScaleX: 15.5,
+      pixelScaleY: 15.555555555555555,
     })
   })
 
@@ -56,7 +104,7 @@ describe("preview viewport geometry", () => {
     expect(
       getDisplayPointImageCoordinates({
         clientX: 190,
-        clientY: 120,
+        clientY: 114,
         frameLeft: 40,
         frameTop: 20,
         imageHeight: 400,
@@ -73,17 +121,20 @@ describe("preview viewport geometry", () => {
   })
 
   it("maps manual frame coordinates directly to image pixels", () => {
-    expect(
-      getFramePointImageCoordinates({
-        clientX: 148,
-        clientY: 92,
-        frameLeft: 100,
-        frameTop: 60,
-        imageHeight: 200,
-        imageWidth: 300,
-        zoom: 4,
-      })
-    ).toEqual({ x: 12, y: 8 })
+    const coordinates = getFramePointImageCoordinates({
+      clientX: 148,
+      clientY: 92,
+      frameLeft: 100,
+      frameTop: 60,
+      imageHeight: 200,
+      imageWidth: 300,
+      viewportHeight: 200,
+      viewportWidth: 300,
+      zoom: 4,
+    })
+
+    expect(coordinates?.x).toBeCloseTo(12.7659574468)
+    expect(coordinates?.y).toBeCloseTo(8.5106382979)
   })
 
   it("maps viewport coordinates to manual image pixels without reading frame layout", () => {
@@ -100,7 +151,7 @@ describe("preview viewport geometry", () => {
           center: { x: 200, y: 100 },
         }),
       })
-    ).toEqual({ x: 220, y: 110 })
+    ).toEqual({ x: 242.5531914893617, y: 121.27659574468085 })
   })
 
   it("clamps the center to image bounds", () => {
@@ -110,16 +161,17 @@ describe("preview viewport geometry", () => {
   })
 
   it("clamps manual pan so image edges can reach viewport edges", () => {
-    expect(
-      clampManualViewportCenter({
-        center: { x: 0, y: 999 },
-        imageHeight: 400,
-        imageWidth: 600,
-        viewportHeight: 200,
-        viewportWidth: 300,
-        zoom: 2,
-      })
-    ).toEqual({ x: 75, y: 350 })
+    const center = clampManualViewportCenter({
+      center: { x: 0, y: 999 },
+      imageHeight: 400,
+      imageWidth: 600,
+      viewportHeight: 200,
+      viewportWidth: 300,
+      zoom: 2,
+    })
+
+    expect(center.x).toBeCloseTo(159.5744680851)
+    expect(center.y).toBeCloseTo(293.6170212766)
   })
 
   it("locks manual center when zoomed image fits inside the viewport", () => {
@@ -136,27 +188,28 @@ describe("preview viewport geometry", () => {
   })
 
   it("anchors zoom around the inspected image point", () => {
-    expect(
-      getAnchoredZoomViewport({
-        anchorImagePoint: { x: 125, y: 75 },
-        imageHeight: 200,
-        imageWidth: 300,
-        nextZoom: 4,
-        viewport: viewport({
-          mode: "manual",
-          zoom: 2,
-          center: { x: 100, y: 50 },
-        }),
-        viewportHeight: 100,
-        viewportWidth: 100,
-      })
-    ).toEqual({
+    const nextViewport = getAnchoredZoomViewport({
+      anchorImagePoint: { x: 125, y: 75 },
+      imageHeight: 200,
+      imageWidth: 300,
+      nextZoom: 4,
+      viewport: viewport({
+        mode: "manual",
+        zoom: 2,
+        center: { x: 100, y: 50 },
+      }),
+      viewportHeight: 100,
+      viewportWidth: 100,
+    })
+
+    expect(nextViewport).toMatchObject({
       mode: "manual",
       zoom: 4,
-      center: { x: 112.5, y: 62.5 },
       gridEnabled: false,
       loupeEnabled: false,
     })
+    expect(nextViewport.center.x).toBeCloseTo(112.5)
+    expect(nextViewport.center.y).toBeCloseTo(62.5)
   })
 
   it("anchors zoom around the cursor point when entering manual mode from fit", () => {
@@ -178,7 +231,7 @@ describe("preview viewport geometry", () => {
     ).toMatchObject({
       mode: "manual",
       zoom: 2,
-      center: { x: 215, y: 115 },
+      center: { x: 189.23611111111111, y: 107.63888888888889 },
     })
   })
 
@@ -191,36 +244,6 @@ describe("preview viewport geometry", () => {
       gridEnabled: false,
       loupeEnabled: false,
     })
-  })
-
-  it("shows the pixel grid only in manual mode at 400 percent and above", () => {
-    expect(
-      isPixelGridVisible({
-        mode: "manual",
-        zoom: 4,
-        center: { x: 0, y: 0 },
-        gridEnabled: true,
-        loupeEnabled: false,
-      })
-    ).toBe(true)
-    expect(
-      isPixelGridVisible({
-        mode: "manual",
-        zoom: 3.99,
-        center: { x: 0, y: 0 },
-        gridEnabled: true,
-        loupeEnabled: false,
-      })
-    ).toBe(false)
-    expect(
-      isPixelGridVisible({
-        mode: "fit",
-        zoom: 8,
-        center: { x: 0, y: 0 },
-        gridEnabled: true,
-        loupeEnabled: false,
-      })
-    ).toBe(false)
   })
 
   it("steps wheel zoom in both directions and clamps the result", () => {

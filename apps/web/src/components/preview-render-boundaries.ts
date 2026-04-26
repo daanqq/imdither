@@ -10,7 +10,6 @@ export type CanvasPanelProps = {
   label: string
   missing?: boolean
   pixelInspectorEnabled?: boolean
-  pixelGridHidden?: boolean
   status?: string
   previewViewport?: PreviewViewport
   viewScale: ViewScale
@@ -25,7 +24,6 @@ export type SlideComparePreviewProps = {
   original: PixelBuffer
   processed: PixelBuffer | null
   pixelInspectorEnabled?: boolean
-  pixelGridHidden?: boolean
   status?: string
   previewViewport?: PreviewViewport
   viewScale: SlideCompareViewScale
@@ -44,7 +42,6 @@ export function areCanvasPanelPropsEqual(
     previous.label !== next.label ||
     previous.missing !== next.missing ||
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
-    previous.pixelGridHidden !== next.pixelGridHidden ||
     previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale
   ) {
@@ -69,7 +66,6 @@ export function areSlideComparePreviewPropsEqual(
     previous.original !== next.original ||
     previous.processed !== next.processed ||
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
-    previous.pixelGridHidden !== next.pixelGridHidden ||
     previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale ||
     previous.onDividerChange !== next.onDividerChange ||

@@ -224,13 +224,6 @@ describe("PreviewStage", () => {
         },
       })
     ).toBe(false)
-
-    expect(
-      areCanvasPanelPropsEqual(baseProps, {
-        ...baseProps,
-        pixelGridHidden: true,
-      })
-    ).toBe(false)
   })
 
   it("keeps placeholder status updates visible while processed output is missing", () => {
@@ -282,42 +275,8 @@ describe("PreviewStage", () => {
       />
     )
 
-    expect(html).toContain("height:1333px")
-    expect(html).toContain("width:2000px")
-  })
-
-  it("hides the pixel grid while showing reduced preview only output", () => {
-    const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(10, 8)}
-        preview={makeBuffer(5, 4)}
-        previewTargetHeight={8}
-        previewTargetWidth={10}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 4,
-          center: { x: 2, y: 2 },
-          gridEnabled: true,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
-    )
-
-    expect(html).toContain("PREVIEW ONLY")
-    expect(html).not.toContain("linear-gradient(to right")
+    expect(html).toContain("height:1321px")
+    expect(html).toContain("width:1982px")
   })
 
   it("keeps inspection controls in the preview toolbar", () => {
@@ -353,12 +312,11 @@ describe("PreviewStage", () => {
     )
 
     const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
-    const gridButton = buttonRenders.find(
-      (button) => button["aria-label"] === "Toggle pixel grid"
-    )
 
     zoomSlider?.onValueChange?.([5])
-    gridButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+    buttonRenders
+      .find((button) => button["aria-label"] === "Set zoom to 100 percent")
+      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
     expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
@@ -366,7 +324,9 @@ describe("PreviewStage", () => {
       zoom: 5,
     })
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      gridEnabled: false,
+      mode: "manual",
+      zoom: 1,
+      center: { x: 1, y: 1 },
     })
   })
 
@@ -408,11 +368,6 @@ describe("PreviewStage", () => {
     ).toBe(false)
     expect(
       buttonRenders.some(
-        (button) => button["aria-label"] === "Toggle pixel grid"
-      )
-    ).toBe(false)
-    expect(
-      buttonRenders.some(
         (button) => button["aria-label"] === "Toggle pixel inspector"
       )
     ).toBe(false)
@@ -448,11 +403,6 @@ describe("PreviewStage", () => {
       />
     )
 
-    expect(
-      buttonRenders.some(
-        (button) => button["aria-label"] === "Toggle pixel grid"
-      )
-    ).toBe(true)
     expect(
       buttonRenders.some(
         (button) => button["aria-label"] === "Toggle pixel inspector"
@@ -492,8 +442,8 @@ describe("PreviewStage", () => {
 
     expect(html).toContain("left:50%")
     expect(html).toContain("top:50%")
-    expect(html).toContain("margin-left:-16px")
-    expect(html).toContain("margin-top:-12px")
+    expect(html).toContain("margin-left:-2px")
+    expect(html).toContain("margin-top:-1px")
   })
 })
 

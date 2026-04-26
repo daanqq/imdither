@@ -31,11 +31,18 @@ export function getPreviewFrameStyle({
   const containerWidth = `calc(100cqw - ${safeInset})`
   const containerHeight = `calc(100cqh - ${safeInset})`
   const aspect = safeSourceWidth / safeSourceHeight
+  const height = `max(1px, min(${containerHeight}, calc(${containerWidth} / var(--preview-aspect))))`
+  const width = `max(1px, min(${containerWidth}, calc(${containerHeight} * var(--preview-aspect))))`
 
   return {
     "--preview-aspect": String(aspect),
     aspectRatio: `${safeSourceWidth} / ${safeSourceHeight}`,
-    height: `max(1px, min(${containerHeight}, calc(${containerWidth} / var(--preview-aspect))))`,
-    width: `max(1px, min(${containerWidth}, calc(${containerHeight} * var(--preview-aspect))))`,
+    height,
+    left: "50%",
+    marginLeft: `calc(${width} / -2)`,
+    marginTop: `calc(${height} / -2)`,
+    position: "absolute",
+    top: "50%",
+    width,
   }
 }

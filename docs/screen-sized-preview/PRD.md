@@ -5,7 +5,7 @@ Last updated: 2026-04-25
 
 ## Problem Statement
 
-Users can see a regular grid or moire pattern in the preview that is not present in the exported PNG. This happens when the app renders a high-frequency dithered pixel buffer into a canvas and then lets the browser resize that canvas for the `Fit` view. The exported PNG is generated from the real output buffer at its native dimensions, so the preview can visually misrepresent the final result.
+Users can see a regular moire pattern in the preview that is not present in the exported PNG. This happens when the app renders a high-frequency dithered pixel buffer into a canvas and then lets the browser resize that canvas for the `Fit` view. The exported PNG is generated from the real output buffer at its native dimensions, so the preview can visually misrepresent the final result.
 
 From the user's perspective, this is confusing: the preview appears to contain an artifact, while the exported result does not. The app should make `Fit` mode a trustworthy screen preview without changing the final export dimensions or editor settings.
 
