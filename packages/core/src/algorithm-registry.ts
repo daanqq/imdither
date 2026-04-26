@@ -10,7 +10,7 @@ import {
   ditherStucki,
   mapToPalette,
 } from "./stages"
-import type { BayerSize, Palette, PixelBuffer } from "./types"
+import type { BayerSize, MatchingMode, Palette, PixelBuffer } from "./types"
 
 export const DITHER_ALGORITHM_IDS = [
   "none",
@@ -40,6 +40,7 @@ export type DitherAlgorithmOption = {
 type DitherAlgorithmSettings = {
   algorithm: DitherAlgorithm
   bayerSize: BayerSize
+  matchingMode: MatchingMode
 }
 
 type DitherAlgorithmDefinition = DitherAlgorithmOption & {
@@ -56,7 +57,8 @@ const DITHER_ALGORITHMS: readonly DitherAlgorithmDefinition[] = [
     id: "none",
     label: "None",
     capabilities: { bayerSize: false },
-    process: (input, palette) => mapToPalette(input, palette),
+    process: (input, palette, settings) =>
+      mapToPalette(input, palette, settings.matchingMode),
     metadataLabel: () => "None",
   },
   {
@@ -64,7 +66,7 @@ const DITHER_ALGORITHMS: readonly DitherAlgorithmDefinition[] = [
     label: "Bayer",
     capabilities: { bayerSize: true },
     process: (input, palette, settings) =>
-      ditherOrdered(input, palette, settings.bayerSize),
+      ditherOrdered(input, palette, settings.bayerSize, settings.matchingMode),
     metadataLabel: (settings) =>
       `Bayer ${settings.bayerSize}x${settings.bayerSize}`,
   },
@@ -79,49 +81,56 @@ const DITHER_ALGORITHMS: readonly DitherAlgorithmDefinition[] = [
     id: "floyd-steinberg",
     label: "Floyd-Steinberg",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherFloydSteinberg(input, palette),
+    process: (input, palette, settings) =>
+      ditherFloydSteinberg(input, palette, settings.matchingMode),
     metadataLabel: () => "Floyd-Steinberg",
   },
   {
     id: "atkinson",
     label: "Atkinson",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherAtkinson(input, palette),
+    process: (input, palette, settings) =>
+      ditherAtkinson(input, palette, settings.matchingMode),
     metadataLabel: () => "Atkinson",
   },
   {
     id: "burkes",
     label: "Burkes",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherBurkes(input, palette),
+    process: (input, palette, settings) =>
+      ditherBurkes(input, palette, settings.matchingMode),
     metadataLabel: () => "Burkes",
   },
   {
     id: "stucki",
     label: "Stucki",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherStucki(input, palette),
+    process: (input, palette, settings) =>
+      ditherStucki(input, palette, settings.matchingMode),
     metadataLabel: () => "Stucki",
   },
   {
     id: "sierra-lite",
     label: "Sierra Lite",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherSierraLite(input, palette),
+    process: (input, palette, settings) =>
+      ditherSierraLite(input, palette, settings.matchingMode),
     metadataLabel: () => "Sierra Lite",
   },
   {
     id: "blue-noise",
     label: "Blue Noise",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherBlueNoise(input, palette),
+    process: (input, palette, settings) =>
+      ditherBlueNoise(input, palette, settings.matchingMode),
     metadataLabel: () => "Blue Noise",
   },
   {
     id: "halftone-dot",
     label: "Halftone Dot",
     capabilities: { bayerSize: false },
-    process: (input, palette) => ditherHalftoneDot(input, palette),
+    process: (input, palette, settings) =>
+      ditherHalftoneDot(input, palette, settings.matchingMode),
     metadataLabel: () => "Halftone Dot",
   },
 ]

@@ -12,6 +12,7 @@ Primary value:
 - load an image by upload, drag-and-drop, clipboard paste, or bundled demo
 - resize and prepare tones locally
 - apply a processing recipe or choose palette, color mode, and dithering algorithm directly
+- limit palette depth and choose RGB or perceptual nearest-color matching
 - compare original and processed output in a stable preview surface
 - export the final full-resolution processed output as PNG, WebP, or JPEG
 
@@ -150,6 +151,7 @@ The Recipe selector applies a subset of Editor Settings:
 - algorithm
 - optional Bayer size
 - optional color mode
+- optional matching mode
 
 Palette, Algorithm, Bayer Matrix, and Color Mode remain visible and editable after a recipe is applied. The active recipe is derived from current settings; if the controlled fields no longer match a recipe, the selector shows Custom. Recipe identity is not stored in Editor Settings, Settings JSON, processing metadata, or export metadata.
 
@@ -163,6 +165,8 @@ Current curated recipes:
 - Blue Ink Noise
 - Halftone Mono
 - Game Boy Sierra
+- RGB Color Match
+- Perceptual Color Match
 
 ### 8.6 Algorithms
 
@@ -236,6 +240,19 @@ Color modes:
 
 - `grayscale-first`
 - `color-preserve`
+
+Color quality controls:
+
+- Color Depth can use the full active palette or limit processing to the first
+  2, 4, 8, or 16 colors.
+- Color Depth never mutates preset palettes, custom palettes, or palette asset
+  exports.
+- Image preview and export use the effective limited palette.
+- Color Matching supports `rgb` and `perceptual`.
+- `rgb` remains the default and uses squared distance in encoded sRGB channels.
+- `perceptual` uses squared distance in Oklab coordinates.
+- Matt Parker dithering remains a tonal level algorithm and does not use the
+  matching-mode selector.
 
 Resize:
 
@@ -499,7 +516,7 @@ Current shape:
 
 ```ts
 type EditorSettings = {
-  schemaVersion: 1
+  schemaVersion: 2
   algorithm:
     | "none"
     | "bayer"
@@ -515,6 +532,8 @@ type EditorSettings = {
   paletteId: string
   customPalette?: string[]
   alphaBackground: "black" | "white"
+  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 }
+  matchingMode: "rgb" | "perceptual"
   resize: {
     mode: "bilinear" | "nearest"
     fit: "contain" | "cover" | "stretch"

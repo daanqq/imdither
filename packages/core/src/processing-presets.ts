@@ -1,6 +1,11 @@
 import { PRESET_PALETTES } from "./palettes"
 import type { DitherAlgorithm } from "./algorithm-registry"
-import type { BayerSize, ColorMode, EditorSettings } from "./types"
+import type {
+  BayerSize,
+  ColorMode,
+  EditorSettings,
+  MatchingMode,
+} from "./types"
 
 export type ProcessingPresetId =
   | "mono-bayer"
@@ -11,12 +16,15 @@ export type ProcessingPresetId =
   | "blue-ink-noise"
   | "halftone-mono"
   | "game-boy-sierra"
+  | "rgb-color-match"
+  | "perceptual-color-match"
 
 export type ProcessingPresetRecipe = {
   paletteId: string
   algorithm: DitherAlgorithm
   bayerSize?: BayerSize
   colorMode?: ColorMode
+  matchingMode?: MatchingMode
 }
 
 export type ProcessingPresetOption = {
@@ -100,6 +108,26 @@ export const PROCESSING_PRESET_OPTIONS: readonly ProcessingPresetOption[] = [
       colorMode: "grayscale-first",
     },
   },
+  {
+    id: "rgb-color-match",
+    label: "RGB Color Match",
+    recipe: {
+      paletteId: "screenprint-16",
+      algorithm: "none",
+      colorMode: "color-preserve",
+      matchingMode: "rgb",
+    },
+  },
+  {
+    id: "perceptual-color-match",
+    label: "Perceptual Color Match",
+    recipe: {
+      paletteId: "screenprint-16",
+      algorithm: "none",
+      colorMode: "color-preserve",
+      matchingMode: "perceptual",
+    },
+  },
 ]
 
 const PROCESSING_PRESETS_BY_ID = new Map(
@@ -154,7 +182,8 @@ function settingsMatchRecipe(
   if (
     settings.paletteId !== recipe.paletteId ||
     settings.algorithm !== recipe.algorithm ||
-    settings.preprocess.colorMode !== getProcessingPresetColorMode(recipe)
+    settings.preprocess.colorMode !== getProcessingPresetColorMode(recipe) ||
+    settings.matchingMode !== (recipe.matchingMode ?? "rgb")
   ) {
     return false
   }

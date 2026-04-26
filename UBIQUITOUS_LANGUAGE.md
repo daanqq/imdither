@@ -45,8 +45,9 @@
 | Term                          | Definition                                                                                                           | Aliases to avoid                       |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | **Product Contract**          | The maintained description of current IMDITHER product behavior and boundaries.                                      | Product docs, app description          |
-| **Settings Schema Reference** | The public reference for **Editor Settings** schema version 1 and **Settings JSON** normalization rules.             | Settings docs, JSON docs               |
-| **Schema Version 1**          | The current compatibility baseline for **Editor Settings** payloads.                                                 | v1 settings, settings version          |
+| **Settings Schema Reference** | The public reference for **Editor Settings** schema version 2 and **Settings JSON** normalization rules.             | Settings docs, JSON docs               |
+| **Schema Version 1**          | The legacy **Editor Settings** compatibility shape accepted by normalization.                                        | Current settings version               |
+| **Schema Version 2**          | The current **Editor Settings** compatibility baseline with **Color Depth** and **Matching Mode**.                   | v2 settings, settings version          |
 | **Public Hardening Baseline** | The Phase 0 baseline of license, docs, tests, fixtures, and performance reports that future roadmap work builds on.  | Cleanup, docs pass, prep work          |
 | **Visual Contract**           | Deterministic test coverage that protects preview, processing, compare, and export behavior without screenshot diff. | Visual tests, screenshot baseline      |
 | **Core Pixel Golden**         | A compact expected pixel fixture for public core processing output.                                                  | Golden image, snapshot image           |
@@ -86,6 +87,14 @@
 | **Palette Extraction**         | The command that derives a **Custom Palette** from the current **Source Image** using deterministic source-buffer analysis.                   | Auto palette, sampled palette                |
 | **Extraction Size**            | The requested number of colors for **Palette Extraction**, currently 2, 4, 8, 16, or 32.                                                      | Palette size, color depth                    |
 | **Palette Resolution**         | The rule that chooses the actual **Palette** from **Editor Settings** before processing.                                                      | Palette lookup, palette selection            |
+| **Effective Palette**          | The palette actually used for processing after **Color Depth** is applied.                                                                    | Trimmed palette, processing palette          |
+| **Full Palette Depth**         | The **Color Depth** mode where the **Effective Palette** contains every color from the active **Palette**.                                    | Full color depth, unlimited colors           |
+| **Limited Palette Depth**      | The **Color Depth** mode where the **Effective Palette** contains only the first 2, 4, 8, or 16 colors from the active **Palette**.           | Palette trim, color count                    |
+| **Color Depth**                | The **Editor Settings** field that chooses **Full Palette Depth** or **Limited Palette Depth**.                                               | Palette size, extraction size                |
+| **Matching Mode**              | The **Editor Settings** field that chooses RGB or perceptual nearest-color distance.                                                          | Match quality, color match                   |
+| **RGB Matching**               | The **Matching Mode** that chooses nearest palette colors by squared distance in encoded sRGB channels.                                       | RGB distance, default matching               |
+| **Perceptual Matching**        | The **Matching Mode** that chooses nearest palette colors by squared distance in Oklab coordinates.                                           | Oklab matching, perceptual color             |
+| **Palette Matcher**            | The processing contract that prepares a palette and resolves the nearest color for a selected **Matching Mode**.                              | Color matcher, nearest-color helper          |
 | **Palette Default Color Mode** | The **Color Mode** applied automatically when a **Palette Preset** is selected.                                                               | Palette color preset, palette mode           |
 | **Color Mode**                 | The choice between grayscale-first and color-preserve processing.                                                                             | Source color mode, color handling            |
 | **Preprocessing**              | Tone and color adjustment applied before palette mapping and dithering.                                                                       | Adjustment, correction, filters              |
@@ -238,7 +247,7 @@
 - A **Settings Transition** produces one next **Editor Settings** object.
 - A **Settings Transition** may use **Transition Context** to preserve **Aspect Lock**.
 - A **Processing Preset** applies through one **Settings Transition**.
-- A **Processing Recipe** controls one **Palette**, one **Dither Algorithm**, optionally **Bayer Size**, and optionally **Color Mode**.
+- A **Processing Recipe** controls one **Palette**, one **Dither Algorithm**, optionally **Bayer Size**, optionally **Color Mode**, and optionally **Matching Mode**.
 - A **Bayer Recipe** must control **Bayer Size**.
 - A **Non-Bayer Recipe** must preserve the current **Bayer Size**.
 - **Active Recipe** is derived from **Editor Settings**, not stored in **Settings JSON**.
@@ -249,6 +258,14 @@
 - **Effective Recipe Color Mode** is compared when deriving **Active Recipe**.
 - **Clipboard Settings** copies and pastes one **Settings JSON** payload.
 - **Settings JSON** contains one versioned **Editor Settings** object.
+- **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
+- **Color Depth** determines the **Effective Palette** without mutating the active **Palette**.
+- **Full Palette Depth** preserves the active **Palette** size in the **Effective Palette**.
+- **Limited Palette Depth** uses the first N colors of the active **Palette** for the **Effective Palette**.
+- **Palette Export** uses the full active **Palette**, not the **Effective Palette**.
+- **RGB Matching** is the default **Matching Mode**.
+- **Perceptual Matching** uses Oklab distance through the **Palette Matcher**.
+- **Matt Parker Dithering** is tonal and does not use **Matching Mode**.
 - **Mobile Experience** always uses **Mobile Fit Preview**.
 - **Desktop Experience** may use **Fit View** or **1:1 View**.
 - **Fit View** may use **Screen-Sized Preview**.
@@ -273,7 +290,7 @@
 - A **Native Range Slider** may replace a **Slider Primitive** when **Direct Slider Movement** is the primary requirement.
 - **Quality Control** may use a **Slider Primitive** because changing **Export Quality** does not start **Preview Jobs**.
 - **Product Contract** links to the current **Settings Schema Reference** when Settings JSON behavior is part of the shipped product.
-- **Schema Version 1** is the compatibility baseline for **Settings JSON**.
+- **Schema Version 2** is the compatibility baseline for **Settings JSON**.
 - **Settings Schema Reference** defines which **Editor Settings** fields are included and which **Export Preferences** and **View-local State** are excluded.
 - A **Public Hardening Baseline** must not add product features or change the local-only processing model.
 - A **Core Pixel Golden** protects public `processImage` behavior, not private processing stages.
@@ -295,19 +312,19 @@
 >
 > **Dev:** "Where should I document which fields Settings JSON accepts?"
 >
-> **Domain expert:** "Use the **Settings Schema Reference**. It defines **Schema Version 1**, including processing fields and excluding **Export Preferences** and **View-local State**."
+> **Domain expert:** "Use the **Settings Schema Reference**. It defines **Schema Version 2**, including processing fields and excluding **Export Preferences** and **View-local State**."
 >
-> **Dev:** "Does changing **Export Quality** restart the **Preview Job**?"
+> **Dev:** "If the user chooses **Limited Palette Depth**, do we delete colors from the **Custom Palette**?"
 >
-> **Domain expert:** "No. **Export Quality** only affects the **Browser Encoder** when the **Export Action** creates an **Export File** from **Full Output**."
+> **Domain expert:** "No. **Color Depth** only changes the **Effective Palette** used for processing. **Palette Export** and palette editing still use the full active **Palette**."
 >
-> **Dev:** "Does Phase 0 need screenshot diffs before palette work starts?"
+> **Dev:** "Does **Perceptual Matching** affect Matt Parker output?"
 >
-> **Domain expert:** "No. The **Visual Contract** is deterministic Vitest coverage for now: **Core Pixel Goldens**, preview/compare tests, and **Export Contract Fixtures**."
+> **Domain expert:** "No. **Perceptual Matching** goes through the **Palette Matcher** for nearest-color algorithms. **Matt Parker Dithering** is tonal."
 >
-> **Dev:** "Can the **Performance Baseline** fail `bun verify` if diffusion gets slower?"
+> **Dev:** "Can old copied settings still load?"
 >
-> **Domain expert:** "No. It is a non-gating report until we calibrate a future **Performance Threshold**."
+> **Domain expert:** "Yes. **Schema Version 1** **Settings JSON** normalizes into **Schema Version 2** with **Full Palette Depth** and **RGB Matching**."
 
 ## Flagged Ambiguities
 
@@ -340,6 +357,11 @@
 - "Benchmark" can imply a gate. Use **Performance Baseline** for the current non-gating report and **Performance Threshold** only for a future calibrated pass/fail limit.
 - "Visual drift" should not imply screenshot diffs in Phase 0. Use **Visual Contract** for deterministic unit and component coverage unless screenshot-diff infrastructure is explicitly added later.
 - "Settings docs" is vague. Use **Settings Schema Reference** when describing the versioned **Settings JSON** contract.
+- "Schema version" is now ambiguous between legacy and current payloads. Use **Schema Version 1** for accepted legacy payloads and **Schema Version 2** for the current **Settings JSON** baseline.
+- "Color depth", "palette size", and **Extraction Size** can be confused. Use **Color Depth** for processing limits, **Extraction Size** for palette extraction, and **Palette** size for the stored color count.
+- "Limited palette" can imply destructive editing. Use **Limited Palette Depth** for the setting and **Effective Palette** for the derived processing palette.
+- "Perceptual" should mean **Perceptual Matching** backed by Oklab distance, not a generic quality mode.
+- "Matching" can mean recipe matching or nearest-color matching. Use **Active Recipe** matching for recipe derivation and **Matching Mode** for nearest-color selection.
 - "Hardening" should mean **Public Hardening Baseline** in Phase 0, not new UI features or product expansion.
 - "Cap", "limit", "budget", and "ready %" overlapped in UI and architecture discussion. Use **Output Cap** for the pixel budget and **Output Size** for the selected dimensions.
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.

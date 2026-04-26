@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { PRESET_PALETTES } from "./palettes"
+import { PRESET_PALETTES, getEffectivePalette } from "./palettes"
 import { processImage } from "./process"
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings"
 import { flattenAlpha, nearestPaletteColor } from "./stages"
@@ -43,13 +43,88 @@ describe("core pipeline", () => {
     }
   })
 
-  it("normalizes partial settings into schema version 1", () => {
+  it("normalizes partial settings into schema version 2", () => {
     expect(
       normalizeSettings({
         algorithm: "atkinson",
         resize: { width: 32, height: 24 },
       }).schemaVersion
-    ).toBe(1)
+    ).toBe(2)
+  })
+
+  it("limits processing to the first N palette colors without mutating the active palette", () => {
+    const palette = PRESET_PALETTES.find((item) => item.id === "poster-12")!
+    const effective = getEffectivePalette(palette, {
+      mode: "limit",
+      count: 4,
+    })
+
+    expect(effective.colors.map((color) => color.hex)).toEqual(
+      palette.colors.slice(0, 4).map((color) => color.hex)
+    )
+    expect(palette.colors).toHaveLength(12)
+  })
+
+  it("reports effective palette size and uses it for output processing", () => {
+    const input = fixtureBuffer()
+    const result = processImage(input, {
+      ...DEFAULT_SETTINGS,
+      algorithm: "none",
+      paletteId: "poster-12",
+      colorDepth: { mode: "limit", count: 2 },
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        colorMode: "color-preserve",
+      },
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest",
+        fit: "stretch",
+      },
+    })
+
+    expect(result.metadata.paletteSize).toBe(2)
+    expect(collectRgbTriples(result.image).size).toBeLessThanOrEqual(2)
+    expect(result.palette.colors).toHaveLength(12)
+  })
+
+  it("applies matching mode through nearest-color processing", () => {
+    const input: PixelBuffer = {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([0, 5, 0, 255]),
+    }
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "none" as const,
+      paletteId: "custom",
+      customPalette: ["#ff0000", "#00ff00", "#0000ff"],
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        colorMode: "color-preserve" as const,
+      },
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: 1,
+        height: 1,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const rgb = processImage(input, {
+      ...settings,
+      matchingMode: "rgb",
+    }).image.data
+    const perceptual = processImage(input, {
+      ...settings,
+      matchingMode: "perceptual",
+    }).image.data
+
+    expect(Array.from(rgb)).toEqual([0, 255, 0, 255])
+    expect(Array.from(perceptual)).toEqual([0, 0, 255, 255])
   })
 
   it("produces deterministic output for diffusion algorithms", () => {

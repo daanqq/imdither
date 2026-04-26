@@ -1,4 +1,10 @@
-import type { EditorSettings, Palette, PaletteColor, Rgb } from "./types"
+import type {
+  ColorDepth,
+  EditorSettings,
+  Palette,
+  PaletteColor,
+  Rgb,
+} from "./types"
 
 export const PRESET_PALETTES: Palette[] = [
   {
@@ -438,6 +444,20 @@ export function resolvePalette(settings: EditorSettings): Palette {
     PRESET_PALETTES.find((palette) => palette.id === settings.paletteId) ??
     PRESET_PALETTES[0]
   )
+}
+
+export function getEffectivePalette(
+  palette: Palette,
+  colorDepth: ColorDepth
+): Palette {
+  if (colorDepth.mode === "full" || palette.colors.length <= colorDepth.count) {
+    return palette
+  }
+
+  return {
+    ...palette,
+    colors: palette.colors.slice(0, colorDepth.count),
+  }
 }
 
 export function hexToRgb(hex: string): Rgb {

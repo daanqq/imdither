@@ -94,6 +94,7 @@ describe("dither algorithm registry", () => {
         getDitherAlgorithmMetadataLabel({
           algorithm: option.id,
           bayerSize: 8,
+          matchingMode: "rgb",
         })
       )
     ).toEqual([

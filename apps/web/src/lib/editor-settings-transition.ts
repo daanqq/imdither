@@ -8,8 +8,10 @@ import {
   type ColorMode,
   type AlphaBackground,
   type BayerSize,
+  type ColorDepth,
   type DitherAlgorithm,
   type EditorSettings,
+  type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
 } from "@workspace/core"
@@ -40,6 +42,14 @@ export type SettingsTransition =
   | {
       type: "set-color-mode"
       colorMode: ColorMode
+    }
+  | {
+      type: "set-color-depth"
+      colorDepth: ColorDepth
+    }
+  | {
+      type: "set-matching-mode"
+      matchingMode: MatchingMode
     }
   | {
       type: "set-preprocess"
@@ -135,6 +145,20 @@ export function applySettingsTransition(
           },
         },
       }
+    case "set-color-depth":
+      return {
+        settings: {
+          ...current,
+          colorDepth: transition.colorDepth,
+        },
+      }
+    case "set-matching-mode":
+      return {
+        settings: {
+          ...current,
+          matchingMode: transition.matchingMode,
+        },
+      }
     case "set-preprocess":
       return {
         settings: {
@@ -191,6 +215,7 @@ export function applySettingsTransition(
           paletteId: recipe.paletteId,
           algorithm: recipe.algorithm,
           bayerSize: recipe.bayerSize ?? current.bayerSize,
+          matchingMode: recipe.matchingMode ?? "rgb",
           preprocess: {
             ...current.preprocess,
             colorMode: getProcessingPresetColorMode(recipe),

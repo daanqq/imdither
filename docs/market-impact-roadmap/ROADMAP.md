@@ -37,8 +37,8 @@ Main competitive gaps:
 
 - no palette editor UI
 - no palette extraction workflow
-- no explicit color-depth control
-- limited perceptual color matching
+- explicit color-depth control shipped; future work can improve active-swatch visualization
+- Oklab perceptual matching shipped; future work can evaluate additional perceptual spaces only if needed
 - no true zoom and pan inspection workflow
 - no undo/history stack
 - no shareable look payloads
@@ -109,17 +109,17 @@ Success signal: shipped. Users can create, reuse, and exchange palettes without 
 
 ### Phase 2: Color Quality and Inspection
 
-- [ ] Add explicit color-depth controls.
-- [ ] Add Oklab or Lab nearest-color matching.
-- [ ] Add a matching mode control where it is visually meaningful.
-- [ ] Add recipe variants that demonstrate perceptual matching versus RGB matching.
+- [x] Add explicit color-depth controls.
+- [x] Add Oklab or Lab nearest-color matching.
+- [x] Add a matching mode control where it is visually meaningful.
+- [x] Add recipe variants that demonstrate perceptual matching versus RGB matching.
 - [ ] Add continuous zoom.
 - [ ] Add pan.
 - [ ] Add optional pixel grid.
 - [ ] Add a cursor loupe.
 - [ ] Keep original and processed transforms locked during zoomed compare.
 
-Success signal: users can intentionally control palette size, trust color matching, and inspect pixel-level output.
+Success signal: color-quality controls shipped. Users can intentionally control palette size and compare RGB versus Oklab matching; inspection work remains open for pixel-level trust.
 
 ### Phase 3: Look-Building Workflow
 

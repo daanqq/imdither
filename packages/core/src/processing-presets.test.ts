@@ -19,6 +19,8 @@ describe("Processing Presets", () => {
       "blue-ink-noise",
       "halftone-mono",
       "game-boy-sierra",
+      "rgb-color-match",
+      "perceptual-color-match",
     ])
 
     const paletteIds = new Set(PRESET_PALETTES.map((palette) => palette.id))
@@ -31,6 +33,19 @@ describe("Processing Presets", () => {
       expect(paletteIds.has(preset.recipe.paletteId)).toBe(true)
       expect(algorithmIds.has(preset.recipe.algorithm)).toBe(true)
     }
+  })
+
+  it("adds matching mode demonstration recipes that differ only by matching mode", () => {
+    const rgb = getProcessingPreset("rgb-color-match")
+    const perceptual = getProcessingPreset("perceptual-color-match")
+
+    expect(rgb.recipe).toEqual({
+      ...perceptual.recipe,
+      matchingMode: "rgb",
+    })
+    expect(perceptual.recipe.matchingMode).toBe("perceptual")
+    expect(rgb.recipe.algorithm).toBe("none")
+    expect(rgb.recipe.colorMode).toBe("color-preserve")
   })
 
   it("looks up recipes by id and rejects unknown ids", () => {
@@ -108,6 +123,12 @@ describe("Processing Presets", () => {
         customPalette: ["#000000", "#ffffff"],
       })
     ).toBeNull()
+    expect(
+      matchProcessingPreset({
+        ...monoBayerSettings,
+        matchingMode: "perceptual",
+      })
+    ).toBeNull()
   })
 
   it("keeps recipe matching deterministic with unique signatures", () => {
@@ -125,6 +146,7 @@ describe("Processing Presets", () => {
           preset.recipe.paletteId,
           preset.recipe.algorithm,
           preset.recipe.colorMode,
+          preset.recipe.matchingMode ?? "rgb",
           bayerPart,
         ].join(":")
       })

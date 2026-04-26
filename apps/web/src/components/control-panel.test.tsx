@@ -190,6 +190,54 @@ describe("ControlPanel", () => {
     expect(onSettingsTransition).not.toHaveBeenCalled()
   })
 
+  it("shows color quality controls and dispatches their settings transitions", () => {
+    const onSettingsTransition = vi.fn()
+    const markup = renderToStaticMarkup(
+      <ControlPanel
+        advancedOpen={false}
+        compareMode="slide"
+        settings={{
+          ...DEFAULT_SETTINGS,
+          paletteId: "screenprint-16",
+          colorDepth: { mode: "limit", count: 8 },
+          matchingMode: "perceptual",
+        }}
+        resolutionAspectLabel="1:1"
+        onAdvancedOpenChange={vi.fn()}
+        onCompareModeChange={vi.fn()}
+        onCopyPaletteJson={vi.fn()}
+        onCopySettings={vi.fn()}
+        onExportPaletteGpl={vi.fn()}
+        onExportPaletteJson={vi.fn()}
+        onExtractPalette={vi.fn()}
+        onImportPaletteFile={vi.fn()}
+        onImportPaletteFromClipboard={vi.fn()}
+        onPasteSettings={vi.fn()}
+        onReset={vi.fn()}
+        onResolutionWidthChange={vi.fn()}
+        onSettingsTransition={onSettingsTransition}
+      />
+    )
+
+    expect(markup).toContain("Color Depth")
+    expect(markup).toContain("First 8 of 16 palette colors")
+    expect(markup).toContain("Color Matching")
+
+    selectRenders.find((select) => select.value === "8")?.onValueChange?.("4")
+    selectRenders
+      .find((select) => select.value === "perceptual")
+      ?.onValueChange?.("rgb")
+
+    expect(onSettingsTransition).toHaveBeenCalledWith({
+      type: "set-color-depth",
+      colorDepth: { mode: "limit", count: 4 },
+    })
+    expect(onSettingsTransition).toHaveBeenCalledWith({
+      type: "set-matching-mode",
+      matchingMode: "rgb",
+    })
+  })
+
   it("chooses a random option without repeating the current value when possible", () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
 

@@ -119,21 +119,13 @@ export const useEditorStore = create<EditorState>()(
         advancedOpen: state.advancedOpen,
       }),
       migrate: (persistedState) => {
-        if (!isPersistedEditorState(persistedState)) {
-          return persistedState
-        }
-
-        return {
-          ...persistedState,
-          compareMode: normalizeCompareMode(persistedState.compareMode),
-          exportFormat: normalizeExportFormat(persistedState.exportFormat),
-          exportQuality: clampExportQuality(persistedState.exportQuality),
-          settings: settingsWithoutPersistedDimensions(
-            normalizeSettings(persistedState.settings)
-          ),
-        }
+        return normalizePersistedEditorState(persistedState)
       },
-      version: 3,
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...normalizePersistedEditorState(persistedState),
+      }),
+      version: 4,
     }
   )
 )
@@ -152,6 +144,24 @@ export function normalizeCompareMode(value: unknown): CompareMode {
 
 export function paletteName(id: string): string {
   return PRESET_PALETTES.find((palette) => palette.id === id)?.name ?? "Custom"
+}
+
+export function normalizePersistedEditorState(
+  persistedState: unknown
+): Partial<EditorState> {
+  if (!isPersistedEditorState(persistedState)) {
+    return {}
+  }
+
+  return {
+    ...persistedState,
+    compareMode: normalizeCompareMode(persistedState.compareMode),
+    exportFormat: normalizeExportFormat(persistedState.exportFormat),
+    exportQuality: clampExportQuality(persistedState.exportQuality),
+    settings: settingsWithoutPersistedDimensions(
+      normalizeSettings(persistedState.settings)
+    ),
+  }
 }
 
 function settingsWithoutPersistedDimensions(

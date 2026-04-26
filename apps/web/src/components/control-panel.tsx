@@ -8,9 +8,11 @@ import {
   matchProcessingPreset,
   type AlphaBackground,
   type BayerSize,
+  type ColorDepth,
   type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
+  type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
 } from "@workspace/core"
@@ -331,6 +333,73 @@ export const ControlPanel = React.memo(function ControlPanel({
                 />
               ) : null}
 
+              <Field>
+                <FieldLabel htmlFor="color-depth">Color Depth</FieldLabel>
+                <Select
+                  value={getColorDepthSelectValue(settings.colorDepth)}
+                  onValueChange={(value) =>
+                    onSettingsTransition({
+                      type: "set-color-depth",
+                      colorDepth:
+                        value === "full"
+                          ? { mode: "full" }
+                          : {
+                              mode: "limit",
+                              count: Number(value) as 2 | 4 | 8 | 16,
+                            },
+                    })
+                  }
+                >
+                  <SelectTrigger id="color-depth" className="min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="full">Full palette</SelectItem>
+                      {[2, 4, 8, 16].map((count) => (
+                        <SelectItem key={count} value={String(count)}>
+                          First {count}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {settings.colorDepth.mode === "limit" &&
+                activePaletteColors.length > settings.colorDepth.count ? (
+                  <FieldDescription>
+                    First {settings.colorDepth.count} of{" "}
+                    {activePaletteColors.length} palette colors are used.
+                  </FieldDescription>
+                ) : (
+                  <FieldDescription>
+                    Processing uses the selected palette order.
+                  </FieldDescription>
+                )}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="matching-mode">Color Matching</FieldLabel>
+                <Select
+                  value={settings.matchingMode}
+                  onValueChange={(matchingMode) =>
+                    onSettingsTransition({
+                      type: "set-matching-mode",
+                      matchingMode: matchingMode as MatchingMode,
+                    })
+                  }
+                >
+                  <SelectTrigger id="matching-mode" className="min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="rgb">RGB</SelectItem>
+                      <SelectItem value="perceptual">Perceptual</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+
               <FieldSet>
                 <FieldLegend variant="label">Compare</FieldLegend>
                 <div className="flex w-full items-center gap-2">
@@ -405,8 +474,6 @@ export const ControlPanel = React.memo(function ControlPanel({
                   })
                 }
               />
-
-              <Separator />
 
               <Collapsible
                 className="min-w-0 overflow-hidden"
@@ -826,6 +893,10 @@ function PaletteEditor({
       />
     </FieldSet>
   )
+}
+
+function getColorDepthSelectValue(colorDepth: ColorDepth): string {
+  return colorDepth.mode === "full" ? "full" : String(colorDepth.count)
 }
 
 function getExtractionSizeValue(colorCount: number): string {

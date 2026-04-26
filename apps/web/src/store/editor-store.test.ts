@@ -6,7 +6,8 @@ Object.defineProperty(globalThis, "localStorage", {
   value: createMemoryStorage(),
 })
 
-const { normalizeCompareMode, useEditorStore } = await import("./editor-store")
+const { normalizeCompareMode, normalizePersistedEditorState, useEditorStore } =
+  await import("./editor-store")
 
 describe("editor store compare mode migration", () => {
   it("migrates old split state to slide mode", () => {
@@ -26,6 +27,30 @@ describe("editor store compare mode migration", () => {
 })
 
 describe("editor store settings transitions", () => {
+  it("normalizes persisted schema version 1 settings even when Zustand version already matches", () => {
+    const persisted = normalizePersistedEditorState({
+      settings: {
+        schemaVersion: 1,
+        algorithm: "atkinson",
+      },
+      compareMode: "split",
+      exportFormat: "jpeg",
+      exportQuality: 0.5,
+    })
+
+    expect(persisted).toMatchObject({
+      compareMode: "slide",
+      exportFormat: "jpeg",
+      exportQuality: 0.5,
+      settings: {
+        schemaVersion: 2,
+        algorithm: "atkinson",
+        colorDepth: { mode: "full" },
+        matchingMode: "rgb",
+      },
+    })
+  })
+
   it("applies settings intents and stores transition Source Notices", () => {
     useEditorStore.setState({
       settings: DEFAULT_SETTINGS,

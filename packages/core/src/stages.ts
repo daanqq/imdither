@@ -3,10 +3,12 @@ import type {
   BayerSize,
   EditorSettings,
   Palette,
+  MatchingMode,
   PixelBuffer,
   ResizeFit,
   Rgb,
 } from "./types"
+import { createPaletteMatcher } from "./palette-matcher"
 
 const BAYER_MATRICES: Record<BayerSize, number[][]> = {
   2: [
@@ -168,15 +170,18 @@ export function applyPreprocess(
 
 export function mapToPalette(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
+  const matcher = createPaletteMatcher(palette, matchingMode)
 
   for (let index = 0; index < input.data.length; index += 4) {
-    const nearest = nearestPaletteColor(
-      [input.data[index], input.data[index + 1], input.data[index + 2]],
-      palette
-    )
+    const nearest = matcher.nearest([
+      input.data[index],
+      input.data[index + 1],
+      input.data[index + 2],
+    ])
 
     output.data[index] = nearest[0]
     output.data[index + 1] = nearest[1]
@@ -190,32 +195,55 @@ export function mapToPalette(
 export function ditherOrdered(
   input: PixelBuffer,
   palette: Palette,
-  size: BayerSize
+  size: BayerSize,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return ditherWithThresholdMatrix(input, palette, BAYER_MATRICES[size], size)
+  return ditherWithThresholdMatrix(
+    input,
+    palette,
+    BAYER_MATRICES[size],
+    size,
+    matchingMode
+  )
 }
 
 export function ditherBlueNoise(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return ditherWithThresholdMatrix(input, palette, BLUE_NOISE_MATRIX, 8)
+  return ditherWithThresholdMatrix(
+    input,
+    palette,
+    BLUE_NOISE_MATRIX,
+    8,
+    matchingMode
+  )
 }
 
 export function ditherHalftoneDot(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return ditherWithThresholdMatrix(input, palette, HALFTONE_DOT_MATRIX, 8)
+  return ditherWithThresholdMatrix(
+    input,
+    palette,
+    HALFTONE_DOT_MATRIX,
+    8,
+    matchingMode
+  )
 }
 
 function ditherWithThresholdMatrix(
   input: PixelBuffer,
   palette: Palette,
   matrix: number[][],
-  size: number
+  size: number,
+  matchingMode: MatchingMode
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
+  const matcher = createPaletteMatcher(palette, matchingMode)
   const divisor = size * size
   const strength = palette.colors.length <= 2 ? 96 : 56
 
@@ -224,14 +252,11 @@ function ditherWithThresholdMatrix(
       const index = (y * input.width + x) * 4
       const threshold =
         ((matrix[y % size][x % size] + 0.5) / divisor - 0.5) * strength
-      const nearest = nearestPaletteColor(
-        [
-          clampByte(input.data[index] + threshold),
-          clampByte(input.data[index + 1] + threshold),
-          clampByte(input.data[index + 2] + threshold),
-        ],
-        palette
-      )
+      const nearest = matcher.nearest([
+        clampByte(input.data[index] + threshold),
+        clampByte(input.data[index + 1] + threshold),
+        clampByte(input.data[index + 2] + threshold),
+      ])
 
       output.data[index] = nearest[0]
       output.data[index + 1] = nearest[1]
@@ -288,74 +313,104 @@ export function ditherMattParker(
 
 export function ditherFloydSteinberg(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return diffuseError(input, palette, [
-    [1, 0, 7 / 16],
-    [-1, 1, 3 / 16],
-    [0, 1, 5 / 16],
-    [1, 1, 1 / 16],
-  ])
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 7 / 16],
+      [-1, 1, 3 / 16],
+      [0, 1, 5 / 16],
+      [1, 1, 1 / 16],
+    ],
+    matchingMode
+  )
 }
 
 export function ditherBurkes(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return diffuseError(input, palette, [
-    [1, 0, 8 / 32],
-    [2, 0, 4 / 32],
-    [-2, 1, 2 / 32],
-    [-1, 1, 4 / 32],
-    [0, 1, 8 / 32],
-    [1, 1, 4 / 32],
-    [2, 1, 2 / 32],
-  ])
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 8 / 32],
+      [2, 0, 4 / 32],
+      [-2, 1, 2 / 32],
+      [-1, 1, 4 / 32],
+      [0, 1, 8 / 32],
+      [1, 1, 4 / 32],
+      [2, 1, 2 / 32],
+    ],
+    matchingMode
+  )
 }
 
 export function ditherStucki(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return diffuseError(input, palette, [
-    [1, 0, 8 / 42],
-    [2, 0, 4 / 42],
-    [-2, 1, 2 / 42],
-    [-1, 1, 4 / 42],
-    [0, 1, 8 / 42],
-    [1, 1, 4 / 42],
-    [2, 1, 2 / 42],
-    [-2, 2, 1 / 42],
-    [-1, 2, 2 / 42],
-    [0, 2, 4 / 42],
-    [1, 2, 2 / 42],
-    [2, 2, 1 / 42],
-  ])
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 8 / 42],
+      [2, 0, 4 / 42],
+      [-2, 1, 2 / 42],
+      [-1, 1, 4 / 42],
+      [0, 1, 8 / 42],
+      [1, 1, 4 / 42],
+      [2, 1, 2 / 42],
+      [-2, 2, 1 / 42],
+      [-1, 2, 2 / 42],
+      [0, 2, 4 / 42],
+      [1, 2, 2 / 42],
+      [2, 2, 1 / 42],
+    ],
+    matchingMode
+  )
 }
 
 export function ditherSierraLite(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return diffuseError(input, palette, [
-    [1, 0, 2 / 4],
-    [-1, 1, 1 / 4],
-    [0, 1, 1 / 4],
-  ])
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 2 / 4],
+      [-1, 1, 1 / 4],
+      [0, 1, 1 / 4],
+    ],
+    matchingMode
+  )
 }
 
 export function ditherAtkinson(
   input: PixelBuffer,
-  palette: Palette
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
-  return diffuseError(input, palette, [
-    [1, 0, 1 / 8],
-    [2, 0, 1 / 8],
-    [-1, 1, 1 / 8],
-    [0, 1, 1 / 8],
-    [1, 1, 1 / 8],
-    [0, 2, 1 / 8],
-  ])
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 1 / 8],
+      [2, 0, 1 / 8],
+      [-1, 1, 1 / 8],
+      [0, 1, 1 / 8],
+      [1, 1, 1 / 8],
+      [0, 2, 1 / 8],
+    ],
+    matchingMode
+  )
 }
 
 export function nearestPaletteColor(input: Rgb, palette: Palette): Rgb {
@@ -384,10 +439,12 @@ function rgbLuma(color: Rgb): number {
 function diffuseError(
   input: PixelBuffer,
   palette: Palette,
-  kernel: Array<readonly [number, number, number]>
+  kernel: Array<readonly [number, number, number]>,
+  matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
   const work = new Float32Array(input.data.length)
+  const matcher = createPaletteMatcher(palette, matchingMode)
 
   for (let index = 0; index < input.data.length; index += 1) {
     work[index] = input.data[index]
@@ -406,7 +463,7 @@ function diffuseError(
         clampByte(work[index + 1]),
         clampByte(work[index + 2]),
       ]
-      const nextColor = nearestPaletteColor(oldColor, palette)
+      const nextColor = matcher.nearest(oldColor)
       const error: Rgb = [
         oldColor[0] - nextColor[0],
         oldColor[1] - nextColor[1],

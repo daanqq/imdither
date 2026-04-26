@@ -3,7 +3,7 @@ import {
   getDitherAlgorithmMetadataLabel,
   processWithDitherAlgorithm,
 } from "./algorithm-registry"
-import { resolvePalette } from "./palettes"
+import { getEffectivePalette, resolvePalette } from "./palettes"
 import { normalizeSettings } from "./settings"
 import { applyPreprocess, flattenAlpha, resizeImage } from "./stages"
 import type {
@@ -26,6 +26,7 @@ export function processImage(
   const startedAt = Date.now()
   const settings = normalizeSettings(unsafeSettings)
   const palette = resolvePalette(settings)
+  const effectivePalette = getEffectivePalette(palette, settings.colorDepth)
   const sourceKey = options.sourceKey ?? hashPixelBuffer(input)
 
   const flattened = getOrSet(
@@ -44,7 +45,11 @@ export function processImage(
     () => applyPreprocess(resized, settings.preprocess)
   )
 
-  const image = processWithDitherAlgorithm(preprocessed, settings, palette)
+  const image = processWithDitherAlgorithm(
+    preprocessed,
+    settings,
+    effectivePalette
+  )
 
   return {
     image,
@@ -53,7 +58,7 @@ export function processImage(
       sourceHeight: input.height,
       outputWidth: settings.resize.width,
       outputHeight: settings.resize.height,
-      paletteSize: palette.colors.length,
+      paletteSize: effectivePalette.colors.length,
       algorithmName: getDitherAlgorithmMetadataLabel(settings),
       processingTimeMs: Date.now() - startedAt,
       exportFormat: "PNG",

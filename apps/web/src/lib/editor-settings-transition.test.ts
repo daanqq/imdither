@@ -203,6 +203,24 @@ describe("Editor Settings transitions", () => {
       ...current.resize,
       mode: "nearest",
     })
+
+    const colorDepthResult = applySettingsTransition(current, {
+      type: "set-color-depth",
+      colorDepth: { mode: "limit", count: 4 },
+    })
+    expect(colorDepthResult.settings).toEqual({
+      ...current,
+      colorDepth: { mode: "limit", count: 4 },
+    })
+
+    const matchingModeResult = applySettingsTransition(current, {
+      type: "set-matching-mode",
+      matchingMode: "perceptual",
+    })
+    expect(matchingModeResult.settings).toEqual({
+      ...current,
+      matchingMode: "perceptual",
+    })
   })
 
   it("applies requested Output Size through Output Cap policy", () => {

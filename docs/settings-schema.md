@@ -13,11 +13,11 @@ Editor Settings describe deterministic image processing only. They do not
 include source image bytes, preview state, export preferences, runtime job
 status, or UI-only controls.
 
-Current schema version: `1`
+Current schema version: `2`
 
 ```ts
 type EditorSettings = {
-  schemaVersion: 1
+  schemaVersion: 2
   algorithm:
     | "none"
     | "bayer"
@@ -33,6 +33,8 @@ type EditorSettings = {
   paletteId: string
   customPalette?: string[]
   alphaBackground: "black" | "white"
+  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 }
+  matchingMode: "rgb" | "perceptual"
   resize: {
     mode: "bilinear" | "nearest"
     fit: "contain" | "cover" | "stretch"
@@ -51,7 +53,7 @@ type EditorSettings = {
 
 ## Included
 
-- `schemaVersion`: literal `1`.
+- `schemaVersion`: literal `2`.
 - `algorithm`: one registry-backed dithering algorithm id.
 - `bayerSize`: Bayer matrix size used when the selected algorithm supports it.
 - `paletteId`: preset palette id, or `custom` when the active settings use a
@@ -60,6 +62,11 @@ type EditorSettings = {
   lowercase 6-digit hex with a leading `#`, must contain 2 to 256 unique colors,
   and do not support alpha.
 - `alphaBackground`: background used when transparent pixels must be flattened.
+- `colorDepth`: processing palette depth. `full` uses the full active palette;
+  `limit` uses the first 2, 4, 8, or 16 colors without mutating the palette.
+- `matchingMode`: nearest-color distance mode. `rgb` uses squared distance in
+  encoded sRGB channels; `perceptual` uses squared distance in Oklab
+  coordinates.
 - `resize`: output dimensions, resize kernel, and fit mode.
 - `preprocess`: brightness, contrast, gamma, invert, and color mode.
 
@@ -103,6 +110,9 @@ by normalization and must not be relied on for persistence.
 
 ## Compatibility
 
-Schema version `1` is the compatibility baseline. Future additive fields should
-keep old version `1` payloads valid through default merging when possible. Any
-breaking change must introduce a new schema version and a migration path.
+Schema version `1` payloads remain accepted and normalize to schema version `2`
+with `colorDepth: { mode: "full" }` and `matchingMode: "rgb"`.
+
+Schema version `2` is the current compatibility baseline. Future additive fields
+should keep old version `2` payloads valid through default merging when possible.
+Any breaking change must introduce a new schema version and a migration path.

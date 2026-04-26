@@ -26,14 +26,20 @@ export type ResizeMode = "bilinear" | "nearest"
 export type ResizeFit = "contain" | "cover" | "stretch"
 export type ColorMode = "grayscale-first" | "color-preserve"
 export type AlphaBackground = "black" | "white"
+export type ColorDepth =
+  | { mode: "full" }
+  | { mode: "limit"; count: 2 | 4 | 8 | 16 }
+export type MatchingMode = "rgb" | "perceptual"
 
 export type EditorSettings = {
-  schemaVersion: 1
+  schemaVersion: 2
   algorithm: DitherAlgorithm
   bayerSize: BayerSize
   paletteId: string
   customPalette?: string[]
   alphaBackground: AlphaBackground
+  colorDepth: ColorDepth
+  matchingMode: MatchingMode
   resize: {
     mode: ResizeMode
     fit: ResizeFit

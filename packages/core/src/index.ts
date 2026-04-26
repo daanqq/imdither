@@ -6,7 +6,13 @@ export {
   processWithDitherAlgorithm,
 } from "./algorithm-registry"
 export { createStageCache, hashPixelBuffer } from "./cache"
-export { PRESET_PALETTES, hexToRgb, resolvePalette } from "./palettes"
+export {
+  PRESET_PALETTES,
+  getEffectivePalette,
+  hexToRgb,
+  resolvePalette,
+} from "./palettes"
+export { createPaletteMatcher, type PaletteMatcher } from "./palette-matcher"
 export {
   exportPaletteGpl,
   exportPaletteJson,
@@ -68,8 +74,10 @@ export type {
 export type {
   AlphaBackground,
   BayerSize,
+  ColorDepth,
   ColorMode,
   EditorSettings,
+  MatchingMode,
   Palette,
   PaletteColor,
   PixelBuffer,
