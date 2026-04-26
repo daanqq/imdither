@@ -61,6 +61,10 @@
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **Editor Settings**            | The versioned processing configuration that determines the current **Processed Image**.                                                       | Config, preset, options                      |
 | **Settings JSON**              | A serialized **Editor Settings** payload used for reproducible clipboard copy and paste.                                                      | Preset JSON, config JSON, import/export JSON |
+| **Look Snapshot**              | A shareable artifact that wraps normalized **Editor Settings** with lightweight look metadata.                                                | Settings JSON, preset file, saved state      |
+| **Look Payload**               | The compact, gzip-compressed, base64url transport form of one **Look Snapshot**.                                                              | Settings payload, URL state, compressed JSON |
+| **URL Look Import**            | The one-shot flow that applies a **Look Payload** from `#look=<payload>` and then clears the hash.                                            | URL state sync, route import, live hash      |
+| **Clipboard Look**             | The clipboard text flow that copies or pastes a **Look Payload** as a full URL or bare payload.                                               | Clipboard settings, settings paste           |
 | **Settings Transition**        | A user intent that produces one next **Editor Settings** value while preserving domain rules.                                                 | Settings patch, state update                 |
 | **Settings History**           | The session-local undo and redo stack for **Editor Settings** changes.                                                                        | History, edit history, undo stack            |
 | **Undo Settings Change**       | The command that restores the previous **Editor Settings** entry from **Settings History**.                                                   | Undo, revert change                          |
@@ -271,6 +275,10 @@
 - **Effective Recipe Color Mode** is compared when deriving **Active Recipe**.
 - **Clipboard Settings** copies and pastes one **Settings JSON** payload.
 - **Settings JSON** contains one versioned **Editor Settings** object.
+- A **Look Snapshot** contains one normalized **Editor Settings** object plus look metadata.
+- A **Look Payload** must not contain **Source Image** data, source file names, **Compare Mode**, **Preview Viewport**, **Export Preferences**, runtime state, **Processing Metadata**, **Source Notice**, or **Processing Preset Id**.
+- **Clipboard Look** and **URL Look Import** apply through **Settings Transition** so **Settings History** can undo them.
+- **URL Look Import** is one-shot import, not general URL state sync.
 - **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
 - **Color Depth** determines the **Effective Palette** without mutating the active **Palette**.
 - **Full Palette Depth** preserves the active **Palette** size in the **Effective Palette**.
@@ -341,6 +349,10 @@
 > **Dev:** "Should the hidden **Quality Control** be undoable?"
 >
 > **Domain expert:** "No. **Export Quality** belongs to **Export Preferences**, so it is independent from **Settings History**."
+>
+> **Dev:** "Is a copied **Look Snapshot** just **Settings JSON** with a different button?"
+>
+> **Domain expert:** "No. **Settings JSON** is the processing contract, while a **Look Snapshot** is the share artifact. Its **Look Payload** may travel through **Clipboard Look** or **URL Look Import**, but it still applies only **Editor Settings**."
 
 ## Flagged Ambiguities
 
@@ -398,6 +410,9 @@
 - "Patch settings", "state update", and "settings change" blur UI mechanics with domain rules. Use **Settings Transition** when aspect lock, palette defaults, or **Output Cap** rules must be preserved.
 - "Context" is vague by itself. Use **Transition Context** only for source dimensions and other facts required to turn a **Settings Transition** into valid **Editor Settings**.
 - "Clipboard" in settings discussions means **Clipboard Settings** text, not a file import/export path.
+- "Share URL" can imply full URL state sync. Use **URL Look Import** for the one-shot `#look=<payload>` flow and avoid implying that source images, view state, or export preferences are stored in the URL.
+- "Look", "settings", and "preset" overlap. Use **Look Snapshot** for a shareable artifact, **Settings JSON** for the processing contract, and **Processing Preset** for a curated starting recipe.
+- "Payload" is too broad by itself. Use **Look Payload** for compact share transport, **Settings JSON** for serialized editor settings, and **Palette Asset** for standalone palette exchange.
 - Oversized **Source Image** handling is a **Source Intake** rejection. **Output Size** may still be auto-sized to stay within the **Output Cap**.
 - "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for the worker-backed image run, **Worker Source Cache** for retained source data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
 - "Trace" should mean **Trace Capture**, not a product log or analytics event.

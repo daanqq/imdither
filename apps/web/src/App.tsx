@@ -1,7 +1,11 @@
 import * as React from "react"
 import {
+  createLookSnapshot,
+  decodeLookPayload,
+  encodeLookPayload,
   exportPaletteGpl,
   exportPaletteJson,
+  extractLookPayload,
   extractPaletteFromSource,
   parsePaletteText,
   safeNormalizeSettings,
@@ -74,6 +78,7 @@ export function App() {
       : window.matchMedia(DESKTOP_VIEW_SCALE_QUERY).matches
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
+  const lookHashAppliedRef = React.useRef(false)
   const aspectLabel = source
     ? formatAspectRatio(source.buffer.width, source.buffer.height)
     : formatAspectRatio(settings.resize.width, settings.resize.height)
@@ -259,6 +264,44 @@ export function App() {
     }
   }, [handleFile])
 
+  React.useEffect(() => {
+    if (!source || lookHashAppliedRef.current) {
+      return
+    }
+
+    lookHashAppliedRef.current = true
+
+    const payload = extractLookPayload(window.location.hash)
+
+    if (!payload) {
+      return
+    }
+
+    try {
+      const snapshot = decodeLookPayload(payload)
+      const result = transitionSettings(
+        { type: "apply-settings", settings: snapshot.settings },
+        transitionContext
+      )
+
+      setError(null)
+      setSourceNotice(
+        result.sourceNotice
+          ? `[LOOK APPLIED FROM URL] ${result.sourceNotice}`
+          : "[LOOK APPLIED FROM URL]"
+      )
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`
+      )
+    } catch (lookError) {
+      setError(
+        lookError instanceof Error ? lookError.message : "Look import failed"
+      )
+    }
+  }, [setError, setSourceNotice, source, transitionContext, transitionSettings])
+
   const handleInvalidDrop = React.useCallback(
     (message: string) => {
       setError(message)
@@ -349,6 +392,56 @@ export function App() {
       )
     }
   }, [setError, setSourceNotice, transitionContext, transitionSettings])
+
+  const applyLookText = React.useCallback(
+    (text: string, notice: string) => {
+      const payload = extractLookPayload(text)
+
+      if (!payload) {
+        throw new Error("Look payload is empty")
+      }
+
+      const snapshot = decodeLookPayload(payload)
+      const result = transitionSettings(
+        { type: "apply-settings", settings: snapshot.settings },
+        transitionContext
+      )
+
+      setError(null)
+      setSourceNotice(
+        result.sourceNotice ? `${notice} ${result.sourceNotice}` : notice
+      )
+    },
+    [setError, setSourceNotice, transitionContext, transitionSettings]
+  )
+
+  const handleCopyLook = React.useCallback(async () => {
+    try {
+      const payload = encodeLookPayload(createLookSnapshot({ settings }))
+      const url = new URL(window.location.href)
+      url.hash = `look=${payload}`
+      await navigator.clipboard.writeText(url.toString())
+      setError(null)
+      setSourceNotice("[LOOK COPIED TO CLIPBOARD]")
+    } catch (lookError) {
+      setError(
+        lookError instanceof Error ? lookError.message : "Look copy failed"
+      )
+    }
+  }, [setError, setSourceNotice, settings])
+
+  const handlePasteLook = React.useCallback(async () => {
+    try {
+      applyLookText(
+        await navigator.clipboard.readText(),
+        "[LOOK PASTED FROM CLIPBOARD]"
+      )
+    } catch (lookError) {
+      setError(
+        lookError instanceof Error ? lookError.message : "Look paste failed"
+      )
+    }
+  }, [applyLookText, setError])
 
   const applyPaletteText = React.useCallback(
     (text: string, notice: string) => {
@@ -565,6 +658,7 @@ export function App() {
             settings={settings}
             onAdvancedOpenChange={setAdvancedOpen}
             onCompareModeChange={setCompareMode}
+            onCopyLook={handleCopyLook}
             onCopySettings={handleCopySettings}
             onCopyPaletteJson={handleCopyPaletteJson}
             onExportPaletteGpl={handleExportPaletteGpl}
@@ -572,6 +666,7 @@ export function App() {
             onExtractPalette={handleExtractPalette}
             onImportPaletteFile={handleImportPaletteFile}
             onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
+            onPasteLook={handlePasteLook}
             onPasteSettings={handlePasteSettings}
             onResolutionWidthChange={handleResolutionWidthChange}
             onReset={handleResetSettings}

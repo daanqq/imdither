@@ -19,6 +19,8 @@ in the browser; the app does not upload source images to a server.
 - Export the current result as PNG, WebP, or JPEG.
 - Create, edit, import, export, and extract one active custom palette.
 - Copy and paste versioned settings JSON through the system clipboard.
+- Copy, paste, and URL-apply shareable Look payloads without sharing source
+  image data.
 - Switch between persistent dark and light themes from the header.
 
 ## Processing Controls
@@ -64,7 +66,7 @@ in the browser; the app does not upload source images to a server.
 
 - [Product PRD](docs/PRD.md) - current product behavior and architecture.
 - [Editor Settings Schema](docs/settings-schema.md) - versioned Settings JSON
-  contract for clipboard copy/paste.
+  contract for clipboard copy/paste and Look Snapshot sharing boundaries.
 - [MIT License](LICENSE) - usage and contribution licensing.
 
 ## Architecture

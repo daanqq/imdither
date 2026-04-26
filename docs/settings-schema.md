@@ -95,6 +95,11 @@ Palette JSON/GPL export is a palette asset flow, not Settings JSON. Settings
 JSON copy/paste may still include `customPalette` so palette-dependent output is
 reproducible.
 
+Look Snapshot copy/paste is a separate share flow. A Look Snapshot wraps
+normalized Settings JSON in lightweight metadata and transports it as a compact,
+gzip-compressed, base64url payload, but it still applies back to Editor Settings
+only.
+
 ## Normalization
 
 Pasted settings are merged with current defaults before validation. This means

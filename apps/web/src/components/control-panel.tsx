@@ -78,6 +78,7 @@ export type ControlPanelProps = {
   settings: EditorSettings
   onAdvancedOpenChange: (open: boolean) => void
   onCompareModeChange: (mode: CompareMode) => void
+  onCopyLook: () => void
   onCopyPaletteJson: () => void
   onCopySettings: () => void
   onExportPaletteGpl: () => void
@@ -85,6 +86,7 @@ export type ControlPanelProps = {
   onExtractPalette: (size: 2 | 4 | 8 | 16 | 32) => void
   onImportPaletteFile: (file: File) => void
   onImportPaletteFromClipboard: () => void
+  onPasteLook: () => void
   onPasteSettings: () => void
   onResolutionWidthChange: (width: number) => void
   onReset: () => void
@@ -98,6 +100,7 @@ export const ControlPanel = React.memo(function ControlPanel({
   settings,
   onAdvancedOpenChange,
   onCompareModeChange,
+  onCopyLook,
   onCopyPaletteJson,
   onCopySettings,
   onExportPaletteGpl,
@@ -105,6 +108,7 @@ export const ControlPanel = React.memo(function ControlPanel({
   onExtractPalette,
   onImportPaletteFile,
   onImportPaletteFromClipboard,
+  onPasteLook,
   onPasteSettings,
   onResolutionWidthChange,
   onReset,
@@ -612,6 +616,27 @@ export const ControlPanel = React.memo(function ControlPanel({
                   </Field>
                   <Separator />
                   <div className="flex min-w-0 flex-col gap-1.5">
+                    <FieldLabel>Look</FieldLabel>
+                    <Button
+                      variant="outline"
+                      className="min-w-0 justify-start"
+                      onClick={onCopyLook}
+                    >
+                      <ClipboardIcon data-icon="inline-start" />
+                      Copy look
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-w-0 justify-start"
+                      onClick={onPasteLook}
+                    >
+                      <UploadIcon data-icon="inline-start" />
+                      Paste look
+                    </Button>
+                  </div>
+                  <Separator />
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <FieldLabel>Settings JSON</FieldLabel>
                     <Button
                       variant="outline"
                       className="min-w-0 justify-start"

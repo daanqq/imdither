@@ -123,11 +123,11 @@ Success signal: shipped. Users can intentionally control palette size, compare R
 ### Phase 3: Look-Building Workflow
 
 - [x] Add undo and redo for editor settings changes.
-- [ ] Add immutable look snapshots.
-- [ ] Add shareable looks through URL-safe or clipboard-safe payloads.
+- [x] Add immutable look snapshots.
+- [x] Add shareable looks through URL-safe and clipboard-safe payloads.
 - [ ] Add an Auto-Tune analysis pass over histogram, entropy, edge density, palette suitability, and output size.
 - [ ] Return 3-5 recommended looks instead of one opaque magic result.
-- [ ] Keep copied Settings JSON focused on processing, not transient UI state.
+- [x] Keep copied Settings JSON focused on processing, not transient UI state.
 
 Success signal: users can explore aggressively, recover quickly, and share repeatable looks.
 

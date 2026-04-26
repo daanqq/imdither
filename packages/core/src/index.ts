@@ -12,6 +12,13 @@ export {
   hexToRgb,
   resolvePalette,
 } from "./palettes"
+export {
+  createLookSnapshot,
+  decodeLookPayload,
+  encodeLookPayload,
+  extractLookPayload,
+  type LookSnapshot,
+} from "./look-snapshot"
 export { createPaletteMatcher, type PaletteMatcher } from "./palette-matcher"
 export {
   exportPaletteGpl,

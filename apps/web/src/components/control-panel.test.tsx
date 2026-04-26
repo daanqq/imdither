@@ -91,6 +91,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -98,6 +99,7 @@ describe("ControlPanel", () => {
         onExtractPalette={vi.fn()}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -128,6 +130,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -135,6 +138,7 @@ describe("ControlPanel", () => {
         onExtractPalette={vi.fn()}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -157,6 +161,43 @@ describe("ControlPanel", () => {
     })
   })
 
+  it("shows separate Look and Settings JSON clipboard actions", () => {
+    const onCopyLook = vi.fn()
+    const onPasteLook = vi.fn()
+    const onCopySettings = vi.fn()
+    const onPasteSettings = vi.fn()
+    const markup = renderToStaticMarkup(
+      <ControlPanel
+        advancedOpen
+        compareMode="slide"
+        settings={DEFAULT_SETTINGS}
+        resolutionAspectLabel="1:1"
+        onAdvancedOpenChange={vi.fn()}
+        onCompareModeChange={vi.fn()}
+        onCopyLook={onCopyLook}
+        onCopyPaletteJson={vi.fn()}
+        onCopySettings={onCopySettings}
+        onExportPaletteGpl={vi.fn()}
+        onExportPaletteJson={vi.fn()}
+        onExtractPalette={vi.fn()}
+        onImportPaletteFile={vi.fn()}
+        onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={onPasteLook}
+        onPasteSettings={onPasteSettings}
+        onReset={vi.fn()}
+        onResolutionWidthChange={vi.fn()}
+        onSettingsTransition={vi.fn()}
+      />
+    )
+
+    expect(markup).toContain("Look")
+    expect(markup).toContain("Copy look")
+    expect(markup).toContain("Paste look")
+    expect(markup).toContain("Settings JSON")
+    expect(markup).toContain("Copy settings")
+    expect(markup).toContain("Paste settings")
+  })
+
   it("keeps custom palette controls hidden until Custom is selected", () => {
     const onExtractPalette = vi.fn()
     const onSettingsTransition = vi.fn()
@@ -168,6 +209,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -175,6 +217,7 @@ describe("ControlPanel", () => {
         onExtractPalette={onExtractPalette}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -208,6 +251,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -215,6 +259,7 @@ describe("ControlPanel", () => {
         onExtractPalette={vi.fn()}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -272,6 +317,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -279,6 +325,7 @@ describe("ControlPanel", () => {
         onExtractPalette={vi.fn()}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -320,6 +367,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -327,6 +375,7 @@ describe("ControlPanel", () => {
         onExtractPalette={vi.fn()}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}
@@ -361,6 +410,7 @@ describe("ControlPanel", () => {
         resolutionAspectLabel="1:1"
         onAdvancedOpenChange={vi.fn()}
         onCompareModeChange={vi.fn()}
+        onCopyLook={vi.fn()}
         onCopyPaletteJson={vi.fn()}
         onCopySettings={vi.fn()}
         onExportPaletteGpl={vi.fn()}
@@ -368,6 +418,7 @@ describe("ControlPanel", () => {
         onExtractPalette={onExtractPalette}
         onImportPaletteFile={vi.fn()}
         onImportPaletteFromClipboard={vi.fn()}
+        onPasteLook={vi.fn()}
         onPasteSettings={vi.fn()}
         onReset={vi.fn()}
         onResolutionWidthChange={vi.fn()}

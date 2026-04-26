@@ -14,6 +14,7 @@ Primary value:
 - apply a processing recipe or choose palette, color mode, and dithering algorithm directly
 - limit palette depth and choose RGB or perceptual nearest-color matching
 - compare original and processed output in a stable preview surface
+- copy, paste, and URL-apply repeatable processing looks without sharing source image data
 - export the final full-resolution processed output as PNG, WebP, or JPEG
 
 The current product is a single-screen, local-only editor. It is optimized for desktop precision, remains usable on mobile, and keeps heavy image work behind explicit browser-side job boundaries.
@@ -35,8 +36,7 @@ The current product is a single-screen, local-only editor. It is optimized for d
 - No palette library or named saved palette collection.
 - No palette drag-and-drop or remote palette URL import.
 - No custom recipe creation or recipe marketplace.
-- No undo/redo history stack.
-- No URL state sharing.
+- No general URL state sync beyond one-shot Look Payload import.
 - No router or multi-page product shell.
 - No batch processing.
 - No WebGL/WebGPU pipeline.
@@ -56,6 +56,7 @@ The current product is a single-screen, local-only editor. It is optimized for d
 - "I want to compare original and processed output without coordinate drift or preview-only artifacts."
 - "I want the exported file to match my committed processing settings and chosen file format."
 - "I want settings to be reproducible without embedding transient UI state or file-encoding preferences."
+- "I want to share a repeatable processing look without sharing my source image."
 - "I want the tool to feel local, responsive, and private."
 
 ## 6. Product Principles
@@ -335,6 +336,15 @@ Rules:
 - quality range: `0.1` through `1.0`, step `0.05`
 - export format and quality are persisted editor preferences, not Editor Settings.
 - Settings JSON copy/paste excludes export format and quality.
+- Look copy/paste wraps normalized Editor Settings in a shareable Look Snapshot
+  and excludes source image data, source file names, compare mode, preview
+  viewport, export preferences, runtime state, metadata, notices, and recipe id.
+- Look payloads use `#look=<payload>` for URL sharing. The payload is compact
+  JSON, gzip-compressed with `fflate`, and base64url encoded.
+- URL look import applies once after a source image is available, then clears
+  the look hash from the address bar.
+- Clipboard look import accepts either a full URL containing `#look=<payload>`
+  or a bare payload.
 - JPEG export flattens alpha using the current alpha background setting.
 - PNG preserves alpha.
 - WebP preserves alpha where browser encoding supports it.
@@ -633,6 +643,7 @@ Included:
 - screen-sized Fit preview
 - PNG, WebP, and JPEG export
 - settings JSON copy/paste for processing settings
+- Look Snapshot copy/paste and one-shot `#look=<payload>` URL import
 - local preference persistence
 - dark-first Nothing-inspired UI on top of shared primitives
 - deterministic tests across core, web modules, and UI wiring
@@ -641,8 +652,7 @@ Explicitly out:
 
 - palette library or named saved palette collection
 - custom recipe editor
-- undo/redo
-- URL share state
+- general URL state sync beyond one-shot Look Payload import
 - multi-page app shell
 - free pan/zoom editor
 - batch processing
@@ -665,6 +675,7 @@ The current product contract is informed by the implemented feature PRDs in this
 - Processing Presets
 - Export Layer
 - Market Impact Roadmap Phase 1 Palette Platform MVP
+- Market Impact Roadmap Phase 3 Look Payloads
 
 These feature PRDs are subordinate detail documents. This root PRD should stay aligned with their implemented contracts and with the current code state.
 
