@@ -563,6 +563,39 @@ describe("PreviewStage", () => {
     ).toBe(false)
   })
 
+  it("reserves mobile touch drag gestures for manual preview panning", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale={false}
+        original={makeBuffer(2, 2)}
+        preview={makeBuffer(2, 2)}
+        previewTargetHeight={2}
+        previewTargetWidth={2}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 4,
+          center: { x: 1, y: 1 },
+          gridEnabled: true,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("touch-action:none")
+  })
+
   it("applies manual viewport center as a visible frame offset", () => {
     const html = renderToStaticMarkup(
       <PreviewStage

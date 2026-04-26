@@ -946,9 +946,16 @@ const CanvasPanel = React.memo(function CanvasPanel({
               : "cursor-grab active:cursor-grabbing")
         )}
         style={
-          viewScale === "fit" || centeredManualViewport
-            ? { containerType: "size" }
-            : undefined
+          previewViewport?.mode === "manual"
+            ? {
+                ...(viewScale === "fit" || centeredManualViewport
+                  ? { containerType: "size" as const }
+                  : null),
+                touchAction: "none",
+              }
+            : viewScale === "fit" || centeredManualViewport
+              ? { containerType: "size" }
+              : undefined
         }
         onWheel={handleWheel}
         onPointerDown={panPointer}
