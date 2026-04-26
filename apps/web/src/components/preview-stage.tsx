@@ -133,7 +133,7 @@ export const PreviewStage = React.memo(function PreviewStage({
     <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
       <Card
         className={cn(
-          "relative h-full min-h-0 min-w-0 flex-1 overflow-hidden border-border bg-card py-3",
+          "relative h-full min-h-0 min-w-0 flex-1 overflow-hidden border-border bg-[var(--surface-preview)] py-2",
           dragActive && "border-destructive"
         )}
         onDragEnter={(event) => {
@@ -144,17 +144,21 @@ export const PreviewStage = React.memo(function PreviewStage({
         onDragLeave={() => setDragActive(false)}
         onDrop={handleDrop}
       >
+        <div
+          aria-hidden="true"
+          className="dot-grid-subtle pointer-events-none absolute inset-0 z-0"
+        />
         <ProcessingOverlay
           algorithm={algorithm}
           busy={busy}
           previewReduced={isDesktopViewScale && previewReduced}
           status={status}
         />
-        <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
+        <CardContent className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
           <div
             ref={previewDisplayRef}
             className={cn(
-              "dot-grid-subtle m-3 flex min-h-0 flex-1 bg-background ring-1 ring-foreground/10",
+              "relative mx-2 mt-2 flex min-h-0 flex-1",
               viewScale === "fit"
                 ? "items-center justify-center overflow-hidden"
                 : "overflow-auto"
@@ -206,8 +210,8 @@ export const PreviewStage = React.memo(function PreviewStage({
               </div>
             )}
           </div>
-          <div className="mx-3 mb-3 grid shrink-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-            <div className="order-1 grid min-w-0 grid-cols-2 items-center gap-2 md:relative md:order-2 md:flex md:min-h-9 md:justify-center">
+          <div className="mx-2 grid shrink-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+            <div className="order-1 grid min-w-0 grid-cols-2 items-center gap-2 md:relative md:order-2 md:flex md:h-full md:min-h-9 md:justify-center">
               <Input
                 ref={fileInputRef}
                 className="sr-only"
@@ -215,9 +219,9 @@ export const PreviewStage = React.memo(function PreviewStage({
                 accept="image/*"
                 onChange={handleFileInput}
               />
-              <div className="contents md:grid md:grid-cols-[9rem_9rem] md:gap-2">
+              <div className="contents md:grid md:h-full md:grid-cols-[9rem_9rem] md:gap-2">
                 <Button
-                  className="min-w-0"
+                  className="min-w-0 md:h-full"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -225,12 +229,12 @@ export const PreviewStage = React.memo(function PreviewStage({
                   Upload
                 </Button>
                 <Button
-                  className="min-w-0"
+                  className="min-w-0 md:h-full"
                   disabled={!original || status === "exporting"}
                   onClick={onExport}
                 >
                   <DownloadIcon data-icon="inline-start" />
-                  {status === "exporting" ? "[EXPORTING]" : "Export"}
+                  {status === "exporting" ? "Exporting" : "Export"}
                 </Button>
               </div>
               <div className="col-span-2 grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-center gap-2 md:absolute md:top-1/2 md:left-[calc(50%+9.75rem)] md:w-80 md:-translate-y-1/2">
@@ -242,7 +246,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                 >
                   <SelectTrigger
                     aria-label="Export format"
-                    className="h-9 w-full"
+                    className="h-8 w-full md:h-full"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -255,7 +259,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                   </SelectContent>
                 </Select>
                 <div className="min-w-0">
-                  <label className="flex h-9 min-w-0 items-center gap-2 font-mono text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+                  <label className="flex h-8 min-w-0 items-center gap-2 font-mono text-[10px] text-muted-foreground md:h-full">
                     <span>Quality</span>
                     <Slider
                       aria-label="Export quality"
@@ -283,7 +287,7 @@ export const PreviewStage = React.memo(function PreviewStage({
               type="single"
               value={viewScale}
               variant="outline"
-              className="order-2 hidden h-full w-full md:order-1 md:flex md:max-w-72"
+              className="order-2 hidden h-full w-full md:order-1 md:flex md:max-w-64"
               onValueChange={(value) => {
                 if (value) {
                   onViewScaleChange(value as ViewScale)
@@ -399,13 +403,13 @@ function ProcessingOverlay({
           : `${algorithm} worker is running. New changes replace queued preview.`
 
   return (
-    <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-xl border border-primary bg-background/95 p-3 shadow-none">
+    <div className="pointer-events-none absolute inset-x-2 top-2 z-20 border border-primary bg-background/95 p-2 shadow-none">
       <div className="flex min-w-0 items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="font-display text-2xl leading-none tracking-[-0.04em] uppercase">
+          <div className="font-display text-xl leading-none tracking-[-0.03em]">
             {title}
           </div>
-          <div className="mt-1 truncate font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
             {detail}
           </div>
         </div>
@@ -459,7 +463,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
       >
         <div
           className={cn(
-            "relative shrink-0 overflow-hidden bg-background ring-1 ring-foreground/10",
+            "relative shrink-0 overflow-hidden bg-background ring-1 ring-border",
             missing && "border border-dashed border-border ring-0",
             viewScale === "actual" && "h-fit w-fit max-w-none"
           )}
@@ -477,7 +481,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
               className="absolute inset-0 block size-full bg-background"
             />
           )}
-          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center font-mono text-[10px] tracking-[0.1em] text-foreground/80 uppercase">
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center font-mono text-[10px] text-foreground/80">
             <span className="bg-background/80 px-1.5 py-0.5">{label}</span>
           </div>
         </div>
@@ -497,7 +501,7 @@ function PreviewPlaceholder({
 }) {
   return (
     <div className="dot-grid-subtle flex size-full items-center justify-center bg-background text-center">
-      <div className="flex flex-col gap-1 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+      <div className="flex flex-col gap-1 font-mono text-[11px] text-muted-foreground">
         <span>[{status ?? "processing"}]</span>
         <span>
           {width}x{height}

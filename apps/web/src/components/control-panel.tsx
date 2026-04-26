@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { Separator } from "@workspace/ui/components/separator"
+import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { Switch } from "@workspace/ui/components/switch"
 import {
   ToggleGroup,
@@ -95,13 +96,13 @@ export const ControlPanel = React.memo(function ControlPanel({
 
   return (
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
-      <Card className="flex h-full min-h-0 min-w-0 overflow-hidden border-border bg-card py-3">
-        <CardHeader className="shrink-0">
-          <CardTitle>Control Panel</CardTitle>
+      <Card className="flex h-full min-h-0 min-w-0 gap-0 overflow-hidden border-border bg-[var(--surface-inspector)] py-2">
+        <CardHeader className="shrink-0 border-b border-border pb-2">
+          <CardTitle>Inspector</CardTitle>
         </CardHeader>
         <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0">
-          <div className="h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]">
-            <FieldGroup className="min-w-0 gap-4 pb-1">
+          <ScrollArea className="h-full min-h-0 min-w-0 overscroll-contain">
+            <FieldGroup className="min-w-0 gap-3 pb-1">
               <Field>
                 <FieldLabel htmlFor="processing-preset">Recipe</FieldLabel>
                 <div className="flex min-w-0 items-center gap-2">
@@ -340,7 +341,7 @@ export const ControlPanel = React.memo(function ControlPanel({
                 open={advancedOpen}
                 onOpenChange={onAdvancedOpenChange}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-3 border-t border-border pt-3">
                   <div className="flex flex-col gap-1">
                     <FieldLabel>Advanced</FieldLabel>
                     <FieldDescription>
@@ -348,13 +349,13 @@ export const ControlPanel = React.memo(function ControlPanel({
                     </FieldDescription>
                   </div>
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost">
-                      {advancedOpen ? "[CLOSE]" : "[OPEN]"}
+                    <Button size="sm" variant="ghost">
+                      {advancedOpen ? "Close" : "Open"}
                     </Button>
                   </CollapsibleTrigger>
                 </div>
 
-                <CollapsibleContent className="flex min-w-0 flex-col gap-5 overflow-hidden pt-4">
+                <CollapsibleContent className="flex min-w-0 flex-col gap-3 overflow-hidden pt-3">
                   <FieldSet>
                     <FieldLegend variant="label">Resize Kernel</FieldLegend>
                     <ToggleGroup
@@ -468,7 +469,7 @@ export const ControlPanel = React.memo(function ControlPanel({
                     />
                   </Field>
                   <Separator />
-                  <div className="flex min-w-0 flex-col gap-2">
+                  <div className="flex min-w-0 flex-col gap-1.5">
                     <Button
                       variant="outline"
                       className="min-w-0 justify-start"
@@ -497,7 +498,7 @@ export const ControlPanel = React.memo(function ControlPanel({
                 </CollapsibleContent>
               </Collapsible>
             </FieldGroup>
-          </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </aside>

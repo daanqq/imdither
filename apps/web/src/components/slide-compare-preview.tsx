@@ -182,7 +182,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         <div
           ref={frameRef}
           className={cn(
-            "relative overflow-hidden bg-background ring-1 ring-foreground/10",
+            "relative overflow-hidden bg-background ring-1 ring-border",
             processedReady && "cursor-ew-resize",
             viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none shrink-0"
           )}
@@ -226,7 +226,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               }}
             />
           ) : null}
-          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.1em] text-foreground/80 uppercase">
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/80">
             <span className="bg-background/80 px-1.5 py-0.5">Original</span>
             <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
           </div>
@@ -234,7 +234,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             <>
               <div
                 ref={dividerLineRef}
-                className="pointer-events-none absolute inset-y-0 w-px bg-foreground ring-1 ring-background/75"
+                className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
                 style={{ left: `${clampedDivider}%` }}
               />
               <button
@@ -244,7 +244,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                 aria-valuemax={SLIDE_COMPARE_MAX}
                 aria-valuemin={SLIDE_COMPARE_MIN}
                 aria-valuenow={Math.round(clampedDivider)}
-                className="absolute top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-foreground bg-background font-mono text-[10px] text-foreground ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 role="slider"
                 style={{ left: `${clampedDivider}%`, touchAction: "none" }}
                 onKeyDown={handleKeyDown}
@@ -275,7 +275,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               </button>
             </>
           ) : (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
               [{status ?? "processing"}]
             </div>
           )}

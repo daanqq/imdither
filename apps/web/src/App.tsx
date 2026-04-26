@@ -356,21 +356,24 @@ export function App() {
   )
 
   return (
-    <main className="h-svh w-full overflow-hidden bg-background text-foreground">
-      <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-3 overflow-hidden p-3">
-        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border pb-1.5 md:gap-3 md:pb-3">
+    <main className="h-[100dvh] w-full overflow-hidden bg-[var(--surface-workbench)] text-foreground">
+      <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-2 overflow-hidden p-2 md:gap-3 md:p-3">
+        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border pb-1.5 md:gap-3 md:pb-2">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex min-w-0 items-center gap-1.5 md:gap-3">
-              <span className="size-1 rounded-full bg-destructive md:size-2" />
-              <h1 className="font-display text-base leading-none tracking-[-0.04em] md:text-4xl">
+            <div className="flex min-w-0 items-baseline gap-2 md:gap-3">
+              <span className="h-3 w-px bg-primary md:h-5" />
+              <h1 className="font-display text-lg leading-none tracking-[-0.03em] md:text-3xl">
                 IMDITHER
               </h1>
+              <span className="hidden font-mono text-[11px] text-muted-foreground md:inline">
+                raster proof desk
+              </span>
             </div>
           </div>
           <ThemeToggle />
         </header>
 
-        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_420px] xl:grid-rows-1">
+        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
           <PreviewStage
             algorithm={settings.algorithm}
             compareMode={compareMode}
@@ -423,7 +426,7 @@ function ThemeToggle() {
       type="button"
       aria-label={`Switch to ${nextTheme} theme`}
       aria-pressed={isLight}
-      className="!size-6 !min-h-6 gap-0 p-0 font-mono text-xs uppercase md:!h-8 md:!min-h-11 md:!w-auto md:gap-1.5 md:px-2.5"
+      className="!size-7 !min-h-7 gap-0 p-0 font-mono text-xs md:!h-8 md:!min-h-8 md:!w-auto md:gap-1.5 md:px-2.5"
       size="icon-xs"
       variant="outline"
       onClick={() => setTheme(nextTheme)}
