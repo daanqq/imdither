@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { DEFAULT_SETTINGS } from "@workspace/core"
+import { DEFAULT_SETTINGS, PRESET_PALETTES } from "@workspace/core"
 
 import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
 import { getRandomDifferentValue } from "@/lib/random-options"
@@ -186,8 +186,11 @@ describe("ControlPanel", () => {
     expect(selectRenders[2]?.value).toBe(DEFAULT_SETTINGS.paletteId)
 
     selectRenders[2]?.onValueChange?.("custom")
-    expect(onExtractPalette).toHaveBeenCalledWith(16)
-    expect(onSettingsTransition).not.toHaveBeenCalled()
+    expect(onExtractPalette).not.toHaveBeenCalled()
+    expect(onSettingsTransition).toHaveBeenCalledWith({
+      type: "set-custom-palette",
+      colors: getPaletteColors(DEFAULT_SETTINGS.paletteId),
+    })
   })
 
   it("shows color quality controls and dispatches their settings transitions", () => {
@@ -381,3 +384,11 @@ describe("ControlPanel", () => {
     expect(onExtractPalette).toHaveBeenCalledWith(8)
   })
 })
+
+function getPaletteColors(paletteId: string) {
+  return (
+    PRESET_PALETTES.find((palette) => palette.id === paletteId)?.colors.map(
+      (color) => color.hex
+    ) ?? []
+  )
+}

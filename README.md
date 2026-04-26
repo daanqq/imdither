@@ -14,7 +14,8 @@ in the browser; the app does not upload source images to a server.
   selected output.
 - Compare original and processed output with a slide before/after preview,
   processed-only view, or original-only view.
-- Use Fit and 1:1 preview modes on desktop; mobile keeps the preview in Fit mode.
+- Use Fit or Manual preview on desktop, with zoom, pan, optional pixel grid, and
+  pixel inspection; mobile keeps the preview in Fit mode.
 - Export the current result as PNG, WebP, or JPEG.
 - Create, edit, import, export, and extract one active custom palette.
 - Copy and paste versioned settings JSON through the system clipboard.

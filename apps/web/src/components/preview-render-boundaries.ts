@@ -1,5 +1,6 @@
 import type { PixelBuffer } from "@workspace/core"
 
+import type { PreviewViewport } from "@/lib/preview-viewport"
 import type { ViewScale } from "@/store/editor-store"
 
 export type CanvasPanelProps = {
@@ -8,7 +9,9 @@ export type CanvasPanelProps = {
   expectedWidth: number
   label: string
   missing?: boolean
+  pixelInspectorEnabled?: boolean
   status?: string
+  previewViewport?: PreviewViewport
   viewScale: ViewScale
 }
 
@@ -20,9 +23,12 @@ export type SlideComparePreviewProps = {
   displayWidth?: number
   original: PixelBuffer
   processed: PixelBuffer | null
+  pixelInspectorEnabled?: boolean
   status?: string
+  previewViewport?: PreviewViewport
   viewScale: SlideCompareViewScale
   onDividerChange: (percent: number) => void
+  onViewportChange?: (viewport: Partial<PreviewViewport>) => void
 }
 
 export function areCanvasPanelPropsEqual(
@@ -35,6 +41,8 @@ export function areCanvasPanelPropsEqual(
     previous.expectedWidth !== next.expectedWidth ||
     previous.label !== next.label ||
     previous.missing !== next.missing ||
+    previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
+    previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale
   ) {
     return false
@@ -57,8 +65,11 @@ export function areSlideComparePreviewPropsEqual(
     previous.displayWidth !== next.displayWidth ||
     previous.original !== next.original ||
     previous.processed !== next.processed ||
+    previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
+    previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale ||
-    previous.onDividerChange !== next.onDividerChange
+    previous.onDividerChange !== next.onDividerChange ||
+    previous.onViewportChange !== next.onViewportChange
   ) {
     return false
   }

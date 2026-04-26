@@ -30,20 +30,21 @@ import {
   type SourceIntakeResult,
 } from "@/lib/source-intake"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import { useEditorStore, type ViewScale } from "@/store/editor-store"
+import type { PreviewViewport } from "@/lib/preview-viewport"
+import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
 export function App() {
   const settings = useEditorStore((state) => state.settings)
   const compareMode = useEditorStore((state) => state.compareMode)
-  const viewScale = useEditorStore((state) => state.viewScale)
+  const previewViewport = useEditorStore((state) => state.previewViewport)
   const exportFormat = useEditorStore((state) => state.exportFormat)
   const exportQuality = useEditorStore((state) => state.exportQuality)
   const advancedOpen = useEditorStore((state) => state.advancedOpen)
   const status = useEditorStore((state) => state.status)
   const transitionSettings = useEditorStore((state) => state.transitionSettings)
   const setCompareMode = useEditorStore((state) => state.setCompareMode)
-  const setViewScale = useEditorStore((state) => state.setViewScale)
+  const setPreviewViewport = useEditorStore((state) => state.setPreviewViewport)
   const setExportFormat = useEditorStore((state) => state.setExportFormat)
   const setExportQuality = useEditorStore((state) => state.setExportQuality)
   const setAdvancedOpen = useEditorStore((state) => state.setAdvancedOpen)
@@ -83,14 +84,14 @@ export function App() {
         displayWidth: previewDisplaySize?.width,
         outputHeight: settings.resize.height,
         outputWidth: settings.resize.width,
-        viewScale,
+        viewScale: previewViewport.mode === "fit" ? "fit" : "actual",
       }),
     [
       previewDisplaySize?.height,
       previewDisplaySize?.width,
       settings.resize.height,
       settings.resize.width,
-      viewScale,
+      previewViewport.mode,
     ]
   )
 
@@ -215,7 +216,7 @@ export function App() {
       setIsDesktopViewScale(mediaQuery.matches)
 
       if (!mediaQuery.matches) {
-        setViewScale("fit")
+        setPreviewViewport({ mode: "fit" })
       }
     }
 
@@ -225,7 +226,7 @@ export function App() {
     return () => {
       mediaQuery.removeEventListener("change", enforceMobileFit)
     }
-  }, [setViewScale])
+  }, [setPreviewViewport])
 
   React.useEffect(() => {
     const handlePaste = async (event: ClipboardEvent) => {
@@ -491,11 +492,11 @@ export function App() {
     [transitionContext, transitionSettings]
   )
 
-  const handleViewScaleChange = React.useCallback(
-    (scale: ViewScale) => {
-      setViewScale(scale)
+  const handlePreviewViewportChange = React.useCallback(
+    (viewport: Partial<PreviewViewport>) => {
+      setPreviewViewport(viewport)
     },
-    [setViewScale]
+    [setPreviewViewport]
   )
 
   return (
@@ -528,7 +529,7 @@ export function App() {
             }
             previewTargetWidth={previewTarget?.width ?? settings.resize.width}
             status={status}
-            viewScale={viewScale}
+            previewViewport={previewViewport}
             exportFormat={exportFormat}
             exportQuality={exportQuality}
             onExport={handleExport}
@@ -537,7 +538,7 @@ export function App() {
             onFileSelected={handleFile}
             onInvalidDrop={handleInvalidDrop}
             onPreviewDisplaySizeChange={setPreviewDisplaySize}
-            onViewScaleChange={handleViewScaleChange}
+            onPreviewViewportChange={handlePreviewViewportChange}
           />
 
           <ControlPanel

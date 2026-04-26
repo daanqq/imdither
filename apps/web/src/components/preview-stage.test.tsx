@@ -113,7 +113,13 @@ describe("PreviewStage", () => {
         previewTargetHeight={1}
         previewTargetWidth={1}
         status="ready"
-        viewScale="fit"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
         exportFormat="png"
         exportQuality={0.92}
         onExport={onExportPng}
@@ -122,7 +128,7 @@ describe("PreviewStage", () => {
         onFileSelected={onFileSelected}
         onInvalidDrop={vi.fn()}
         onPreviewDisplaySizeChange={vi.fn()}
-        onViewScaleChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
       />
     )
 
@@ -154,7 +160,13 @@ describe("PreviewStage", () => {
       previewTargetHeight: 1,
       previewTargetWidth: 1,
       status: "ready",
-      viewScale: "fit",
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
       exportQuality: 0.75,
       onExport: vi.fn(),
       onExportFormatChange,
@@ -162,7 +174,7 @@ describe("PreviewStage", () => {
       onFileSelected: vi.fn(),
       onInvalidDrop: vi.fn(),
       onPreviewDisplaySizeChange: vi.fn(),
-      onViewScaleChange: vi.fn(),
+      onPreviewViewportChange: vi.fn(),
     } as const
 
     const render = (exportFormat: ExportFormat) =>
@@ -171,18 +183,17 @@ describe("PreviewStage", () => {
       )
 
     expect(render("png")).not.toContain("Quality")
-    expect(render("png")).not.toContain("100%")
     expect(render("webp")).toContain("Quality")
     expect(render("webp")).toContain("75%")
     expect(render("jpeg")).toContain("Quality")
     expect(inputRenders.some((input) => input.type === "range")).toBe(false)
-    expect(sliderRenders.at(-1)).toMatchObject({
+    expect(sliderRenders.find((slider) => slider.max === 1)).toMatchObject({
       max: 1,
       min: 0.1,
       step: 0.05,
       value: [0.75],
     })
-    sliderRenders.at(-1)?.onValueChange?.([0.8])
+    sliderRenders.find((slider) => slider.max === 1)?.onValueChange?.([0.8])
     expect(onExportQualityChange).toHaveBeenLastCalledWith(0.8)
   })
 
@@ -245,7 +256,13 @@ describe("PreviewStage", () => {
         previewTargetHeight={1333}
         previewTargetWidth={2000}
         status="ready"
-        viewScale="actual"
+        previewViewport={{
+          mode: "manual",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
         exportFormat="png"
         exportQuality={0.92}
         onExport={vi.fn()}
@@ -254,12 +271,140 @@ describe("PreviewStage", () => {
         onFileSelected={vi.fn()}
         onInvalidDrop={vi.fn()}
         onPreviewDisplaySizeChange={vi.fn()}
-        onViewScaleChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
       />
     )
 
     expect(html).toContain("height:1333px")
     expect(html).toContain("width:2000px")
+  })
+
+  it("keeps inspection controls in the preview toolbar", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(2, 2)}
+        preview={makeBuffer(2, 2)}
+        previewTargetHeight={2}
+        previewTargetWidth={2}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 4,
+          center: { x: 1, y: 1 },
+          gridEnabled: true,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
+    const gridButton = buttonRenders.find(
+      (button) => button["aria-label"] === "Toggle pixel grid"
+    )
+
+    zoomSlider?.onValueChange?.([5])
+    gridButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      mode: "manual",
+      zoom: 5,
+    })
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      gridEnabled: false,
+    })
+  })
+
+  it("hides the pixel inspector control on mobile", () => {
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale={false}
+        original={makeBuffer(2, 2)}
+        preview={makeBuffer(2, 2)}
+        previewTargetHeight={2}
+        previewTargetWidth={2}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 4,
+          center: { x: 1, y: 1 },
+          gridEnabled: true,
+          loupeEnabled: true,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Toggle pixel grid"
+      )
+    ).toBe(true)
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Toggle pixel inspector"
+      )
+    ).toBe(false)
+  })
+
+  it("applies manual viewport center as a visible frame offset", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(10, 8)}
+        preview={makeBuffer(10, 8)}
+        previewTargetHeight={8}
+        previewTargetWidth={10}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 4,
+          center: { x: 4, y: 3 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("left:50%")
+    expect(html).toContain("top:50%")
+    expect(html).toContain("margin-left:-16px")
+    expect(html).toContain("margin-top:-12px")
   })
 })
 

@@ -96,6 +96,51 @@ describe("editor store settings transitions", () => {
       "exportQuality"
     )
   })
+
+  it("migrates old view scale into preview viewport state", () => {
+    expect(
+      normalizePersistedEditorState({
+        settings: DEFAULT_SETTINGS,
+        viewScale: "actual",
+      })
+    ).toMatchObject({
+      previewViewport: {
+        mode: "manual",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+  })
+
+  it("stores preview viewport separately from editor settings", () => {
+    useEditorStore.setState({
+      previewViewport: {
+        mode: "manual",
+        zoom: 4,
+        center: { x: 12, y: 9 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+      settings: DEFAULT_SETTINGS,
+    })
+
+    useEditorStore.getState().setPreviewViewport({ mode: "fit" })
+    useEditorStore.getState().transitionSettings({
+      type: "apply-settings",
+      settings: DEFAULT_SETTINGS,
+    })
+
+    expect(useEditorStore.getState().previewViewport).toMatchObject({
+      mode: "fit",
+      gridEnabled: true,
+      loupeEnabled: true,
+    })
+    expect(useEditorStore.getState().settings).not.toHaveProperty(
+      "previewViewport"
+    )
+  })
 })
 
 function createMemoryStorage(): Storage {

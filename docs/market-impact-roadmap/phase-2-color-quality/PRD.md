@@ -76,7 +76,7 @@ The default behavior remains visually compatible with the current product: exist
 - Nearest-color algorithms receive or create a palette matcher rather than duplicating distance logic.
 - Matching mode applies to all nearest-color processing paths.
 - Matt Parker dithering remains unchanged because it is a tonal level algorithm rather than a nearest-color algorithm.
-- New recipe variants named RGB Color Match and Perceptual Color Match are added.
+- New recipe variants named Screenprint 16 RGB and Screenprint 16 Perceptual are added.
 - The RGB and Perceptual recipe variants use identical settings except matching mode.
 - The demonstration recipes use no dithering and a color-preserving palette so that matching differences are not hidden by dither texture.
 - The Inspector contains color-depth and color-matching controls.
@@ -99,7 +99,7 @@ The default behavior remains visually compatible with the current product: exist
 - Palette matcher tests should verify deterministic Oklab nearest-color selection with fixtures chosen to differ from RGB where possible.
 - Algorithm contract tests should verify that nearest-color algorithms accept the selected matching mode through the shared matcher behavior.
 - Matt Parker coverage should verify that matching mode does not alter its tonal selection contract unless a future PRD changes that behavior.
-- Processing preset tests should verify that RGB Color Match and Perceptual Color Match differ only by matching mode.
+- Processing preset tests should verify that Screenprint 16 RGB and Screenprint 16 Perceptual differ only by matching mode.
 - Existing golden fixture patterns should be reused where they already validate deterministic core pixel output.
 - Existing settings-contract tests are prior art for schema and normalization coverage.
 - Existing processing-preset tests are prior art for recipe matching and recipe option coverage.

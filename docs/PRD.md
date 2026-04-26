@@ -63,7 +63,7 @@ The current product is a single-screen, local-only editor. It is optimized for d
 - Local first: image processing and file export run in the browser.
 - Deterministic output: the same source image and committed editor settings produce the same processed pixels.
 - Editor first: immediate visual feedback and stable controls matter more than workflow ceremony.
-- Truthful preview: `Fit` should be a clean screen preview, while `1:1` should inspect output pixels.
+- Truthful preview: `Fit` should be a clean screen preview, while Manual zoom should inspect output pixels.
 - Engine/UI separation: the processing core stays DOM-free and reusable outside React.
 - Explicit boundaries: source intake, settings transitions, preview jobs, slide compare, and export encoding are separate contracts.
 - Restraint in UI: the interface should feel precise, compact, and instrument-like.
@@ -165,8 +165,8 @@ Current curated recipes:
 - Blue Ink Noise
 - Halftone Mono
 - Game Boy Sierra
-- RGB Color Match
-- Perceptual Color Match
+- Screenprint 16 RGB
+- Screenprint 16 Perceptual
 
 ### 8.6 Algorithms
 
@@ -281,11 +281,19 @@ Preview modes:
 View scale:
 
 - `Fit`
-- `1:1`
+- `Manual` zoom with 100% and slider controls
+
+Inspection controls:
+
+- pointer-drag pan in Manual mode
+- wheel zoom rounded to 50% percentage steps
+- optional pixel grid visible in Manual mode at 400% and above
+- optional pixel inspector with image coordinates and visible original/processed hex values
 
 Slide comparison:
 
 - renders original and processed layers in one shared frame
+- keeps original and processed viewport transforms locked in Manual mode
 - keeps original on the left and processed output on the right
 - uses a draggable divider with pointer, click/tap, and keyboard support
 - clamps the divider between 2% and 98%
@@ -295,7 +303,7 @@ Slide comparison:
 Screen-sized preview:
 
 - `Fit` preview uses a measured CSS-pixel preview target to avoid browser downscaling artifacts
-- `1:1` keeps exact output-pixel inspection behavior
+- Manual zoom keeps output-pixel inspection behavior without mutating processing settings
 - preview target overrides do not mutate Editor Settings
 - export jobs ignore preview target overrides and always use final output settings
 
@@ -476,6 +484,8 @@ The web app owns browser-specific and React-specific layers:
 - Worker Client
 - Preview Stage
 - Slide Compare Preview Module
+- Preview Viewport geometry
+- Pixel Inspector
 - Preview Frame and Screen Preview sizing
 - Export Image layer
 - editor store persistence
@@ -613,7 +623,8 @@ Included:
 - resize, alpha background, color mode, and preprocessing controls
 - commit-on-release slider behavior
 - original, processed, and slide compare modes
-- Fit and 1:1 view scales
+- Fit and Manual preview viewport
+- zoom, pan, pixel grid, and pixel inspector UI state
 - screen-sized Fit preview
 - PNG, WebP, and JPEG export
 - settings JSON copy/paste for processing settings

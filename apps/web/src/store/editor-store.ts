@@ -21,6 +21,11 @@ import {
   type SettingsTransitionContext,
   type SettingsTransitionResult,
 } from "../lib/editor-settings-transition"
+import {
+  DEFAULT_PREVIEW_VIEWPORT,
+  normalizePreviewViewport,
+  type PreviewViewport,
+} from "../lib/preview-viewport"
 
 export type CompareMode = "processed" | "original" | "slide"
 export type ViewScale = "fit" | "actual"
@@ -35,7 +40,7 @@ export type JobStatus =
 type EditorState = {
   settings: EditorSettings
   compareMode: CompareMode
-  viewScale: ViewScale
+  previewViewport: PreviewViewport
   exportFormat: ExportFormat
   exportQuality: number
   advancedOpen: boolean
@@ -48,7 +53,7 @@ type EditorState = {
     context?: SettingsTransitionContext
   ) => SettingsTransitionResult
   setCompareMode: (mode: CompareMode) => void
-  setViewScale: (scale: ViewScale) => void
+  setPreviewViewport: (viewport: Partial<PreviewViewport>) => void
   setExportFormat: (format: ExportFormat) => void
   setExportQuality: (quality: number) => void
   setAdvancedOpen: (open: boolean) => void
@@ -63,7 +68,7 @@ export const useEditorStore = create<EditorState>()(
     (set) => ({
       settings: DEFAULT_SETTINGS,
       compareMode: "slide",
-      viewScale: "fit",
+      previewViewport: DEFAULT_PREVIEW_VIEWPORT,
       exportFormat: DEFAULT_EXPORT_FORMAT,
       exportQuality: DEFAULT_EXPORT_QUALITY,
       advancedOpen: false,
@@ -97,7 +102,17 @@ export const useEditorStore = create<EditorState>()(
         return transitionResult
       },
       setCompareMode: (compareMode) => set({ compareMode }),
-      setViewScale: (viewScale) => set({ viewScale }),
+      setPreviewViewport: (previewViewport) =>
+        set((state) => ({
+          previewViewport: normalizePreviewViewport({
+            ...state.previewViewport,
+            ...previewViewport,
+            center: {
+              ...state.previewViewport.center,
+              ...previewViewport.center,
+            },
+          }),
+        })),
       setExportFormat: (exportFormat) => set({ exportFormat }),
       setExportQuality: (exportQuality) =>
         set({ exportQuality: clampExportQuality(exportQuality) }),
@@ -113,7 +128,7 @@ export const useEditorStore = create<EditorState>()(
       partialize: (state) => ({
         settings: settingsWithoutPersistedDimensions(state.settings),
         compareMode: state.compareMode,
-        viewScale: state.viewScale,
+        previewViewport: state.previewViewport,
         exportFormat: state.exportFormat,
         exportQuality: state.exportQuality,
         advancedOpen: state.advancedOpen,
@@ -156,6 +171,9 @@ export function normalizePersistedEditorState(
   return {
     ...persistedState,
     compareMode: normalizeCompareMode(persistedState.compareMode),
+    previewViewport: normalizePreviewViewport(
+      persistedState.previewViewport ?? persistedState.viewScale
+    ),
     exportFormat: normalizeExportFormat(persistedState.exportFormat),
     exportQuality: clampExportQuality(persistedState.exportQuality),
     settings: settingsWithoutPersistedDimensions(
@@ -180,6 +198,8 @@ function settingsWithoutPersistedDimensions(
 function isPersistedEditorState(value: unknown): value is {
   settings: unknown
   compareMode?: unknown
+  previewViewport?: unknown
+  viewScale?: unknown
   exportFormat?: unknown
   exportQuality?: unknown
 } {

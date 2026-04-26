@@ -110,7 +110,7 @@ export const PROCESSING_PRESET_OPTIONS: readonly ProcessingPresetOption[] = [
   },
   {
     id: "rgb-color-match",
-    label: "RGB Color Match",
+    label: "Screenprint 16 RGB",
     recipe: {
       paletteId: "screenprint-16",
       algorithm: "none",
@@ -120,7 +120,7 @@ export const PROCESSING_PRESET_OPTIONS: readonly ProcessingPresetOption[] = [
   },
   {
     id: "perceptual-color-match",
-    label: "Perceptual Color Match",
+    label: "Screenprint 16 Perceptual",
     recipe: {
       paletteId: "screenprint-16",
       algorithm: "none",

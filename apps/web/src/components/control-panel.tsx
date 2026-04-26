@@ -129,7 +129,7 @@ export const ControlPanel = React.memo(function ControlPanel({
     <aside className="h-full max-h-full min-h-0 min-w-0 overflow-hidden">
       <Card className="flex h-full min-h-0 min-w-0 gap-0 overflow-hidden border-border bg-[var(--surface-inspector)] py-2">
         <CardHeader className="shrink-0 border-b border-border pb-2">
-          <CardTitle>Inspector</CardTitle>
+          <CardTitle>Controls</CardTitle>
         </CardHeader>
         <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0">
           <ScrollArea className="h-full min-h-0 min-w-0 overscroll-contain">
@@ -260,7 +260,10 @@ export const ControlPanel = React.memo(function ControlPanel({
                     value={paletteSelectValue}
                     onValueChange={(paletteId) => {
                       if (paletteId === "custom") {
-                        onExtractPalette(16)
+                        onSettingsTransition({
+                          type: "set-custom-palette",
+                          colors: activePaletteColors,
+                        })
                       } else {
                         onSettingsTransition({ type: "set-palette", paletteId })
                       }
