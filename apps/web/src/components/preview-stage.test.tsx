@@ -526,6 +526,49 @@ describe("PreviewStage", () => {
     })
   })
 
+  it("centers real pixels view when enabling the pixel inspector from fit mode", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(8, 6)}
+        preview={makeBuffer(8, 6)}
+        previewTargetHeight={6}
+        previewTargetWidth={8}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    buttonRenders
+      .find((button) => button["aria-label"] === "Toggle pixel inspector")
+      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 4, y: 3 },
+      loupeEnabled: true,
+      mode: "manual",
+    })
+  })
+
   it("hides the pixel inspector control on mobile", () => {
     renderToStaticMarkup(
       <PreviewStage

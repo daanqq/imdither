@@ -19,6 +19,7 @@ import { AutoTunePanel } from "@/components/auto-tune-panel"
 import { ControlPanel } from "@/components/control-panel"
 import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
+import { applyAutoTuneLookSettings } from "@/lib/auto-tune-application"
 import {
   encodePixelBuffer,
   getExportFormatOption,
@@ -646,7 +647,13 @@ export function App() {
   const handleApplyAutoTuneRecommendation = React.useCallback(
     (recommendation: AutoTuneRecommendation) => {
       transitionSettings(
-        { type: "apply-settings", settings: recommendation.snapshot.settings },
+        {
+          type: "apply-settings",
+          settings: applyAutoTuneLookSettings({
+            current: settings,
+            recommended: recommendation.snapshot.settings,
+          }),
+        },
         transitionContext
       )
       markAutoTuneApplied(recommendation.id)
@@ -657,6 +664,7 @@ export function App() {
       markAutoTuneApplied,
       setError,
       setSourceNotice,
+      settings,
       transitionContext,
       transitionSettings,
     ]

@@ -618,6 +618,9 @@ function PreviewViewportToolbar({
           className="ml-1.5 h-full min-w-10 px-2 md:col-span-1 md:ml-0"
           onClick={() =>
             onViewportChange({
+              ...(viewport.mode === "manual"
+                ? null
+                : { center: centeredViewport.center }),
               loupeEnabled: !viewport.loupeEnabled,
               mode: "manual",
             })
