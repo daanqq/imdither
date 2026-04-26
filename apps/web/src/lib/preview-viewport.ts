@@ -86,9 +86,16 @@ export function clampZoom(zoom: number): number {
 }
 
 export function getWheelZoom(currentZoom: number, deltaY: number): number {
-  const factor = deltaY < 0 ? WHEEL_ZOOM_IN_FACTOR : WHEEL_ZOOM_OUT_FACTOR
+  const direction = deltaY < 0 ? 1 : -1
+  const factor = direction > 0 ? WHEEL_ZOOM_IN_FACTOR : WHEEL_ZOOM_OUT_FACTOR
+  const scaledZoom = roundZoomPercentToStep(clampZoom(currentZoom) * factor)
+  const minimumStepZoom = stepZoomPercent(currentZoom, direction)
 
-  return clampZoom(roundZoomPercentToStep(currentZoom * factor))
+  return clampZoom(
+    direction > 0
+      ? Math.max(scaledZoom, minimumStepZoom)
+      : Math.min(scaledZoom, minimumStepZoom)
+  )
 }
 
 export function clampViewportCenter(
@@ -410,6 +417,17 @@ function clampManualCenterAxis(
   const max = safeImageSize - halfVisibleImageSize
 
   return Math.min(max, Math.max(min, center))
+}
+
+function stepZoomPercent(zoom: number, direction: 1 | -1) {
+  const percent = clampZoom(zoom) * 100
+  const step = WHEEL_ZOOM_PERCENT_STEP
+  const steppedPercent =
+    direction > 0
+      ? Math.floor(percent / step) * step + step
+      : Math.ceil(percent / step) * step - step
+
+  return steppedPercent / 100
 }
 
 function roundZoomPercentToStep(zoom: number) {

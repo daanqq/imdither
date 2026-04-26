@@ -34,6 +34,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   displayWidth,
   original,
   pixelInspectorEnabled = true,
+  pixelGridHidden = false,
   processed,
   previewViewport,
   status,
@@ -486,7 +487,9 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             <span className="bg-background/80 px-1.5 py-0.5">Original</span>
             <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
           </div>
-          {previewViewport && isPixelGridVisible(previewViewport) ? (
+          {previewViewport &&
+          !pixelGridHidden &&
+          isPixelGridVisible(previewViewport) ? (
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 opacity-45 mix-blend-difference"

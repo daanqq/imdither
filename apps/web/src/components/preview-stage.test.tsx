@@ -224,6 +224,13 @@ describe("PreviewStage", () => {
         },
       })
     ).toBe(false)
+
+    expect(
+      areCanvasPanelPropsEqual(baseProps, {
+        ...baseProps,
+        pixelGridHidden: true,
+      })
+    ).toBe(false)
   })
 
   it("keeps placeholder status updates visible while processed output is missing", () => {
@@ -279,6 +286,40 @@ describe("PreviewStage", () => {
     expect(html).toContain("width:2000px")
   })
 
+  it("hides the pixel grid while showing reduced preview only output", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(10, 8)}
+        preview={makeBuffer(5, 4)}
+        previewTargetHeight={8}
+        previewTargetWidth={10}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 4,
+          center: { x: 2, y: 2 },
+          gridEnabled: true,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("PREVIEW ONLY")
+    expect(html).not.toContain("linear-gradient(to right")
+  })
+
   it("keeps inspection controls in the preview toolbar", () => {
     const onPreviewViewportChange = vi.fn()
 
@@ -327,6 +368,54 @@ describe("PreviewStage", () => {
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
       gridEnabled: false,
     })
+  })
+
+  it("shows zoom inspection controls only after manual zoom mode is selected", () => {
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(2, 2)}
+        preview={makeBuffer(2, 2)}
+        previewTargetHeight={2}
+        previewTargetWidth={2}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 4,
+          center: { x: 1, y: 1 },
+          gridEnabled: true,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(sliderRenders.some((slider) => slider.max === 16)).toBe(false)
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Set zoom to 100 percent"
+      )
+    ).toBe(false)
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Toggle pixel grid"
+      )
+    ).toBe(false)
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Toggle pixel inspector"
+      )
+    ).toBe(false)
   })
 
   it("hides the pixel inspector control on mobile", () => {

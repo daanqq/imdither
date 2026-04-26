@@ -93,6 +93,48 @@ describe("SlideComparePreview", () => {
         processed: makePixelBuffer(4, 3),
       })
     ).toBe(false)
+
+    expect(
+      areSlideComparePreviewPropsEqual(baseProps, {
+        ...baseProps,
+        pixelGridHidden: true,
+      })
+    ).toBe(false)
+  })
+
+  it("hides the pixel grid when reduced preview only output is displayed", () => {
+    const previewViewport = {
+      mode: "manual" as const,
+      zoom: 4,
+      center: { x: 2, y: 2 },
+      gridEnabled: true,
+      loupeEnabled: false,
+    }
+
+    const visibleHtml = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={37}
+        original={makePixelBuffer(4, 3)}
+        processed={makePixelBuffer(4, 3)}
+        previewViewport={previewViewport}
+        viewScale="actual"
+        onDividerChange={() => {}}
+      />
+    )
+    const hiddenHtml = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={37}
+        original={makePixelBuffer(4, 3)}
+        processed={makePixelBuffer(4, 3)}
+        pixelGridHidden
+        previewViewport={previewViewport}
+        viewScale="actual"
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(visibleHtml).toContain("linear-gradient(to right")
+    expect(hiddenHtml).not.toContain("linear-gradient(to right")
   })
 
   it("redraws ready slide canvases when their shared display dimensions change", () => {

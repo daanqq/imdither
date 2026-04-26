@@ -225,11 +225,14 @@ describe("preview viewport geometry", () => {
 
   it("steps wheel zoom in both directions and clamps the result", () => {
     expect(getWheelZoom(1, -100)).toBe(1.5)
-    expect(getWheelZoom(1, 100)).toBe(1)
+    expect(getWheelZoom(1, 100)).toBe(0.5)
     expect(getWheelZoom(1.5, -100)).toBe(2)
     expect(getWheelZoom(1.5, 100)).toBe(1)
+    expect(getWheelZoom(8, -100)).toBe(10)
+    expect(getWheelZoom(8, 100)).toBe(6.5)
     expect(getWheelZoom(16, -100)).toBe(16)
-    expect(getWheelZoom(0.25, 100)).toBe(0.5)
+    expect(getWheelZoom(0.5, -100)).toBe(1)
+    expect(getWheelZoom(0.25, 100)).toBe(0.25)
   })
 })
 

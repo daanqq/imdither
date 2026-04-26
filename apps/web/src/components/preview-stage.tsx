@@ -203,6 +203,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                     dividerPercent={slideDividerPercent}
                     original={original}
                     pixelInspectorEnabled={isDesktopViewScale}
+                    pixelGridHidden={previewReduced}
                     processed={preview}
                     displayHeight={previewTargetHeight}
                     displayWidth={previewTargetWidth}
@@ -220,6 +221,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                     expectedHeight={comparisonFrameHeight ?? original.height}
                     expectedWidth={comparisonFrameWidth ?? original.width}
                     pixelInspectorEnabled={isDesktopViewScale}
+                    pixelGridHidden={previewReduced}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
                     onViewportChange={onPreviewViewportChange}
@@ -233,6 +235,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                     label="Processed"
                     missing={!preview}
                     pixelInspectorEnabled={isDesktopViewScale}
+                    pixelGridHidden={previewReduced}
                     status={status}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
@@ -480,9 +483,12 @@ function PreviewViewportToolbar({
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }) {
   const zoomPercent = Math.round(viewport.zoom * 100)
-  const gridColumns = pixelInspectorEnabled
-    ? "grid-cols-[auto_auto_minmax(6rem,1fr)_auto_auto]"
-    : "grid-cols-[auto_auto_minmax(6rem,1fr)_auto]"
+  const zoomControlsVisible = viewport.mode === "manual"
+  const gridColumns = zoomControlsVisible
+    ? pixelInspectorEnabled
+      ? "grid-cols-[auto_auto_minmax(6rem,1fr)_auto_auto]"
+      : "grid-cols-[auto_auto_minmax(6rem,1fr)_auto]"
+    : "grid-cols-[auto]"
 
   return (
     <div
@@ -523,43 +529,49 @@ function PreviewViewportToolbar({
           <span className="hidden lg:inline">Zoom</span>
         </ToggleGroupItem>
       </ToggleGroup>
-      <Button
-        type="button"
-        aria-label="Set zoom to 100 percent"
-        variant="outline"
-        className="h-full min-w-10 px-2 font-mono text-[10px]"
-        onClick={() => onViewportChange({ mode: "manual", zoom: 1 })}
-      >
-        100%
-      </Button>
-      <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_4ch] items-center gap-2 font-mono text-[10px] text-muted-foreground">
-        <Slider
-          aria-label="Preview zoom"
-          className="min-w-0"
-          min={0.25}
-          max={16}
-          step={0.25}
-          value={[viewport.zoom]}
-          onValueChange={(value) =>
-            onViewportChange({
-              mode: "manual",
-              zoom: clampZoom(value[0] ?? viewport.zoom),
-            })
-          }
-        />
-        <span className="text-right tabular-nums">{zoomPercent}%</span>
-      </label>
-      <Button
-        type="button"
-        aria-label="Toggle pixel grid"
-        aria-pressed={viewport.gridEnabled}
-        variant={viewport.gridEnabled ? "default" : "outline"}
-        className="h-full min-w-10 px-2"
-        onClick={() => onViewportChange({ gridEnabled: !viewport.gridEnabled })}
-      >
-        <Grid3X3Icon data-icon="inline-start" />
-      </Button>
-      {pixelInspectorEnabled ? (
+      {zoomControlsVisible ? (
+        <>
+          <Button
+            type="button"
+            aria-label="Set zoom to 100 percent"
+            variant="outline"
+            className="h-full min-w-10 px-2 font-mono text-[10px]"
+            onClick={() => onViewportChange({ mode: "manual", zoom: 1 })}
+          >
+            100%
+          </Button>
+          <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_4ch] items-center gap-2 font-mono text-[10px] text-muted-foreground">
+            <Slider
+              aria-label="Preview zoom"
+              className="min-w-0"
+              min={0.25}
+              max={16}
+              step={0.25}
+              value={[viewport.zoom]}
+              onValueChange={(value) =>
+                onViewportChange({
+                  mode: "manual",
+                  zoom: clampZoom(value[0] ?? viewport.zoom),
+                })
+              }
+            />
+            <span className="text-right tabular-nums">{zoomPercent}%</span>
+          </label>
+          <Button
+            type="button"
+            aria-label="Toggle pixel grid"
+            aria-pressed={viewport.gridEnabled}
+            variant={viewport.gridEnabled ? "default" : "outline"}
+            className="ml-1.5 h-full min-w-10 px-2"
+            onClick={() =>
+              onViewportChange({ gridEnabled: !viewport.gridEnabled })
+            }
+          >
+            <Grid3X3Icon data-icon="inline-start" />
+          </Button>
+        </>
+      ) : null}
+      {zoomControlsVisible && pixelInspectorEnabled ? (
         <Button
           type="button"
           aria-label="Toggle pixel inspector"
@@ -584,6 +596,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
   label,
   missing = false,
   pixelInspectorEnabled = true,
+  pixelGridHidden = false,
   previewViewport,
   status,
   viewScale,
@@ -895,7 +908,9 @@ const CanvasPanel = React.memo(function CanvasPanel({
           <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center font-mono text-[10px] text-foreground/80">
             <span className="bg-background/80 px-1.5 py-0.5">{label}</span>
           </div>
-          {previewViewport && isPixelGridVisible(previewViewport) ? (
+          {previewViewport &&
+          !pixelGridHidden &&
+          isPixelGridVisible(previewViewport) ? (
             <PixelGridOverlay zoom={previewViewport.zoom} />
           ) : null}
         </div>
