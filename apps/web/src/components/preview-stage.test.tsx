@@ -142,7 +142,7 @@ describe("PreviewStage", () => {
     expect(onExportPng).toHaveBeenCalledTimes(1)
   })
 
-  it("keeps quality visible and disables it for PNG export", () => {
+  it("shows quality only for formats that support it", () => {
     const onExportFormatChange = vi.fn()
     const onExportQualityChange = vi.fn()
     const baseProps = {
@@ -170,12 +170,8 @@ describe("PreviewStage", () => {
         <PreviewStage {...baseProps} exportFormat={exportFormat} />
       )
 
-    expect(render("png")).toContain("Quality")
-    expect(render("png")).toContain("100%")
-    expect(sliderRenders.at(-1)).toMatchObject({
-      disabled: true,
-      value: [1],
-    })
+    expect(render("png")).not.toContain("Quality")
+    expect(render("png")).not.toContain("100%")
     expect(render("webp")).toContain("Quality")
     expect(render("webp")).toContain("75%")
     expect(render("jpeg")).toContain("Quality")

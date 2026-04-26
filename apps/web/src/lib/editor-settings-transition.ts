@@ -4,6 +4,7 @@ import {
   clampOutputSize,
   getProcessingPreset,
   getProcessingPresetColorMode,
+  normalizePaletteColors,
   type ColorMode,
   type AlphaBackground,
   type BayerSize,
@@ -31,6 +32,10 @@ export type SettingsTransition =
   | {
       type: "set-palette"
       paletteId: string
+    }
+  | {
+      type: "set-custom-palette"
+      colors: string[]
     }
   | {
       type: "set-color-mode"
@@ -95,10 +100,15 @@ export function applySettingsTransition(
       const preset = PRESET_PALETTES.find(
         (palette) => palette.id === transition.paletteId
       )
+      const customPaletteReplaced = Boolean(current.customPalette?.length)
 
       return {
+        sourceNotice: customPaletteReplaced
+          ? "[CUSTOM PALETTE REPLACED]"
+          : undefined,
         settings: {
           ...current,
+          customPalette: undefined,
           paletteId: transition.paletteId,
           preprocess: {
             ...current.preprocess,
@@ -107,6 +117,14 @@ export function applySettingsTransition(
         },
       }
     }
+    case "set-custom-palette":
+      return {
+        settings: {
+          ...current,
+          paletteId: "custom",
+          customPalette: normalizePaletteColors(transition.colors),
+        },
+      }
     case "set-color-mode":
       return {
         settings: {
@@ -161,8 +179,12 @@ export function applySettingsTransition(
     case "apply-processing-preset": {
       const preset = getProcessingPreset(transition.presetId)
       const { recipe } = preset
+      const customPaletteReplaced = Boolean(current.customPalette?.length)
 
       return {
+        sourceNotice: customPaletteReplaced
+          ? "[CUSTOM PALETTE REPLACED]"
+          : undefined,
         settings: {
           ...current,
           customPalette: undefined,

@@ -31,8 +31,8 @@ The current product is a single-screen, local-only editor. It is optimized for d
 - No backend image processing.
 - No account system, cloud sync, or remote storage.
 - No remote URL import.
-- No custom palette editor UI.
-- No automatic palette extraction.
+- No palette library or named saved palette collection.
+- No palette drag-and-drop or remote palette URL import.
 - No custom recipe creation or recipe marketplace.
 - No undo/redo history stack.
 - No URL state sharing.
@@ -191,7 +191,7 @@ Rules:
 
 ### 8.7 Palettes
 
-The app supports preset palettes and a schema-level custom palette field.
+The app supports preset palettes and one active custom palette in Editor Settings.
 
 Current palette families include:
 
@@ -200,11 +200,35 @@ Current palette families include:
 - handheld and retro-computer palettes
 - creative multi-color palettes such as DawnBringer, Sweetie, AAP, Endesga, PICO-8, Poster, Risograph, Redline, Screenprint, and Sea Glass
 
+Custom palette workflow:
+
+- the Palette control shows `Custom` when `customPalette` is active
+- users can convert the current preset palette into a custom palette
+- users can add, edit, and delete custom palette colors in the Control Panel
+- manual editing is capped at 32 colors; valid imported Settings JSON can preserve 33 to 256 colors
+- custom palette colors normalize to lowercase 6-digit hex with a leading `#`
+- duplicate colors are removed and palettes must contain 2 to 256 unique colors
+- selecting a Palette Preset or applying a Processing Preset clears the active Custom Palette and shows a short notice
+
+Palette asset import/export:
+
+- import supports file picker and clipboard text
+- accepted palette text includes HEX/plain text, GIMP Palette (`.gpl`), IMDITHER palette JSON, JSON hex arrays, and Settings JSON with `customPalette`
+- export supports `imdither-palette.json` and `imdither-palette.gpl`
+- full Settings JSON copy/paste remains separate from palette asset export
+
+Source palette extraction:
+
+- users can extract a custom palette from the current Source Image
+- extraction uses the original Source Image buffer, not the processed preview
+- supported extraction sizes are 2, 4, 8, 16, and 32 colors; the initial extraction size is 8
+- extraction uses deterministic median-cut quantization and returns luminance-sorted hex colors
+
 Architectural requirements:
 
 - the engine is palette-agnostic and accepts a resolved palette array
 - palette presets define default color mode
-- custom palette data remains supported by the schema, even though there is no custom palette editor UI
+- palette parsing/export and source extraction live in DOM-free core modules
 
 ### 8.8 Color, Resize, and Preprocessing
 
@@ -566,7 +590,7 @@ Included:
 - worker-based local processing
 - algorithm registry
 - processing recipes
-- preset palettes and schema-level custom palette support
+- preset palettes and active custom palette editing
 - resize, alpha background, color mode, and preprocessing controls
 - commit-on-release slider behavior
 - original, processed, and slide compare modes
@@ -580,9 +604,8 @@ Included:
 
 Explicitly out:
 
-- custom palette editor
+- palette library or named saved palette collection
 - custom recipe editor
-- auto-palette extraction
 - undo/redo
 - URL share state
 - multi-page app shell
@@ -606,6 +629,7 @@ The current product contract is informed by the implemented feature PRDs in this
 - Screen-Sized Preview
 - Processing Presets
 - Export Layer
+- Market Impact Roadmap Phase 1 Palette Platform MVP
 
 These feature PRDs are subordinate detail documents. This root PRD should stay aligned with their implemented contracts and with the current code state.
 
@@ -613,9 +637,9 @@ These feature PRDs are subordinate detail documents. This root PRD should stay a
 
 Candidates for later releases:
 
-- custom palette editor
+- palette library and named saved palettes
 - custom recipe creation
-- automatic palette extraction
+- palette quality refinements such as k-means or perceptual extraction
 - additional curated recipes
 - additional export formats where they fit the raster model
 - richer docs and algorithm comparisons

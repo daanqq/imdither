@@ -96,16 +96,16 @@ baseline command.
 
 ### Phase 1: Palette Platform MVP
 
-- [ ] Add a custom palette editor UI backed by existing settings support.
-- [ ] Import palettes from `.hex`, `.gpl`, `.json`, and clipboard text.
-- [ ] Export palettes as JSON and GPL.
-- [ ] Add palette extraction from the current source image.
-- [ ] Start extraction with median-cut or Wu-style quantization.
-- [ ] Keep optional k-means refinement as a later quality pass.
-- [ ] Separate `palette source` from `palette size`.
-- [ ] Preserve Processing Presets as applied recipes, not persisted modes.
+- [x] Add a custom palette editor UI backed by existing settings support.
+- [x] Import palettes from `.hex`, `.gpl`, `.json`, and clipboard text.
+- [x] Export palettes as JSON and GPL.
+- [x] Add palette extraction from the current source image.
+- [x] Start extraction with median-cut quantization.
+- [x] Keep optional k-means refinement as a later quality pass.
+- [x] Separate `palette source` from `palette size` without persisting them as settings fields.
+- [x] Preserve Processing Presets as applied recipes, not persisted modes.
 
-Success signal: users can create, reuse, and exchange palettes without leaving the local editor.
+Success signal: shipped. Users can create, reuse, and exchange palettes without leaving the local editor.
 
 ### Phase 2: Color Quality and Inspection
 

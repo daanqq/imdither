@@ -8,6 +8,18 @@ export {
 export { createStageCache, hashPixelBuffer } from "./cache"
 export { PRESET_PALETTES, hexToRgb, resolvePalette } from "./palettes"
 export {
+  exportPaletteGpl,
+  exportPaletteJson,
+  normalizePaletteColor,
+  normalizePaletteColors,
+  parsePaletteText,
+  type ParsedPalette,
+} from "./palette-codec"
+export {
+  extractPaletteFromSource,
+  type PaletteExtractionSize,
+} from "./palette-extraction"
+export {
   PROCESSING_PRESET_OPTIONS,
   findProcessingPreset,
   getProcessingPreset,

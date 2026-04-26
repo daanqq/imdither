@@ -54,9 +54,11 @@ type EditorSettings = {
 - `schemaVersion`: literal `1`.
 - `algorithm`: one registry-backed dithering algorithm id.
 - `bayerSize`: Bayer matrix size used when the selected algorithm supports it.
-- `paletteId`: preset palette id, or the palette identity used by the current
-  settings.
-- `customPalette`: optional hex colors for schema-level custom palette support.
+- `paletteId`: preset palette id, or `custom` when the active settings use a
+  custom palette.
+- `customPalette`: optional active custom palette colors. Values normalize to
+  lowercase 6-digit hex with a leading `#`, must contain 2 to 256 unique colors,
+  and do not support alpha.
 - `alphaBackground`: background used when transparent pixels must be flattened.
 - `resize`: output dimensions, resize kernel, and fit mode.
 - `preprocess`: brightness, contrast, gamma, invert, and color mode.
@@ -81,6 +83,10 @@ current settings and is never persisted as a second settings model.
 Export format and export quality are browser encoding preferences. They are
 persisted separately by the web app and are excluded from Settings JSON so the
 same processing settings remain reproducible across PNG, WebP, and JPEG export.
+
+Palette JSON/GPL export is a palette asset flow, not Settings JSON. Settings
+JSON copy/paste may still include `customPalette` so palette-dependent output is
+reproducible.
 
 ## Normalization
 

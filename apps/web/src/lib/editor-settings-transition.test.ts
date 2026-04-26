@@ -36,6 +36,63 @@ describe("Editor Settings transitions", () => {
     expect(manualResult.settings.preprocess.colorMode).toBe("grayscale-first")
   })
 
+  it("applies a custom palette with canonical identity while preserving the current look settings", () => {
+    const current = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "atkinson" as const,
+      bayerSize: 4 as const,
+      paletteId: "sea-glass",
+      alphaBackground: "black" as const,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        mode: "nearest" as const,
+        width: 1234,
+        height: 987,
+      },
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        brightness: 12,
+        contrast: -8,
+        gamma: 1.45,
+        invert: true,
+        colorMode: "color-preserve" as const,
+      },
+    }
+
+    const result = applySettingsTransition(current, {
+      type: "set-custom-palette",
+      colors: ["FFF", "#0A0B0C", "ffffff"],
+    })
+
+    expect(result.settings).toEqual({
+      ...current,
+      paletteId: "custom",
+      customPalette: ["#ffffff", "#0a0b0c"],
+    })
+  })
+
+  it("clears custom palette colors when a preset palette replaces Custom", () => {
+    const current = {
+      ...DEFAULT_SETTINGS,
+      paletteId: "custom",
+      customPalette: ["#000000", "#ffffff"],
+      preprocess: {
+        ...DEFAULT_SETTINGS.preprocess,
+        colorMode: "color-preserve" as const,
+      },
+    }
+
+    const result = applySettingsTransition(current, {
+      type: "set-palette",
+      paletteId: "gray-4",
+    })
+
+    expect(result.settings.customPalette).toBeUndefined()
+    expect(result.settings.paletteId).toBe("gray-4")
+    expect(result.settings.preprocess.colorMode).toBe("grayscale-first")
+    expect(result.sourceNotice).toBe("[CUSTOM PALETTE REPLACED]")
+  })
+
   it("applies normalized Settings JSON through current Source Image aspect rules", () => {
     const pastedSettings = {
       ...DEFAULT_SETTINGS,

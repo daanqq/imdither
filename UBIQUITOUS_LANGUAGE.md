@@ -56,38 +56,43 @@
 
 ## Processing
 
-| Term                           | Definition                                                                                       | Aliases to avoid                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| **Editor Settings**            | The versioned processing configuration that determines the current **Processed Image**.          | Config, preset, options                      |
-| **Settings JSON**              | A serialized **Editor Settings** payload used for reproducible clipboard copy and paste.         | Preset JSON, config JSON, import/export JSON |
-| **Settings Transition**        | A user intent that produces one next **Editor Settings** value while preserving domain rules.    | Settings patch, state update                 |
-| **Transition Context**         | The current source dimensions used by a **Settings Transition** when applying aspect rules.      | Source context, transition data              |
-| **Aspect Lock**                | The rule that keeps **Output Size** proportional to the current **Source Image**.                | Keep ratio, proportional resize              |
-| **Processing Preset**          | A curated starting recipe that applies selected processing fields without becoming stored state. | Recipe mode, settings preset                 |
-| **Processing Recipe**          | The set of **Editor Settings** fields controlled by one **Processing Preset**.                   | Preset config, preset payload                |
-| **Active Recipe**              | The **Processing Preset** currently matched from actual **Editor Settings**.                     | Selected preset, stored preset               |
-| **Custom Recipe State**        | The selector state shown when **Editor Settings** do not match any **Processing Preset**.        | Custom preset, unsaved recipe                |
-| **Default Processing Preset**  | The first **Processing Preset** whose **Processing Recipe** matches **Default Settings**.        | Startup preset, initial recipe               |
-| **Default Settings**           | The initial **Editor Settings** used before user changes or persisted state are applied.         | Factory settings, initial config             |
-| **Dither Algorithm**           | The selected method for producing spatial tone or color patterns from a **Palette**.             | Filter, effect                               |
-| **Dither Algorithm Id**        | The stable settings value that identifies a **Dither Algorithm** across sessions and JSON.       | Algorithm name, label                        |
-| **No Dither**                  | Direct palette mapping without spatial patterning or error diffusion.                            | Plain quantize, none algorithm               |
-| **Bayer Dithering**            | Ordered dithering using a 2x2, 4x4, or 8x8 Bayer matrix.                                         | Bayer, ordered                               |
-| **Matt Parker Dithering**      | Palette-aware pattern dithering based on a Parker-style threshold matrix.                        | Matt Parker, Parker                          |
-| **Floyd-Steinberg Dithering**  | Error diffusion using the Floyd-Steinberg kernel.                                                | Floyd, FS                                    |
-| **Atkinson Dithering**         | Error diffusion using the Atkinson kernel.                                                       | Atkinson                                     |
-| **Bayer Size**                 | The selected Bayer matrix dimension: 2, 4, or 8.                                                 | Matrix size, Bayer matrix                    |
-| **Palette**                    | A named set of colors available to palette mapping and dithering.                                | Color set, swatches                          |
-| **Palette Preset**             | A built-in **Palette** shipped with the app.                                                     | Default palette, built-in palette            |
-| **Custom Palette**             | A user-defined **Palette** supported by the model but not exposed as a v1 editor flow.           | User palette, manual palette                 |
-| **Palette Resolution**         | The rule that chooses the actual **Palette** from **Editor Settings** before processing.         | Palette lookup, palette selection            |
-| **Palette Default Color Mode** | The **Color Mode** applied automatically when a **Palette Preset** is selected.                  | Palette color preset, palette mode           |
-| **Color Mode**                 | The choice between grayscale-first and color-preserve processing.                                | Source color mode, color handling            |
-| **Preprocessing**              | Tone and color adjustment applied before palette mapping and dithering.                          | Adjustment, correction, filters              |
-| **Resize Fit**                 | The rule that maps source dimensions into output dimensions using contain, cover, or stretch.    | Crop mode, fit mode                          |
-| **Resize Mode**                | The sampling method used by resize, currently bilinear or nearest-neighbor.                      | Resample mode, scaling mode                  |
-| **Processing Metadata**        | The export-facing facts that describe the processing result and last **Export Metadata Format**. | Export details, render metadata              |
-| **Preview Target Override**    | A temporary processing size used by a **Preview Job** without changing **Editor Settings**.      | Preview settings, screen settings            |
+| Term                           | Definition                                                                                                                                    | Aliases to avoid                             |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Editor Settings**            | The versioned processing configuration that determines the current **Processed Image**.                                                       | Config, preset, options                      |
+| **Settings JSON**              | A serialized **Editor Settings** payload used for reproducible clipboard copy and paste.                                                      | Preset JSON, config JSON, import/export JSON |
+| **Settings Transition**        | A user intent that produces one next **Editor Settings** value while preserving domain rules.                                                 | Settings patch, state update                 |
+| **Transition Context**         | The current source dimensions used by a **Settings Transition** when applying aspect rules.                                                   | Source context, transition data              |
+| **Aspect Lock**                | The rule that keeps **Output Size** proportional to the current **Source Image**.                                                             | Keep ratio, proportional resize              |
+| **Processing Preset**          | A curated starting recipe that applies selected processing fields without becoming stored state.                                              | Recipe mode, settings preset                 |
+| **Processing Recipe**          | The set of **Editor Settings** fields controlled by one **Processing Preset**.                                                                | Preset config, preset payload                |
+| **Active Recipe**              | The **Processing Preset** currently matched from actual **Editor Settings**.                                                                  | Selected preset, stored preset               |
+| **Custom Recipe State**        | The selector state shown when **Editor Settings** do not match any **Processing Preset**.                                                     | Custom preset, unsaved recipe                |
+| **Default Processing Preset**  | The first **Processing Preset** whose **Processing Recipe** matches **Default Settings**.                                                     | Startup preset, initial recipe               |
+| **Default Settings**           | The initial **Editor Settings** used before user changes or persisted state are applied.                                                      | Factory settings, initial config             |
+| **Dither Algorithm**           | The selected method for producing spatial tone or color patterns from a **Palette**.                                                          | Filter, effect                               |
+| **Dither Algorithm Id**        | The stable settings value that identifies a **Dither Algorithm** across sessions and JSON.                                                    | Algorithm name, label                        |
+| **No Dither**                  | Direct palette mapping without spatial patterning or error diffusion.                                                                         | Plain quantize, none algorithm               |
+| **Bayer Dithering**            | Ordered dithering using a 2x2, 4x4, or 8x8 Bayer matrix.                                                                                      | Bayer, ordered                               |
+| **Matt Parker Dithering**      | Palette-aware pattern dithering based on a Parker-style threshold matrix.                                                                     | Matt Parker, Parker                          |
+| **Floyd-Steinberg Dithering**  | Error diffusion using the Floyd-Steinberg kernel.                                                                                             | Floyd, FS                                    |
+| **Atkinson Dithering**         | Error diffusion using the Atkinson kernel.                                                                                                    | Atkinson                                     |
+| **Bayer Size**                 | The selected Bayer matrix dimension: 2, 4, or 8.                                                                                              | Matrix size, Bayer matrix                    |
+| **Palette**                    | A named set of colors available to palette mapping and dithering.                                                                             | Color set, swatches                          |
+| **Palette Preset**             | A built-in **Palette** shipped with the app.                                                                                                  | Default palette, built-in palette            |
+| **Custom Palette**             | The one active user-defined **Palette** stored in **Editor Settings** and shown as `Custom` in the Palette control.                           | User palette, manual palette                 |
+| **Palette Asset**              | A standalone reusable palette payload imported or exported separately from full **Settings JSON**.                                            | Palette settings, preset JSON                |
+| **Palette Import**             | The file picker or clipboard flow that parses HEX/plain text, GPL, palette JSON, JSON hex arrays, or Settings JSON into a **Custom Palette**. | Palette upload, palette paste                |
+| **Palette Export**             | The flow that downloads or copies the active **Custom Palette** as palette JSON or GPL without exporting processing settings.                 | Settings export, palette save                |
+| **Palette Extraction**         | The command that derives a **Custom Palette** from the current **Source Image** using deterministic source-buffer analysis.                   | Auto palette, sampled palette                |
+| **Extraction Size**            | The requested number of colors for **Palette Extraction**, currently 2, 4, 8, 16, or 32.                                                      | Palette size, color depth                    |
+| **Palette Resolution**         | The rule that chooses the actual **Palette** from **Editor Settings** before processing.                                                      | Palette lookup, palette selection            |
+| **Palette Default Color Mode** | The **Color Mode** applied automatically when a **Palette Preset** is selected.                                                               | Palette color preset, palette mode           |
+| **Color Mode**                 | The choice between grayscale-first and color-preserve processing.                                                                             | Source color mode, color handling            |
+| **Preprocessing**              | Tone and color adjustment applied before palette mapping and dithering.                                                                       | Adjustment, correction, filters              |
+| **Resize Fit**                 | The rule that maps source dimensions into output dimensions using contain, cover, or stretch.                                                 | Crop mode, fit mode                          |
+| **Resize Mode**                | The sampling method used by resize, currently bilinear or nearest-neighbor.                                                                   | Resample mode, scaling mode                  |
+| **Processing Metadata**        | The export-facing facts that describe the processing result and last **Export Metadata Format**.                                              | Export details, render metadata              |
+| **Preview Target Override**    | A temporary processing size used by a **Preview Job** without changing **Editor Settings**.                                                   | Preview settings, screen settings            |
 
 ## Algorithm Registry
 
@@ -225,6 +230,11 @@
 - The **Bayer Matrix Control** is visible only when the selected **Dither Algorithm** has the Bayer size capability.
 - The **Algorithm Metadata Label** for **Bayer Dithering** includes the selected **Bayer Size**.
 - **Palette Resolution** happens before a **Dither Algorithm** processes pixels.
+- A **Custom Palette** is active when **Editor Settings** contain `customPalette`; the Palette control shows `Custom`.
+- Selecting a **Palette Preset** clears the active **Custom Palette** and applies the **Palette Default Color Mode**.
+- **Palette Import** and **Palette Extraction** create or replace the active **Custom Palette**.
+- **Palette Export** requires an active **Custom Palette** and does not export full **Editor Settings**.
+- **Extraction Size** is a command input for **Palette Extraction**, not a persisted **Editor Settings** field.
 - A **Settings Transition** produces one next **Editor Settings** object.
 - A **Settings Transition** may use **Transition Context** to preserve **Aspect Lock**.
 - A **Processing Preset** applies through one **Settings Transition**.
@@ -340,14 +350,13 @@
 - "Preset" is overloaded across **Processing Preset**, **Palette Preset**, and old "Settings JSON preset" wording. Use **Processing Preset** for curated processing recipes, **Palette Preset** for color sets, and **Settings JSON** for serialized settings.
 - "Recipe" should mean **Processing Recipe** or **Active Recipe**, not a persistent settings mode. Use **Processing Recipe** for controlled fields and **Active Recipe** for the derived match.
 - "Selected preset" can falsely imply persisted recipe identity. Use **Active Recipe** when derived from settings and **Processing Preset Id** only inside registry lookup and transition intent.
-- "Custom" in the **Recipe Selector** means **Custom Recipe State**, not **Custom Palette**. A **Custom Palette** is one reason matching returns **Custom Recipe State**.
+- "Custom" in the **Recipe Selector** means **Custom Recipe State**. "Custom" in the Palette control means the active **Custom Palette**.
 - "Default" can mean **Default Settings**, **Default Processing Preset**, or **Palette Default Color Mode**. Name the specific default being discussed.
 - "First preset" is a registry-order rule for the **Default Processing Preset**, not a fallback matching rule.
 - "Patch settings", "state update", and "settings change" blur UI mechanics with domain rules. Use **Settings Transition** when aspect lock, palette defaults, or **Output Cap** rules must be preserved.
 - "Context" is vague by itself. Use **Transition Context** only for source dimensions and other facts required to turn a **Settings Transition** into valid **Editor Settings**.
 - "Clipboard" in settings discussions means **Clipboard Settings** text, not a file import/export path.
 - Oversized **Source Image** handling is a **Source Intake** rejection. **Output Size** may still be auto-sized to stay within the **Output Cap**.
-- **Custom Palette** exists in the processing model but is not a current v1 editor flow. Treat it as future-capable domain language, not exposed functionality.
 - "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for the worker-backed image run, **Worker Source Cache** for retained source data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
 - "Trace" should mean **Trace Capture**, not a product log or analytics event.
 - "Buffer" should mean **Pixel Buffer** only when it carries image dimensions and pixel data; avoid using it for generic transport or cache objects.

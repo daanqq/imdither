@@ -16,6 +16,7 @@ in the browser; the app does not upload source images to a server.
   processed-only view, or original-only view.
 - Use Fit and 1:1 preview modes on desktop; mobile keeps the preview in Fit mode.
 - Export the current result as PNG, WebP, or JPEG.
+- Create, edit, import, export, and extract one active custom palette.
 - Copy and paste versioned settings JSON through the system clipboard.
 - Switch between persistent dark and light themes from the header.
 
@@ -27,7 +28,11 @@ in the browser; the app does not upload source images to a server.
 - Palettes: Black / White, 4 Gray, 6 Gray, Warm Mono, Blue Ink,
   Game Boy, DawnBringer 16, DawnBringer 32, Sweetie 16, AAP-16, Endesga 32,
   PICO-8, C64, EGA 16, Amber Terminal, Green Phosphor, Thermal, CGA Pop,
-  Soft 8, Poster 12, Risograph, Redline, Screenprint 16, and Sea Glass.
+  Soft 8, Poster 12, Risograph, Redline, Screenprint 16, Sea Glass, and one
+  active Custom palette.
+- Custom palette workflow: convert the current preset palette, edit swatches,
+  import HEX/GPL/JSON or clipboard text, export JSON/GPL, and extract 2, 4, 8,
+  16, or 32 colors from the current source image.
 - Color modes: grayscale-first and color-preserve.
 - Preprocessing: brightness, contrast, gamma, invert, and alpha flattening
   against black or white.
@@ -74,6 +79,7 @@ flowchart LR
 
   user --> app
   app --> store
+  app -->|palette import/export/extraction| app
   store --> worker
   app --> worker
   worker -->|preview buffer| preview

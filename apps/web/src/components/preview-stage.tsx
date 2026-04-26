@@ -258,29 +258,27 @@ export const PreviewStage = React.memo(function PreviewStage({
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="min-w-0">
-                  <label className="flex h-8 min-w-0 items-center gap-2 font-mono text-[10px] text-muted-foreground md:h-full">
-                    <span>Quality</span>
-                    <Slider
-                      aria-label="Export quality"
-                      className="min-w-0 flex-1"
-                      disabled={!selectedExportFormat.supportsQuality}
-                      max={MAX_EXPORT_QUALITY}
-                      min={MIN_EXPORT_QUALITY}
-                      step={EXPORT_QUALITY_STEP}
-                      value={[displayedExportQuality]}
-                      onValueChange={
-                        selectedExportFormat.supportsQuality
-                          ? (value) =>
-                              onExportQualityChange(value[0] ?? exportQuality)
-                          : undefined
-                      }
-                    />
-                    <span className="w-[4ch] text-right tabular-nums">
-                      {exportQualityPercent}%
-                    </span>
-                  </label>
-                </div>
+                {selectedExportFormat.supportsQuality ? (
+                  <div className="min-w-0">
+                    <label className="flex h-8 min-w-0 items-center gap-2 font-mono text-[10px] text-muted-foreground md:h-full">
+                      <span>Quality</span>
+                      <Slider
+                        aria-label="Export quality"
+                        className="min-w-0 flex-1"
+                        max={MAX_EXPORT_QUALITY}
+                        min={MIN_EXPORT_QUALITY}
+                        step={EXPORT_QUALITY_STEP}
+                        value={[displayedExportQuality]}
+                        onValueChange={(value) =>
+                          onExportQualityChange(value[0] ?? exportQuality)
+                        }
+                      />
+                      <span className="w-[4ch] text-right tabular-nums">
+                        {exportQualityPercent}%
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
               </div>
             </div>
             <ToggleGroup

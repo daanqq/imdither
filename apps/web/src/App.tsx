@@ -1,5 +1,12 @@
 import * as React from "react"
-import { safeNormalizeSettings } from "@workspace/core"
+import {
+  exportPaletteGpl,
+  exportPaletteJson,
+  extractPaletteFromSource,
+  parsePaletteText,
+  safeNormalizeSettings,
+  type PaletteExtractionSize,
+} from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
 import { MoonIcon, SunIcon } from "lucide-react"
 
@@ -330,6 +337,142 @@ export function App() {
     }
   }, [setError, setSourceNotice, transitionContext, transitionSettings])
 
+  const applyPaletteText = React.useCallback(
+    (text: string, notice: string) => {
+      const palette = parsePaletteText(text)
+      transitionSettings(
+        { type: "set-custom-palette", colors: palette.colors },
+        transitionContext
+      )
+      setError(null)
+      setSourceNotice(notice)
+    },
+    [setError, setSourceNotice, transitionContext, transitionSettings]
+  )
+
+  const handleImportPaletteFile = React.useCallback(
+    async (file: File) => {
+      try {
+        applyPaletteText(await file.text(), "[PALETTE IMPORTED]")
+      } catch (paletteError) {
+        setError(
+          paletteError instanceof Error
+            ? paletteError.message
+            : "Palette import failed"
+        )
+      }
+    },
+    [applyPaletteText, setError]
+  )
+
+  const handleImportPaletteFromClipboard = React.useCallback(async () => {
+    try {
+      applyPaletteText(
+        await navigator.clipboard.readText(),
+        "[PALETTE IMPORTED FROM CLIPBOARD]"
+      )
+    } catch (paletteError) {
+      setError(
+        paletteError instanceof Error
+          ? paletteError.message
+          : "Palette clipboard import failed"
+      )
+    }
+  }, [applyPaletteText, setError])
+
+  const handleCopyPaletteJson = React.useCallback(async () => {
+    try {
+      const colors = settings.customPalette
+
+      if (!colors) {
+        throw new Error("Convert the current preset to Custom before copy")
+      }
+
+      await navigator.clipboard.writeText(exportPaletteJson(colors))
+      setError(null)
+      setSourceNotice("[PALETTE JSON COPIED TO CLIPBOARD]")
+    } catch (paletteError) {
+      setError(
+        paletteError instanceof Error
+          ? paletteError.message
+          : "Palette copy failed"
+      )
+    }
+  }, [setError, setSourceNotice, settings.customPalette])
+
+  const handleExportPaletteJson = React.useCallback(() => {
+    try {
+      const colors = settings.customPalette
+
+      if (!colors) {
+        throw new Error("Convert the current preset to Custom before export")
+      }
+
+      downloadBlob(
+        new Blob([exportPaletteJson(colors)], { type: "application/json" }),
+        "imdither-palette.json"
+      )
+      setError(null)
+      setSourceNotice("[PALETTE JSON EXPORTED]")
+    } catch (paletteError) {
+      setError(
+        paletteError instanceof Error
+          ? paletteError.message
+          : "Palette export failed"
+      )
+    }
+  }, [setError, setSourceNotice, settings.customPalette])
+
+  const handleExportPaletteGpl = React.useCallback(() => {
+    try {
+      const colors = settings.customPalette
+
+      if (!colors) {
+        throw new Error("Convert the current preset to Custom before export")
+      }
+
+      downloadBlob(
+        new Blob([exportPaletteGpl(colors)], { type: "text/plain" }),
+        "imdither-palette.gpl"
+      )
+      setError(null)
+      setSourceNotice("[PALETTE GPL EXPORTED]")
+    } catch (paletteError) {
+      setError(
+        paletteError instanceof Error
+          ? paletteError.message
+          : "Palette export failed"
+      )
+    }
+  }, [setError, setSourceNotice, settings.customPalette])
+
+  const handleExtractPalette = React.useCallback(
+    (size: PaletteExtractionSize) => {
+      try {
+        if (!source) {
+          throw new Error("Load a Source Image before extracting a palette")
+        }
+
+        transitionSettings(
+          {
+            type: "set-custom-palette",
+            colors: extractPaletteFromSource(source.buffer, size),
+          },
+          transitionContext
+        )
+        setError(null)
+        setSourceNotice(`[PALETTE EXTRACTED: ${size} COLORS]`)
+      } catch (paletteError) {
+        setError(
+          paletteError instanceof Error
+            ? paletteError.message
+            : "Palette extraction failed"
+        )
+      }
+    },
+    [setError, setSourceNotice, source, transitionContext, transitionSettings]
+  )
+
   const handleResolutionWidthChange = React.useCallback(
     (width: number) => {
       transitionSettings({ type: "set-output-width", width }, transitionContext)
@@ -404,6 +547,12 @@ export function App() {
             onAdvancedOpenChange={setAdvancedOpen}
             onCompareModeChange={setCompareMode}
             onCopySettings={handleCopySettings}
+            onCopyPaletteJson={handleCopyPaletteJson}
+            onExportPaletteGpl={handleExportPaletteGpl}
+            onExportPaletteJson={handleExportPaletteJson}
+            onExtractPalette={handleExtractPalette}
+            onImportPaletteFile={handleImportPaletteFile}
+            onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
             onPasteSettings={handlePasteSettings}
             onResolutionWidthChange={handleResolutionWidthChange}
             onReset={handleResetSettings}
