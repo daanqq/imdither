@@ -1,245 +1,321 @@
 # IMDITHER PRD
 
 Status: done
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 ## 1. Product Summary
 
-IMDITHER is an open source web application for local image dithering. The product is built as a browser-first, single-page workstation for creative image processing and retro/palette-based output.
+IMDITHER is an open source, browser-first image dithering workstation. It lets a user load one image, choose a curated processing recipe or direct settings, inspect the original versus processed result, and export a raster image without sending the source image to a server.
 
 Primary value:
 
-- upload an image
-- resize and prepare tones
-- choose a palette and dithering algorithm
-- compare original vs processed output
-- export the result as PNG
+- load an image by upload, drag-and-drop, clipboard paste, or bundled demo
+- resize and prepare tones locally
+- apply a processing recipe or choose palette, color mode, and dithering algorithm directly
+- compare original and processed output in a stable preview surface
+- export the final full-resolution processed output as PNG, WebP, or JPEG
 
-The first release is optimized for desktop, remains usable on mobile, and performs all processing locally in the browser without sending user images to a server.
+The current product is a single-screen, local-only editor. It is optimized for desktop precision, remains usable on mobile, and keeps heavy image work behind explicit browser-side job boundaries.
 
 ## 2. Goals
 
-- Ship a fast, deterministic, testable dithering editor for one image at a time.
-- Make dithering understandable enough for practical use without turning the UI into a tutorial.
-- Separate the image-processing engine from the web UI so the core can later be reused as an OSS package.
-- Establish a distinctive dark-first, Nothing-inspired interface with strong typography and high information density.
+- Provide a fast, deterministic, testable dithering editor for one image at a time.
+- Keep image processing local, private, and reproducible.
+- Make good visual starting points discoverable through curated processing recipes.
+- Keep palette, algorithm, preview, export, and settings contracts explicit enough for OSS maintenance.
+- Separate the DOM-free image-processing engine from web-only UI, source-intake, preview, and export layers.
+- Maintain a distinctive dark-first, Nothing-inspired workstation interface with high information density.
 
-## 3. Non-Goals for v1
+## 3. Non-Goals for the Current Product
 
 - No backend image processing.
 - No account system, cloud sync, or remote storage.
-- No custom palette editor in v1.
-- No automatic palette extraction in v1.
+- No remote URL import.
+- No custom palette editor UI.
+- No automatic palette extraction.
+- No custom recipe creation or recipe marketplace.
 - No undo/redo history stack.
 - No URL state sharing.
 - No router or multi-page product shell.
-- No WebGL/WebGPU pipeline in v1.
-- No hardware-accurate device emulation presets in v1.
-- No JPEG or SVG export.
+- No batch processing.
+- No WebGL/WebGPU pipeline.
+- No SVG, GIF, AVIF, TIFF, PDF, or image-sequence export.
+- No hardware-accurate device emulation presets.
 
 ## 4. Target Users
 
-- Designers and artists making retro, monochrome, or limited-palette imagery.
+- Designers and artists making retro, monochrome, limited-palette, print-like, or posterized imagery.
 - Developers and makers preparing visuals for experimental interfaces, pixel-art workflows, or generative tools.
-- OSS users who want transparent algorithms and reproducible results.
+- OSS users who want transparent algorithms, local processing, and reproducible settings.
 
 ## 5. Core Jobs To Be Done
 
 - "I want to quickly turn a source image into a dithered image with a controlled visual character."
-- "I want to compare algorithms and palettes without leaving the editor."
-- "I want reproducible output and shareable settings."
+- "I want a good starting recipe without losing access to the underlying palette and algorithm controls."
+- "I want to compare original and processed output without coordinate drift or preview-only artifacts."
+- "I want the exported file to match my committed processing settings and chosen file format."
+- "I want settings to be reproducible without embedding transient UI state or file-encoding preferences."
 - "I want the tool to feel local, responsive, and private."
 
 ## 6. Product Principles
 
-- Local first: image processing runs in the browser.
-- Deterministic output: the same input and settings produce the same result.
-- Editor first: immediate visual feedback matters more than workflow ceremony.
-- Engine/UI separation: processing code must stay reusable outside React.
-- Restraint in UI: the interface should feel precise, not overloaded.
+- Local first: image processing and file export run in the browser.
+- Deterministic output: the same source image and committed editor settings produce the same processed pixels.
+- Editor first: immediate visual feedback and stable controls matter more than workflow ceremony.
+- Truthful preview: `Fit` should be a clean screen preview, while `1:1` should inspect output pixels.
+- Engine/UI separation: the processing core stays DOM-free and reusable outside React.
+- Explicit boundaries: source intake, settings transitions, preview jobs, slide compare, and export encoding are separate contracts.
+- Restraint in UI: the interface should feel precise, compact, and instrument-like.
 
 ## 7. How Dithering Works in IMDITHER
 
 At a high level:
 
-1. Decode the input image.
-2. Flatten transparency onto a chosen background color.
-3. Crop or fit the image to the desired frame.
-4. Resize the image to the intended output dimensions.
-5. Apply preprocessing such as brightness, contrast, gamma, invert, and optional grayscale-first conversion.
-6. Map pixels to the nearest color in the selected palette.
-7. Apply the chosen dithering strategy.
-8. Render a preview and export the final PNG.
+1. Accept or reject the source image through Source Intake.
+2. Decode the source into a local pixel buffer.
+3. Apply an editor settings transition when the user changes settings or applies a recipe.
+4. Flatten transparency onto the selected alpha background where processing or export requires it.
+5. Apply resize fit and resize kernel.
+6. Apply preprocessing such as brightness, contrast, gamma, invert, and color mode.
+7. Resolve the selected palette.
+8. Run the selected registry-backed dithering algorithm.
+9. Render a preview from a preview job target.
+10. Export the final output from a full-resolution export job and browser-side encoder.
 
-Supported dithering families in v1:
+Supported dithering families:
 
-- No dithering: direct palette quantization.
-- Ordered dithering: Bayer matrices.
-- Error diffusion: Floyd-Steinberg and Atkinson.
+- Direct quantization: `none`
+- Ordered dithering: `bayer`
+- Palette-aware special algorithms: `matt-parker`, `blue-noise`, `halftone-dot`
+- Error diffusion: `floyd-steinberg`, `atkinson`, `burkes`, `stucki`, `sierra-lite`
 
 ## 8. Functional Requirements
 
 ### 8.1 Input
 
-The app must support:
+The app supports:
 
 - drag and drop
 - file picker
 - paste image from clipboard
 - one bundled demo image
 
-The app must not support remote URL import in v1.
+The app does not support remote URL import.
 
 ### 8.2 Image Limits
 
-To keep processing predictable in the browser, v1 should enforce reasonable limits:
+The app enforces browser-friendly image limits:
 
 - maximum source dimension: 4096px
-- maximum processed pixel count: target range 8-12 MP
+- maximum output pixel count: 12 MP
 
-Oversized source images should be rejected during source intake with clear user-facing messaging. Output size may still be auto-sized to stay within the browser output cap.
+Oversized source images are rejected during Source Intake with clear user-facing messaging. Accepted sources may still receive an auto-sized output recommendation when the selected output would exceed the output cap.
 
-### 8.3 Pipeline Stages
+### 8.3 Source Intake
 
-The processing pipeline must support:
+Source Intake owns:
 
-- alpha flattening to black or white
-- crop/fit handling
-- resizing
-- preprocessing
-- palette mapping
-- dithering
+- accepted versus rejected source decisions
+- source dimensions and source identity
+- bundled demo source notices
+- oversized source rejection messages
+- output auto-size notices
+- async intake behavior for upload, drop, paste, and demo flows
 
-The pipeline must use a light stage cache keyed by relevant setting subsets:
+Source Intake must not silently downscale an oversized source.
 
-- decoded source
-- flattened source
-- resized image
-- preprocessed image
+### 8.4 Settings and Transitions
 
-### 8.4 Algorithms
+Editor Settings are versioned and describe processing, not transient UI state.
 
-v1 algorithms:
+Settings transitions own:
+
+- output-size aspect locking
+- output-cap enforcement
+- source-intake recommended output size
+- palette default color mode
+- processing recipe application
+- Settings JSON normalization
+- defaults reset behavior
+
+React components emit user intents. They should not duplicate domain policy for settings changes.
+
+### 8.5 Processing Recipes
+
+Processing Presets are curated recipes, not persisted modes.
+
+The Recipe selector applies a subset of Editor Settings:
+
+- palette
+- algorithm
+- optional Bayer size
+- optional color mode
+
+Palette, Algorithm, Bayer Matrix, and Color Mode remain visible and editable after a recipe is applied. The active recipe is derived from current settings; if the controlled fields no longer match a recipe, the selector shows Custom. Recipe identity is not stored in Editor Settings, Settings JSON, processing metadata, or export metadata.
+
+Current curated recipes:
+
+- Fine Mono Bayer
+- Mono Bayer
+- Sea Glass Atkinson
+- Redline Floyd
+- Poster Blocks
+- Blue Ink Noise
+- Halftone Mono
+- Game Boy Sierra
+
+### 8.6 Algorithms
+
+The Dither Algorithm Registry is the source of truth for algorithm ids, labels, capabilities, metadata labels, option ordering, and execution dispatch.
+
+Current algorithms:
 
 - `none`
-- `bayer` with matrix sizes `2x2`, `4x4`, `8x8`
+- `bayer`
+- `matt-parker`
 - `floyd-steinberg`
 - `atkinson`
+- `burkes`
+- `stucki`
+- `sierra-lite`
+- `blue-noise`
+- `halftone-dot`
 
 Rules:
 
-- default Bayer size: `4x4`
-- error diffusion scan mode: serpentine, internal only
-- algorithms remain deterministic
-- no seeded randomness in v1
+- Bayer supports matrix sizes `2x2`, `4x4`, and `8x8`.
+- The default settings use Bayer with `8x8`.
+- Error diffusion algorithms remain deterministic.
+- Algorithm options in the UI are derived from registry metadata.
+- Algorithm-specific controls are driven by registry capabilities where practical.
 
-### 8.5 Palettes
+### 8.7 Palettes
 
-v1 supports palettes only.
+The app supports preset palettes and a schema-level custom palette field.
 
-Examples:
+Current palette families include:
 
-- black and white
-- 4 gray
-- Game Boy-inspired
-- amber terminal
-- limited creative multi-color sets
+- monochrome and grayscale palettes
+- terminal/phosphor palettes
+- handheld and retro-computer palettes
+- creative multi-color palettes such as DawnBringer, Sweetie, AAP, Endesga, PICO-8, Poster, Risograph, Redline, Screenprint, and Sea Glass
 
-Architectural requirement:
+Architectural requirements:
 
-- the engine must be palette-agnostic and accept an arbitrary palette array
-- the settings model must already allow a future `customPalette` field
+- the engine is palette-agnostic and accepts a resolved palette array
+- palette presets define default color mode
+- custom palette data remains supported by the schema, even though there is no custom palette editor UI
 
-### 8.6 Color Modes
+### 8.8 Color, Resize, and Preprocessing
 
-v1 supports:
+Color modes:
 
 - `grayscale-first`
 - `color-preserve`
 
-Presets may define a default color mode, but the user can override it.
+Resize:
 
-### 8.7 Resize
+- resize kernels: `bilinear`, `nearest`
+- resize fit modes in settings: `contain`, `cover`, `stretch`
+- resize happens before dithering
 
-v1 resize modes:
-
-- `bilinear` as default
-- `nearest` as optional
-
-Resize always happens before dithering.
-
-### 8.8 Preprocessing
-
-v1 preprocessing controls:
+Preprocessing controls:
 
 - brightness
 - contrast
 - gamma
 - invert
-- grayscale-first toggle
+- color mode
 
-UI hierarchy:
-
-- basic controls shown by default
-- advanced controls collapsed by default
+Slider-like preprocessing controls use draft-on-drag and commit-on-release behavior so transient slider movement does not start preview jobs or persist draft values.
 
 ### 8.9 Preview and Compare
 
-v1 preview requirements:
+Preview modes:
 
-- original view
-- processed view
-- split comparison
-- `fit`
+- processed
+- original
+- slide before/after
+
+View scale:
+
+- `Fit`
 - `1:1`
 
-Interaction requirements:
+Slide comparison:
 
-- preview updates live
-- UI debounces worker requests
-- stale jobs are canceled
-- preview may use reduced working resolution if needed
-- export always runs at the full selected output resolution
+- renders original and processed layers in one shared frame
+- keeps original on the left and processed output on the right
+- uses a draggable divider with pointer, click/tap, and keyboard support
+- clamps the divider between 2% and 98%
+- keeps divider position runtime-only and resets on reload
+- shows original output when processed output is not ready
 
-### 8.10 Export and Persistence
+Screen-sized preview:
 
-v1 output:
+- `Fit` preview uses a measured CSS-pixel preview target to avoid browser downscaling artifacts
+- `1:1` keeps exact output-pixel inspection behavior
+- preview target overrides do not mutate Editor Settings
+- export jobs ignore preview target overrides and always use final output settings
 
-- PNG export as primary action
-- settings JSON import/export as secondary action
+### 8.10 Processing Jobs and Responsiveness
 
-Persistence:
+The editor keeps heavy local image work behind explicit async boundaries:
 
-- save lightweight editor preferences to localStorage
-- do not persist source images in localStorage
+- Source Intake handles source loading and rejection.
+- Processing Jobs own preview scheduling, reduced preview, refined preview, cancellation, and export coordination.
+- The worker protocol stays typed.
+- Stale preview results must not overwrite newer source or settings state.
+- Large pixel buffers must stay out of global Zustand state.
+- The previous preview should remain visible while replacement work is queued or processing.
 
-Persisted items:
+Preview jobs may run reduced work first, then a refined preview. Export jobs are full-output operations and should report status clearly.
 
-- last used settings
-- selected theme
-- compare mode
-- last chosen palette
+### 8.11 Export and Persistence
 
-### 8.11 Metadata
+Export formats:
 
-The UI should expose concise technical metadata:
+- PNG
+- WebP
+- JPEG
+
+Rules:
+
+- PNG is the default export format.
+- WebP and JPEG share one lossy quality preference.
+- default lossy quality: `0.92`
+- quality range: `0.1` through `1.0`, step `0.05`
+- export format and quality are persisted editor preferences, not Editor Settings.
+- Settings JSON copy/paste excludes export format and quality.
+- JPEG export flattens alpha using the current alpha background setting.
+- PNG preserves alpha.
+- WebP preserves alpha where browser encoding supports it.
+- unsupported browser encoder failures must fail explicitly, not silently fall back to PNG.
+- filenames use the selected format extension.
+
+The visible export action is format-neutral: `Export`.
+
+### 8.12 Metadata
+
+The UI exposes concise technical metadata:
 
 - source dimensions
 - output dimensions
 - palette size
 - algorithm name
-- last processing time
+- processing time
 - export format
 
-This metadata is informational, not a dashboard.
+Metadata is informational. It must not become a dashboard or a second settings model.
 
-### 8.12 Accessibility
+### 8.13 Accessibility
 
-Baseline accessibility for v1:
+Baseline accessibility:
 
 - keyboard-accessible controls
 - visible focus states
 - semantic labels and aria support
+- accessible slide-divider slider semantics
 - sufficient contrast
 - reduced-motion support
 - no canvas-only critical information without text mirrors
@@ -248,13 +324,15 @@ Baseline accessibility for v1:
 
 ### 9.1 Layout
 
-IMDITHER v1 is a single-screen workstation, not a step-by-step wizard.
+IMDITHER is a single-screen workstation, not a wizard.
 
 High-level layout:
 
-- primary: preview area
+- primary: preview stage
 - secondary: control panel
-- tertiary: metadata and utility strip
+- tertiary: metadata, utility, and status information
+
+The preview stage owns upload/drop affordances, preview surfaces, processing overlays, compare presentation, view-scale controls, and export controls. The control panel owns recipe, palette, algorithm, output, color, and preprocessing controls.
 
 ### 9.2 Visual Direction
 
@@ -273,24 +351,19 @@ Fonts:
 - `Space Grotesk`
 - `Space Mono`
 
-Light mode should exist later as a first-class theme, but dark mode is the initial priority.
+Light mode exists as a theme surface, but the product identity remains dark-first.
 
 ### 9.3 UI Foundation
 
-The project will use `shadcn/ui` for accessible primitives and composition patterns.
+The project uses `shadcn/ui` and Radix-backed primitives as the accessibility and composition foundation.
 
-Important constraint:
+Important constraints:
 
-- `shadcn/ui` is a structural foundation, not the final visual language
-- components must be restyled to match IMDITHER tokens and the Nothing-inspired system
-- default shadcn appearance must not define the product identity
-
-Planned usage:
-
+- `shadcn/ui` is structural foundation, not the final visual language
+- components are restyled to match IMDITHER tokens and the Nothing-inspired system
 - shared primitives live in `packages/ui`
-- the web app consumes them from `apps/web`
-- accessibility and interaction behavior come from the primitive layer
-- brand expression comes from custom tokens, spacing, typography, and composition
+- the web app consumes shared primitives from `apps/web`
+- product identity comes from custom tokens, spacing, typography, and composition
 
 ## 10. Technical Architecture
 
@@ -299,12 +372,12 @@ Planned usage:
 The project uses a workspace layout:
 
 - `apps/web`: Vite + React application
-- `packages/core`: image-processing engine
+- `packages/core`: DOM-free image-processing engine
 - `packages/ui`: shared UI primitives and tokens
 
 ### 10.2 Processing Core
 
-`packages/core` must remain independent from DOM-specific APIs.
+`packages/core` remains independent from DOM-specific APIs.
 
 Core buffer format:
 
@@ -316,66 +389,111 @@ type PixelBuffer = {
 }
 ```
 
-Boundary adapters may convert to and from `ImageData`, but internal processing should operate on `PixelBuffer`.
+Boundary adapters may convert to and from browser APIs such as `ImageData`, but internal processing operates on `PixelBuffer`.
 
 ### 10.3 Core API Shape
 
-Two layers are required.
+Core owns:
 
-Low-level stage functions:
+- settings schema and normalization
+- output limit helpers
+- palette definitions and palette resolution
+- processing preset registry and matching
+- dither algorithm registry
+- low-level pixel stages
+- high-level `processImage(input, settings)`
 
-- `flattenAlpha`
-- `resizeImage`
-- `applyPreprocess`
-- `mapToPalette`
-- `ditherOrdered`
-- `ditherFloydSteinberg`
-- `ditherAtkinson`
+Low-level stages include:
 
-High-level orchestration:
-
-- `processImage(input, settings)`
+- alpha flattening
+- resize
+- preprocessing
+- palette mapping
+- ordered dithering
+- error diffusion and special dithering algorithms
 
 ### 10.4 Worker Model
 
-The processing engine must run behind a dedicated Web Worker.
+Processing runs behind a dedicated Web Worker.
 
 Requirements:
 
-- typed message protocol
-- cancel stale jobs
-- keep large buffers out of the global Zustand store
-- keep UI responsive during resize and dithering
+- typed request/response protocol
+- source-key based source reuse where practical
+- stale preview cancellation or stale result ignoring
+- full-output export jobs
+- preview target override support for screen-sized Fit previews
+- large buffers kept out of global Zustand state
 
-### 10.5 State Management
+### 10.5 Web App Modules
 
-The app uses `zustand`, but narrowly.
+The web app owns browser-specific and React-specific layers:
 
-Zustand stores:
+- Source Intake
+- Editor Settings Transition Module
+- Processing Jobs
+- Worker Client
+- Preview Stage
+- Slide Compare Preview Module
+- Preview Frame and Screen Preview sizing
+- Export Image layer
+- editor store persistence
 
-- editor settings
-- theme
-- session metadata
-- job status
-- UI mode
+These modules should expose small contracts and avoid pushing domain policy into broad React components.
+
+### 10.6 State Management
+
+The app uses `zustand` narrowly.
+
+Persisted editor preferences include:
+
+- normalized settings without stale output dimensions
+- compare mode
+- view scale
+- export format
+- export quality
+- advanced panel state
+
+Runtime state includes:
+
+- source image buffer
+- processed preview buffer
+- source id/name
+- processing status
+- source notices
 - errors
+- metadata
+- slide divider position
 
-Zustand must not become the home for large binary buffers.
+Large source and processed pixel buffers must not be stored in Zustand.
 
-### 10.6 Settings Schema
+### 10.7 Settings Schema
 
-Editor settings and exported JSON presets must be versioned from day one.
+Editor Settings describe processing only.
 
-Example shape:
+Current shape:
 
 ```ts
 type EditorSettings = {
   schemaVersion: 1
-  algorithm: "none" | "bayer" | "floyd-steinberg" | "atkinson"
+  algorithm:
+    | "none"
+    | "bayer"
+    | "matt-parker"
+    | "floyd-steinberg"
+    | "atkinson"
+    | "burkes"
+    | "stucki"
+    | "sierra-lite"
+    | "blue-noise"
+    | "halftone-dot"
+  bayerSize: 2 | 4 | 8
   paletteId: string
   customPalette?: string[]
+  alphaBackground: "black" | "white"
   resize: {
     mode: "bilinear" | "nearest"
+    fit: "contain" | "cover" | "stretch"
     width: number
     height: number
   }
@@ -389,119 +507,118 @@ type EditorSettings = {
 }
 ```
 
+Editor Settings do not include:
+
+- recipe id
+- compare mode
+- view scale
+- export format
+- export quality
+- source image data
+- preview target dimensions
+- runtime job status
+
 ## 11. Testing Strategy
 
 Tooling:
 
 - `Vitest` for unit and component tests
+- repository quality gate: `bun verify`
 
 Test layers:
 
-- unit tests for pixel math, palette mapping, preprocessing, and kernels
-- golden tests for deterministic core output on small fixtures
-- component tests for editor state and interaction logic
-- 1-2 end-to-end happy-path tests
+- unit tests for pixel math, palette mapping, preprocessing, resize, output caps, and dithering algorithms
+- registry tests for algorithm, palette, and processing preset drift
+- transition tests for editor settings policy
+- source-intake tests for acceptance, rejection, and notices
+- processing-job tests for event order, cancellation, reduced/refined preview, and export guarantees
+- export-layer tests for format options, quality, alpha handling, filename generation, and encoder failure behavior
+- component tests for control wiring, preview stage, slide compare, sliders, and store persistence
 
-Golden strategy:
+Test posture:
 
-- exact matching for deterministic pure pipeline output
-- tolerant visual checks or smoke coverage for browser-level snapshots
+- assert public behavior and stable contracts
+- avoid brittle tests for private object shapes or exact React nesting unless accessibility or visible behavior depends on it
+- keep deterministic core output covered by small fixtures
+- use browser-facing tests only where browser behavior is the actual contract
 
-## 12. Deployment
+## 12. Deployment and Workflow
 
-v1 is deployed as a static site.
+The app deploys as a static site.
 
 Implications:
 
 - no production backend required
 - hosting can be any static platform
-- Bun is used for package management and local developer workflow, not as a required production server
+- Bun is used for package management and developer workflow
+- manual publish workflows should be gated by successful CI for the target SHA
+- release visibility may include GitHub Deployments metadata where configured
 
-## 13. MVP-1 Scope
+## 13. Current Scope
 
-Included in MVP-1:
+Included:
 
-- one-page editor
+- one-page local editor
 - demo image
 - upload, drop, paste
-- local worker-based processing
-- palettes
-- algorithms: none, Bayer, Floyd-Steinberg, Atkinson
-- resize and preprocessing controls
-- compare modes
-- PNG export
-- settings JSON import/export
+- hard oversized source rejection
+- output cap and auto-size notices
+- worker-based local processing
+- algorithm registry
+- processing recipes
+- preset palettes and schema-level custom palette support
+- resize, alpha background, color mode, and preprocessing controls
+- commit-on-release slider behavior
+- original, processed, and slide compare modes
+- Fit and 1:1 view scales
+- screen-sized Fit preview
+- PNG, WebP, and JPEG export
+- settings JSON copy/paste for processing settings
 - local preference persistence
-- dark-first Nothing-inspired UI
-- deterministic tests across core and UI wiring
+- dark-first Nothing-inspired UI on top of shared primitives
+- deterministic tests across core, web modules, and UI wiring
 
-Explicitly out of MVP-1:
+Explicitly out:
 
 - custom palette editor
+- custom recipe editor
 - auto-palette extraction
 - undo/redo
 - URL share state
 - multi-page app shell
 - free pan/zoom editor
+- batch processing
 - device-specific output presets
 - WebGL/WebGPU rendering pipeline
-- JPEG and SVG export
+- vector export
+- backend/cloud processing
 
-## 14. Implementation Plan
+## 14. Implemented PRD Modules
 
-### Phase 1: Foundation
+The current product contract is informed by the implemented feature PRDs in this folder:
 
-- finalize workspace structure: `apps/web`, `packages/core`, `packages/ui`
-- keep `shadcn/ui` as the primitive/component foundation in `packages/ui`
-- replace template visual tokens with IMDITHER brand tokens
-- add fonts and theme wiring
-- define `EditorSettings` schema and Zod validation
-- set up Zustand slices for editor/session state
+- Dither Algorithm Registry
+- Editor Settings Transition Module
+- Import and Processing Responsiveness
+- Editor Runtime Responsiveness
+- Slide Before/After Preview
+- Slide Compare Preview Module
+- Screen-Sized Preview
+- Processing Presets
+- Export Layer
 
-### Phase 2: Core Engine
+These feature PRDs are subordinate detail documents. This root PRD should stay aligned with their implemented contracts and with the current code state.
 
-- create `PixelBuffer` and boundary adapters
-- implement flatten, resize, preprocess, palette mapping
-- implement `none`, `bayer`, `floyd-steinberg`, `atkinson`
-- add stage cache
-- expose `processImage()`
-
-### Phase 3: Worker and App Wiring
-
-- define typed worker protocol
-- wire live preview with debounce and cancelation
-- keep binary buffers out of Zustand
-- connect preview rendering and metadata
-
-### Phase 4: Editor UI
-
-- build upload/empty state/demo flow
-- build compare modes and view controls
-- build basic and advanced control groups
-- build export and settings actions
-- restyle shared primitives into the final IMDITHER interface
-
-### Phase 5: Tests and Docs
-
-- unit and golden coverage for `packages/core`
-- component tests for editor wiring
-- OSS-friendly README and algorithm docs
-
-### Phase 6: Release Preparation
-
-- static deployment config
-- performance pass on large images
-- fixture review
-- license and contribution docs
-
-## 15. Post-v1 Roadmap
+## 15. Roadmap Candidates
 
 Candidates for later releases:
 
 - custom palette editor
-- auto-palette extraction
-- additional diffusion kernels
-- light mode parity
+- custom recipe creation
+- automatic palette extraction
+- additional curated recipes
+- additional export formats where they fit the raster model
+- richer docs and algorithm comparisons
+- light mode polish
 - device presets
 - CLI or published `@imdither/core`
-- richer docs and algorithm comparisons

@@ -1,6 +1,6 @@
 # Export Layer PRD
 
-Status: planned
+Status: done
 Last updated: 2026-04-26
 
 ## Problem Statement
