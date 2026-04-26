@@ -80,15 +80,19 @@ The highest-impact roadmap areas are:
 
 ### Phase 0: Core Hardening
 
-- [ ] Sync `docs/PRD.md` with the current product state.
-- [ ] Make the root license explicit and easy to find.
-- [ ] Document the public settings and schema contract.
-- [ ] Add golden image fixtures for core algorithms.
-- [ ] Add export golden fixtures for PNG, WebP, and JPEG.
-- [ ] Add visual drift checks for preview and export behavior.
-- [ ] Add representative performance fixtures before any WASM or GPU work.
+- [x] Sync `docs/PRD.md` with the current product state.
+- [x] Make the root license explicit and easy to find.
+- [x] Document the public settings and schema contract.
+- [x] Add golden fixtures for core algorithms.
+- [x] Add export contract fixtures for PNG, WebP, and JPEG.
+- [x] Add deterministic visual contract checks for preview and export behavior.
+- [x] Add representative performance fixtures before any WASM or GPU work.
 
-Success signal: the repo is safe to extend, easier to understand from the outside, and protected against silent visual regressions.
+Success signal: shipped. The repo is safer to extend, easier to understand from
+the outside, and protected against silent visual regressions through public
+contract docs, settings contract tests, core pixel goldens, export contract
+tests, existing preview/compare Vitest coverage, and a non-gating performance
+baseline command.
 
 ### Phase 1: Palette Platform MVP
 

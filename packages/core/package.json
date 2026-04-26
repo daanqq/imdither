@@ -6,6 +6,7 @@
   "scripts": {
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx}\"",
+    "perf:baseline": "bun scripts/performance-baseline.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

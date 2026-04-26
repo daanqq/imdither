@@ -1,8 +1,8 @@
 # IMDITHER
 
 IMDITHER is a local-first web workstation for turning images into deterministic
-dithered PNG output. Images are decoded, processed, previewed, and exported in
-the browser; the app does not upload source images to a server.
+dithered raster output. Images are decoded, processed, previewed, and exported
+in the browser; the app does not upload source images to a server.
 
 ## What It Does
 
@@ -11,11 +11,11 @@ the browser; the app does not upload source images to a server.
 - Process images in a Web Worker so the editor can keep responding while
   settings change.
 - Preview with a reduced working buffer for interaction, then export the full
-  selected output as PNG.
+  selected output.
 - Compare original and processed output with a slide before/after preview,
   processed-only view, or original-only view.
 - Use Fit and 1:1 preview modes on desktop; mobile keeps the preview in Fit mode.
-- Export the current result as a PNG file.
+- Export the current result as PNG, WebP, or JPEG.
 - Copy and paste versioned settings JSON through the system clipboard.
 - Switch between persistent dark and light themes from the header.
 
@@ -53,6 +53,13 @@ the browser; the app does not upload source images to a server.
   and tests.
 - `packages/ui` - shared shadcn/ui primitive layer.
 - `docs/` - Product Requirements Documents (PRDs), architecture, etc.
+
+## Public Contracts
+
+- [Product PRD](docs/PRD.md) - current product behavior and architecture.
+- [Editor Settings Schema](docs/settings-schema.md) - versioned Settings JSON
+  contract for clipboard copy/paste.
+- [MIT License](LICENSE) - usage and contribution licensing.
 
 ## Architecture
 
@@ -112,6 +119,12 @@ bun build
 
 The root scripts are Turbo-powered and run the matching script in each
 workspace package.
+
+Run the non-gating performance baseline report:
+
+```sh
+bun run --cwd packages/core perf:baseline
+```
 
 ## CI And Release
 

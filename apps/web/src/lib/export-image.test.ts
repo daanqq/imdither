@@ -58,12 +58,12 @@ describe("export image layer", () => {
   it("encodes PNG without lossy quality and WebP with the selected quality", async () => {
     const { toBlob } = installCanvasMock()
 
-    await encodePixelBuffer(buffer, {
+    const png = await encodePixelBuffer(buffer, {
       alphaBackground: "black",
       format: "png",
       quality: 0.5,
     })
-    await encodePixelBuffer(buffer, {
+    const webp = await encodePixelBuffer(buffer, {
       alphaBackground: "black",
       format: "webp",
       quality: 0.7,
@@ -80,6 +80,11 @@ describe("export image layer", () => {
       expect.any(Function),
       "image/webp",
       0.7
+    )
+    expect(png.type).toBe("image/png")
+    expect(webp.type).toBe("image/webp")
+    expect(makeExportName("source photo.png", "jpeg")).toBe(
+      "imdither-source-photo.jpg"
     )
   })
 

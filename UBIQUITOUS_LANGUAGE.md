@@ -40,6 +40,20 @@
 | **Centered Export Actions**    | The layout rule that **Upload** and **Export Action** stay centered relative to the **Preview**.        | Centered buttons, main actions     |
 | **Export Preference Controls** | The right-side **Preview Stage** controls for **Format Selector** and **Quality Slot**.                 | Format and quality controls        |
 
+## Public Contracts
+
+| Term                          | Definition                                                                                                           | Aliases to avoid                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Product Contract**          | The maintained description of current IMDITHER product behavior and boundaries.                                      | Product docs, app description          |
+| **Settings Schema Reference** | The public reference for **Editor Settings** schema version 1 and **Settings JSON** normalization rules.             | Settings docs, JSON docs               |
+| **Schema Version 1**          | The current compatibility baseline for **Editor Settings** payloads.                                                 | v1 settings, settings version          |
+| **Public Hardening Baseline** | The Phase 0 baseline of license, docs, tests, fixtures, and performance reports that future roadmap work builds on.  | Cleanup, docs pass, prep work          |
+| **Visual Contract**           | Deterministic test coverage that protects preview, processing, compare, and export behavior without screenshot diff. | Visual tests, screenshot baseline      |
+| **Core Pixel Golden**         | A compact expected pixel fixture for public core processing output.                                                  | Golden image, snapshot image           |
+| **Export Contract Fixture**   | A test fixture for encoder request and pre-encode behavior without byte-for-byte encoded snapshots.                  | Export golden, encoded file snapshot   |
+| **Performance Baseline**      | A non-gating timing report for representative current processing scenarios.                                          | Benchmark, speed test, perf threshold  |
+| **Performance Threshold**     | A pass/fail timing limit that is intentionally out of scope until runtime noise is calibrated.                       | Performance baseline, benchmark target |
+
 ## Processing
 
 | Term                           | Definition                                                                                       | Aliases to avoid                             |
@@ -248,6 +262,14 @@
 - **Committed Settings** are the only slider values that may start **Preview Jobs**.
 - A **Native Range Slider** may replace a **Slider Primitive** when **Direct Slider Movement** is the primary requirement.
 - **Quality Control** may use a **Slider Primitive** because changing **Export Quality** does not start **Preview Jobs**.
+- **Product Contract** links to the current **Settings Schema Reference** when Settings JSON behavior is part of the shipped product.
+- **Schema Version 1** is the compatibility baseline for **Settings JSON**.
+- **Settings Schema Reference** defines which **Editor Settings** fields are included and which **Export Preferences** and **View-local State** are excluded.
+- A **Public Hardening Baseline** must not add product features or change the local-only processing model.
+- A **Core Pixel Golden** protects public `processImage` behavior, not private processing stages.
+- An **Export Contract Fixture** protects **Browser Encoder** requests and JPEG pre-encode pixels, not byte-for-byte encoded files.
+- A **Visual Contract** may be covered by deterministic unit and component tests before screenshot-diff infrastructure exists.
+- A **Performance Baseline** is report-style and non-gating until a calibrated **Performance Threshold** is introduced.
 - **Preview Stage** owns **Preview Presentation** and **View-local State** for drop affordance and **Slide Divider** position.
 - A **Preview Stage** contains one or more **Preview Surfaces**.
 - A **Ready Preview Surface** should ignore a **Status-only Update**.
@@ -261,17 +283,21 @@
 >
 > **Domain expert:** "No. WebP is an **Export Format**, so it belongs to **Export Preferences**. **Editor Settings** still describe how to produce the **Processed Image**."
 >
+> **Dev:** "Where should I document which fields Settings JSON accepts?"
+>
+> **Domain expert:** "Use the **Settings Schema Reference**. It defines **Schema Version 1**, including processing fields and excluding **Export Preferences** and **View-local State**."
+>
 > **Dev:** "Does changing **Export Quality** restart the **Preview Job**?"
 >
 > **Domain expert:** "No. **Export Quality** only affects the **Browser Encoder** when the **Export Action** creates an **Export File** from **Full Output**."
 >
-> **Dev:** "Why do we keep a **Quality Slot** visible for PNG if PNG has no **Quality Control**?"
+> **Dev:** "Does Phase 0 need screenshot diffs before palette work starts?"
 >
-> **Domain expert:** "The slot is reserved so **Centered Export Actions** stay centered relative to the **Preview** when switching between PNG, WebP, and JPEG."
+> **Domain expert:** "No. The **Visual Contract** is deterministic Vitest coverage for now: **Core Pixel Goldens**, preview/compare tests, and **Export Contract Fixtures**."
 >
-> **Dev:** "If JPEG is selected and the image has transparency, where is alpha handled?"
+> **Dev:** "Can the **Performance Baseline** fail `bun verify` if diffusion gets slower?"
 >
-> **Domain expert:** "**JPEG Alpha Flattening** happens in the **Export Layer** using the current **Alpha Background**, then **Export Metadata Format** records JPEG for the downloaded **Export File**."
+> **Domain expert:** "No. It is a non-gating report until we calibrate a future **Performance Threshold**."
 
 ## Flagged Ambiguities
 
@@ -300,6 +326,11 @@
 - "Export format" and "metadata format" overlap. Use **Export Format** for the selected preference and **Export Metadata Format** for the value recorded after a completed export.
 - "Fallback" is misleading for unsupported encoders. Use **Encoder Failure**; the app must not silently create a different **Export Format**.
 - "Centered buttons" should be named **Centered Export Actions** when the rule is about keeping Upload and Export centered relative to **Preview**.
+- "Golden" can imply a binary image snapshot. Use **Core Pixel Golden** for compact core pixel fixtures and **Export Contract Fixture** for export behavior tests.
+- "Benchmark" can imply a gate. Use **Performance Baseline** for the current non-gating report and **Performance Threshold** only for a future calibrated pass/fail limit.
+- "Visual drift" should not imply screenshot diffs in Phase 0. Use **Visual Contract** for deterministic unit and component coverage unless screenshot-diff infrastructure is explicitly added later.
+- "Settings docs" is vague. Use **Settings Schema Reference** when describing the versioned **Settings JSON** contract.
+- "Hardening" should mean **Public Hardening Baseline** in Phase 0, not new UI features or product expansion.
 - "Cap", "limit", "budget", and "ready %" overlapped in UI and architecture discussion. Use **Output Cap** for the pixel budget and **Output Size** for the selected dimensions.
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.
 - "Fit" was used for both preview zoom and resize fitting. Use **Fit View** for preview sizing and **Resize Fit** for contain / cover / stretch.
