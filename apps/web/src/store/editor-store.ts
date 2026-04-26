@@ -85,10 +85,23 @@ export const useEditorStore = create<EditorState>()(
             transition,
             context
           )
+          const resizeChanged =
+            state.settings.resize.width !== result.settings.resize.width ||
+            state.settings.resize.height !== result.settings.resize.height
           transitionResult = result
 
           return {
             settings: result.settings,
+            ...(resizeChanged
+              ? {
+                  previewViewport: normalizePreviewViewport({
+                    ...state.previewViewport,
+                    mode: "fit",
+                    zoom: 1,
+                    center: { x: 0, y: 0 },
+                  }),
+                }
+              : {}),
             ...(result.sourceNotice !== undefined
               ? { sourceNotice: result.sourceNotice }
               : {}),

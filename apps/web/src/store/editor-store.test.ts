@@ -141,6 +141,34 @@ describe("editor store settings transitions", () => {
       "previewViewport"
     )
   })
+
+  it("resets manual preview viewport when output dimensions change", () => {
+    useEditorStore.setState({
+      previewViewport: {
+        mode: "manual",
+        zoom: 8,
+        center: { x: 3200, y: 2400 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+      settings: DEFAULT_SETTINGS,
+    })
+
+    useEditorStore
+      .getState()
+      .transitionSettings(
+        { type: "set-output-width", width: 640 },
+        { sourceDimensions: { width: 4, height: 3 } }
+      )
+
+    expect(useEditorStore.getState().previewViewport).toMatchObject({
+      mode: "fit",
+      zoom: 1,
+      center: { x: 0, y: 0 },
+      gridEnabled: true,
+      loupeEnabled: true,
+    })
+  })
 })
 
 function createMemoryStorage(): Storage {
