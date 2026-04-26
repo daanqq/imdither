@@ -1,4 +1,12 @@
 export {
+  analyzeAutoTuneImage,
+  rankAutoTuneLookCandidates,
+  recommendAutoTuneLooks,
+  type AutoTuneAnalysis,
+  type AutoTuneContext,
+  type AutoTuneRecommendation,
+} from "./auto-tune"
+export {
   DITHER_ALGORITHM_IDS,
   DITHER_ALGORITHM_OPTIONS,
   getDitherAlgorithmMetadataLabel,

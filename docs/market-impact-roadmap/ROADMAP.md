@@ -1,7 +1,7 @@
 # Market Impact Roadmap
 
 Status: planned
-Last updated: 2026-04-26
+Last updated: 2026-04-27
 
 ## Source
 
@@ -125,11 +125,11 @@ Success signal: shipped. Users can intentionally control palette size, compare R
 - [x] Add undo and redo for editor settings changes.
 - [x] Add immutable look snapshots.
 - [x] Add shareable looks through URL-safe and clipboard-safe payloads.
-- [ ] Add an Auto-Tune analysis pass over histogram, entropy, edge density, palette suitability, and output size.
-- [ ] Return 3-5 recommended looks instead of one opaque magic result.
+- [x] Add an Auto-Tune analysis pass over histogram, entropy, edge density, palette suitability, output size, flatness, gradient structure, noise, and saturation.
+- [x] Return 3-5 recommended looks from a ranked ten-candidate look pool instead of one opaque magic result.
 - [x] Keep copied Settings JSON focused on processing, not transient UI state.
 
-Success signal: users can explore aggressively, recover quickly, and share repeatable looks.
+Success signal: shipped. Users can explore aggressively, recover quickly, share repeatable looks, and ask Auto-Tune for image-aware starting points without losing manual control.
 
 ### Phase 4: Effect Stack MVP
 

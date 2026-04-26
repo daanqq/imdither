@@ -1,7 +1,7 @@
 # IMDITHER PRD
 
-Status: done
-Last updated: 2026-04-26
+Status: in progress
+Last updated: 2026-04-27
 
 ## 1. Product Summary
 
@@ -24,6 +24,8 @@ The current product is a single-screen, local-only editor. It is optimized for d
 - Provide a fast, deterministic, testable dithering editor for one image at a time.
 - Keep image processing local, private, and reproducible.
 - Make good visual starting points discoverable through curated processing recipes.
+- Make image-aware starting points discoverable through Auto-Tune
+  recommendations without hiding the underlying settings.
 - Keep palette, algorithm, preview, export, and settings contracts explicit enough for OSS maintenance.
 - Separate the DOM-free image-processing engine from web-only UI, source-intake, preview, and export layers.
 - Maintain a distinctive dark-first, Nothing-inspired workstation interface with high information density.
@@ -169,7 +171,48 @@ Current curated recipes:
 - Screenprint 16 RGB
 - Screenprint 16 Perceptual
 
-### 8.6 Algorithms
+### 8.6 Auto-Tune Recommendations
+
+Auto-Tune is an image-aware starting-point workflow, not a persisted mode.
+
+Rules:
+
+- Auto-Tune analyzes the current Source Image from a DOM-free Pixel Buffer.
+- Auto-Tune ranks ten deterministic candidate looks in core.
+- The visible Auto-Tune panel shows only the strongest 3 to 5 recommendations.
+- One recommendation is marked `Recommended`; none are applied automatically.
+- Applying a recommendation applies the recommendation's normal Look Snapshot
+  settings through the same Settings Transition path used by pasted looks.
+- Applied recommendations remain normal editable Editor Settings and normal
+  Settings History entries.
+- Auto-Tune state, loading, inline error, and applied marker are runtime UI
+  state, not persisted editor state.
+- Manual settings changes clear the applied marker.
+- Runtime failures are shown inside the Auto-Tune panel, not as global app
+  errors.
+- User-loaded sources require pressing `Auto`; the bundled demo source may seed
+  the panel with a precomputed shortlist that matches the runtime
+  recommendation contract.
+- Pressing `Auto` on the bundled demo runs the normal runtime path.
+
+Current Auto-Tune candidate looks:
+
+- Clean Reduction
+- Fine Ordered Mono
+- High Contrast Ink
+- Screenprint Color
+- Texture/Noise Look
+- Soft Poster
+- Newsprint Mono
+- Low Noise Photo
+- Arcade Color
+- Ink Wash
+
+Auto-Tune may create extracted custom palettes for Clean Reduction and
+Screenprint Color. A 32-color extracted custom palette is allowed, but Color
+Depth remains limited to `2`, `4`, `8`, or `16` when using limited depth.
+
+### 8.7 Algorithms
 
 The Dither Algorithm Registry is the source of truth for algorithm ids, labels, capabilities, metadata labels, option ordering, and execution dispatch.
 
@@ -194,7 +237,7 @@ Rules:
 - Algorithm options in the UI are derived from registry metadata.
 - Algorithm-specific controls are driven by registry capabilities where practical.
 
-### 8.7 Palettes
+### 8.8 Palettes
 
 The app supports preset palettes and one active custom palette in Editor Settings.
 
@@ -235,7 +278,7 @@ Architectural requirements:
 - palette presets define default color mode
 - palette parsing/export and source extraction live in DOM-free core modules
 
-### 8.8 Color, Resize, and Preprocessing
+### 8.9 Color, Resize, and Preprocessing
 
 Color modes:
 
@@ -271,7 +314,7 @@ Preprocessing controls:
 
 Slider-like preprocessing controls use draft-on-drag and commit-on-release behavior so transient slider movement does not start preview jobs or persist draft values.
 
-### 8.9 Preview and Compare
+### 8.10 Preview and Compare
 
 Preview modes:
 
@@ -307,7 +350,7 @@ Screen-sized preview:
 - preview target overrides do not mutate Editor Settings
 - export jobs ignore preview target overrides and always use final output settings
 
-### 8.10 Processing Jobs and Responsiveness
+### 8.11 Processing Jobs and Responsiveness
 
 The editor keeps heavy local image work behind explicit async boundaries:
 
@@ -320,7 +363,7 @@ The editor keeps heavy local image work behind explicit async boundaries:
 
 Preview jobs may run reduced work first, then a refined preview. Export jobs are full-output operations and should report status clearly.
 
-### 8.11 Export and Persistence
+### 8.12 Export and Persistence
 
 Export formats:
 
@@ -353,7 +396,7 @@ Rules:
 
 The visible export action is format-neutral: `Export`.
 
-### 8.12 Metadata
+### 8.13 Metadata
 
 The UI exposes concise technical metadata:
 
@@ -366,7 +409,7 @@ The UI exposes concise technical metadata:
 
 Metadata is informational. It must not become a dashboard or a second settings model.
 
-### 8.13 Accessibility
+### 8.14 Accessibility
 
 Baseline accessibility:
 
@@ -390,7 +433,12 @@ High-level layout:
 - secondary: control panel
 - tertiary: metadata, utility, and status information
 
-The preview stage owns upload/drop affordances, preview surfaces, processing overlays, compare presentation, view-scale controls, and export controls. The control panel owns recipe, palette, algorithm, output, color, and preprocessing controls.
+The preview stage owns upload/drop affordances, preview surfaces, processing
+overlays, compare presentation, view-scale controls, and export controls. The
+editor sidebar places the Auto-Tune panel above the control panel. Auto-Tune
+owns image-aware recommendations and the primary `Auto` action; the control
+panel owns recipe, palette, algorithm, output, color, and preprocessing
+controls.
 
 ### 9.2 Visual Direction
 
@@ -457,6 +505,7 @@ Core owns:
 - output limit helpers
 - palette definitions and palette resolution
 - processing preset registry and matching
+- Auto-Tune analysis and recommendation ranking
 - dither algorithm registry
 - low-level pixel stages
 - high-level `processImage(input, settings)`
@@ -493,6 +542,8 @@ The web app owns browser-specific and React-specific layers:
 - Processing Jobs
 - Worker Client
 - Preview Stage
+- Auto-Tune Panel
+- Auto-Tune recommendation hook and bundled demo recommendation seed
 - Slide Compare Preview Module
 - Preview Viewport geometry
 - Pixel Inspector
@@ -525,6 +576,8 @@ Runtime state includes:
 - source notices
 - errors
 - metadata
+- Auto-Tune recommendation state, inline error state, loading state, and applied
+  marker
 - slide divider position
 
 Large source and processed pixel buffers must not be stored in Zustand.
@@ -584,6 +637,7 @@ Editor Settings do not include:
 - export quality
 - source image data
 - preview target dimensions
+- Auto-Tune recommendation state or applied marker
 - runtime job status
 
 ## 11. Testing Strategy
@@ -644,6 +698,7 @@ Included:
 - PNG, WebP, and JPEG export
 - settings JSON copy/paste for processing settings
 - Look Snapshot copy/paste and one-shot `#look=<payload>` URL import
+- Auto-Tune image-aware recommendation panel
 - local preference persistence
 - dark-first Nothing-inspired UI on top of shared primitives
 - deterministic tests across core, web modules, and UI wiring
@@ -676,6 +731,7 @@ The current product contract is informed by the implemented feature PRDs in this
 - Export Layer
 - Market Impact Roadmap Phase 1 Palette Platform MVP
 - Market Impact Roadmap Phase 3 Look Payloads
+- Market Impact Roadmap Phase 3 Auto-Tune
 
 These feature PRDs are subordinate detail documents. This root PRD should stay aligned with their implemented contracts and with the current code state.
 

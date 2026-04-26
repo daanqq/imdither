@@ -10,10 +10,12 @@ import {
   parsePaletteText,
   safeNormalizeSettings,
   type PaletteExtractionSize,
+  type AutoTuneRecommendation,
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
 import { MoonIcon, SunIcon } from "lucide-react"
 
+import { AutoTunePanel } from "@/components/auto-tune-panel"
 import { ControlPanel } from "@/components/control-panel"
 import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
@@ -25,6 +27,7 @@ import {
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import { getScreenPreviewTarget } from "@/lib/screen-preview"
+import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import {
   createDemoSourceIntake,
   formatSourceNotices,
@@ -107,6 +110,16 @@ export function App() {
       previewViewport.mode,
     ]
   )
+  const autoTune = useAutoTuneRecommendations({ settings, source })
+  const {
+    appliedRecommendationId,
+    clearAppliedMarker,
+    error: autoTuneError,
+    isLoading: isAutoTuneLoading,
+    markApplied: markAutoTuneApplied,
+    recommendations: autoTuneRecommendations,
+    runAutoTune,
+  } = autoTune
 
   const applySourceIntake = React.useCallback(
     (result: SourceIntakeResult) => {
@@ -284,6 +297,7 @@ export function App() {
         transitionContext
       )
 
+      clearAppliedMarker()
       setError(null)
       setSourceNotice(
         result.sourceNotice
@@ -300,7 +314,14 @@ export function App() {
         lookError instanceof Error ? lookError.message : "Look import failed"
       )
     }
-  }, [setError, setSourceNotice, source, transitionContext, transitionSettings])
+  }, [
+    clearAppliedMarker,
+    setError,
+    setSourceNotice,
+    source,
+    transitionContext,
+    transitionSettings,
+  ])
 
   const handleInvalidDrop = React.useCallback(
     (message: string) => {
@@ -378,6 +399,7 @@ export function App() {
         { type: "apply-settings", settings: parsed },
         transitionContext
       )
+      clearAppliedMarker()
       setError(null)
       setSourceNotice(
         result.sourceNotice
@@ -391,7 +413,13 @@ export function App() {
           : "Settings paste failed"
       )
     }
-  }, [setError, setSourceNotice, transitionContext, transitionSettings])
+  }, [
+    clearAppliedMarker,
+    setError,
+    setSourceNotice,
+    transitionContext,
+    transitionSettings,
+  ])
 
   const applyLookText = React.useCallback(
     (text: string, notice: string) => {
@@ -407,12 +435,19 @@ export function App() {
         transitionContext
       )
 
+      clearAppliedMarker()
       setError(null)
       setSourceNotice(
         result.sourceNotice ? `${notice} ${result.sourceNotice}` : notice
       )
     },
-    [setError, setSourceNotice, transitionContext, transitionSettings]
+    [
+      clearAppliedMarker,
+      setError,
+      setSourceNotice,
+      transitionContext,
+      transitionSettings,
+    ]
   )
 
   const handleCopyLook = React.useCallback(async () => {
@@ -566,6 +601,7 @@ export function App() {
           },
           transitionContext
         )
+        clearAppliedMarker()
         setError(null)
         setSourceNotice(`[PALETTE EXTRACTED: ${size} COLORS]`)
       } catch (paletteError) {
@@ -576,25 +612,54 @@ export function App() {
         )
       }
     },
-    [setError, setSourceNotice, source, transitionContext, transitionSettings]
+    [
+      clearAppliedMarker,
+      setError,
+      setSourceNotice,
+      source,
+      transitionContext,
+      transitionSettings,
+    ]
   )
 
   const handleResolutionWidthChange = React.useCallback(
     (width: number) => {
+      clearAppliedMarker()
       transitionSettings({ type: "set-output-width", width }, transitionContext)
     },
-    [transitionContext, transitionSettings]
+    [clearAppliedMarker, transitionContext, transitionSettings]
   )
 
   const handleResetSettings = React.useCallback(() => {
+    clearAppliedMarker()
     transitionSettings({ type: "reset-defaults" }, transitionContext)
-  }, [transitionContext, transitionSettings])
+  }, [clearAppliedMarker, transitionContext, transitionSettings])
 
   const handleSettingsTransition = React.useCallback(
     (transition: SettingsTransition) => {
+      clearAppliedMarker()
       transitionSettings(transition, transitionContext)
     },
-    [transitionContext, transitionSettings]
+    [clearAppliedMarker, transitionContext, transitionSettings]
+  )
+
+  const handleApplyAutoTuneRecommendation = React.useCallback(
+    (recommendation: AutoTuneRecommendation) => {
+      transitionSettings(
+        { type: "apply-settings", settings: recommendation.snapshot.settings },
+        transitionContext
+      )
+      markAutoTuneApplied(recommendation.id)
+      setError(null)
+      setSourceNotice(`[AUTO-TUNE APPLIED: ${recommendation.label}]`)
+    },
+    [
+      markAutoTuneApplied,
+      setError,
+      setSourceNotice,
+      transitionContext,
+      transitionSettings,
+    ]
   )
 
   const handlePreviewViewportChange = React.useCallback(
@@ -652,27 +717,39 @@ export function App() {
             onUndoSettingsChange={undoSettingsChange}
           />
 
-          <ControlPanel
-            advancedOpen={advancedOpen}
-            compareMode={compareMode}
-            settings={settings}
-            onAdvancedOpenChange={setAdvancedOpen}
-            onCompareModeChange={setCompareMode}
-            onCopyLook={handleCopyLook}
-            onCopySettings={handleCopySettings}
-            onCopyPaletteJson={handleCopyPaletteJson}
-            onExportPaletteGpl={handleExportPaletteGpl}
-            onExportPaletteJson={handleExportPaletteJson}
-            onExtractPalette={handleExtractPalette}
-            onImportPaletteFile={handleImportPaletteFile}
-            onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
-            onPasteLook={handlePasteLook}
-            onPasteSettings={handlePasteSettings}
-            onResolutionWidthChange={handleResolutionWidthChange}
-            onReset={handleResetSettings}
-            onSettingsTransition={handleSettingsTransition}
-            resolutionAspectLabel={aspectLabel}
-          />
+          <aside className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2 md:gap-3">
+            <AutoTunePanel
+              appliedRecommendationId={appliedRecommendationId}
+              error={autoTuneError}
+              isLoading={isAutoTuneLoading}
+              recommendations={autoTuneRecommendations}
+              sourceAvailable={Boolean(source)}
+              onApplyRecommendation={handleApplyAutoTuneRecommendation}
+              onRunAutoTune={runAutoTune}
+            />
+
+            <ControlPanel
+              advancedOpen={advancedOpen}
+              compareMode={compareMode}
+              settings={settings}
+              onAdvancedOpenChange={setAdvancedOpen}
+              onCompareModeChange={setCompareMode}
+              onCopyLook={handleCopyLook}
+              onCopySettings={handleCopySettings}
+              onCopyPaletteJson={handleCopyPaletteJson}
+              onExportPaletteGpl={handleExportPaletteGpl}
+              onExportPaletteJson={handleExportPaletteJson}
+              onExtractPalette={handleExtractPalette}
+              onImportPaletteFile={handleImportPaletteFile}
+              onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
+              onPasteLook={handlePasteLook}
+              onPasteSettings={handlePasteSettings}
+              onResolutionWidthChange={handleResolutionWidthChange}
+              onReset={handleResetSettings}
+              onSettingsTransition={handleSettingsTransition}
+              resolutionAspectLabel={aspectLabel}
+            />
+          </aside>
         </section>
       </div>
     </main>

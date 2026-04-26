@@ -135,6 +135,20 @@
 | **Non-Bayer Recipe**            | A **Processing Preset** whose recipe does not control **Bayer Size**.                                      | Regular preset, non-ordered preset |
 | **Fine Mono Bayer**             | The default **Processing Preset** for ordered grayscale output with the 4 Gray palette and 8x8 Bayer size. | Fine preset, first preset          |
 
+## Auto-Tune
+
+| Term                              | Definition                                                                                                | Aliases to avoid                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Auto-Tune**                     | The image-aware workflow that recommends normal **Look Snapshots** from the current **Source Image**.     | Magic preset, AI preset, auto mode    |
+| **Auto-Tune Panel**               | The editor sidebar panel that owns the `Auto` action, inline Auto-Tune states, and recommendation list.   | Assistant panel, smart controls       |
+| **Auto-Tune Candidate**           | One deterministic candidate look generated and ranked by core before shortlist selection.                 | Hidden recommendation, generated item |
+| **Auto-Tune Recommendation**      | A ranked candidate look shown to the user as a normal applicable **Look Snapshot**.                       | Auto preset, suggested preset         |
+| **Auto-Tune Shortlist**           | The visible 3 to 5 **Auto-Tune Recommendations** selected from the ranked candidate pool.                 | Results, recommendation pool          |
+| **Recommended Marker**            | The visual marker on the top-ranked **Auto-Tune Recommendation**.                                         | Best badge, confidence score          |
+| **Applied Recommendation Marker** | The runtime marker showing which visible **Auto-Tune Recommendation** was last applied.                   | Active auto preset, selected look     |
+| **Demo Auto-Tune Seed**           | The bundled demo recommendation fixture shown immediately for the **Demo Image** before runtime analysis. | Demo preset list, cached results      |
+| **Auto-Tune Analysis**            | The deterministic source-image metrics used to rank **Auto-Tune Candidates**.                             | Reasoning, ML inference, score data   |
+
 ## Preview And Comparison
 
 | Term                               | Definition                                                                                                                | Aliases to avoid                   |
@@ -279,6 +293,20 @@
 - A **Look Payload** must not contain **Source Image** data, source file names, **Compare Mode**, **Preview Viewport**, **Export Preferences**, runtime state, **Processing Metadata**, **Source Notice**, or **Processing Preset Id**.
 - **Clipboard Look** and **URL Look Import** apply through **Settings Transition** so **Settings History** can undo them.
 - **URL Look Import** is one-shot import, not general URL state sync.
+- **Auto-Tune** analyzes one current **Source Image** and ranks ten **Auto-Tune
+  Candidates**.
+- **Auto-Tune Shortlist** contains 3 to 5 **Auto-Tune Recommendations**.
+- An **Auto-Tune Recommendation** contains one normal **Look Snapshot**.
+- Applying an **Auto-Tune Recommendation** uses **Settings Transition** and
+  produces normal **Editor Settings**.
+- **Recommended Marker** belongs to the visible **Auto-Tune Shortlist**, not to
+  **Editor Settings**.
+- **Applied Recommendation Marker** is runtime UI state and must clear after
+  manual settings changes.
+- **Demo Auto-Tune Seed** must use the same recommendation contract as runtime
+  **Auto-Tune**.
+- **Auto-Tune Analysis** must not be stored in **Editor Settings**,
+  **Settings JSON**, or **Look Snapshot**.
 - **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
 - **Color Depth** determines the **Effective Palette** without mutating the active **Palette**.
 - **Full Palette Depth** preserves the active **Palette** size in the **Effective Palette**.
@@ -353,6 +381,14 @@
 > **Dev:** "Is a copied **Look Snapshot** just **Settings JSON** with a different button?"
 >
 > **Domain expert:** "No. **Settings JSON** is the processing contract, while a **Look Snapshot** is the share artifact. Its **Look Payload** may travel through **Clipboard Look** or **URL Look Import**, but it still applies only **Editor Settings**."
+>
+> **Dev:** "Is an **Auto-Tune Recommendation** another kind of persisted preset?"
+>
+> **Domain expert:** "No. **Auto-Tune** ranks **Auto-Tune Candidates** and shows an **Auto-Tune Shortlist**, but each visible recommendation applies a normal **Look Snapshot**."
+>
+> **Dev:** "So the **Recommended Marker** and **Applied Recommendation Marker** should not be copied into **Settings JSON**?"
+>
+> **Domain expert:** "Correct. Those markers are runtime UI state. The applied result is only **Editor Settings**."
 
 ## Flagged Ambiguities
 
@@ -413,6 +449,16 @@
 - "Share URL" can imply full URL state sync. Use **URL Look Import** for the one-shot `#look=<payload>` flow and avoid implying that source images, view state, or export preferences are stored in the URL.
 - "Look", "settings", and "preset" overlap. Use **Look Snapshot** for a shareable artifact, **Settings JSON** for the processing contract, and **Processing Preset** for a curated starting recipe.
 - "Payload" is too broad by itself. Use **Look Payload** for compact share transport, **Settings JSON** for serialized editor settings, and **Palette Asset** for standalone palette exchange.
+- "Auto preset" is misleading. Use **Auto-Tune Recommendation** for a visible
+  suggested look and **Processing Preset** for curated manual recipes.
+- "Recommended" can sound like a persisted state or score. Use
+  **Recommended Marker** for the top visible recommendation and avoid showing
+  numeric confidence in v1.
+- "Applied Auto-Tune" can imply a live link to the recommendation. Use
+  **Applied Recommendation Marker** for the runtime marker and **Editor
+  Settings** for the actual applied state.
+- "Demo recommendations" should be called **Demo Auto-Tune Seed** when referring
+  to the bundled shortcut; it must not be treated as the core source of truth.
 - Oversized **Source Image** handling is a **Source Intake** rejection. **Output Size** may still be auto-sized to stay within the **Output Cap**.
 - "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for the worker-backed image run, **Worker Source Cache** for retained source data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
 - "Trace" should mean **Trace Capture**, not a product log or analytics event.
