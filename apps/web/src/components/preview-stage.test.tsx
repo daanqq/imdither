@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server"
-import type * as React from "react"
+import * as React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { PixelBuffer } from "@workspace/core"
 
@@ -16,6 +16,10 @@ type InputMockProps = React.ComponentProps<"input">
 
 const buttonRenders: ButtonMockProps[] = []
 const inputRenders: InputMockProps[] = []
+const toggleGroupItemRenders: Array<{
+  onClick?: () => void
+  value?: string
+}> = []
 const sliderRenders: Array<{
   disabled?: boolean
   max?: number
@@ -50,6 +54,38 @@ vi.mock("@workspace/ui/components/slider", () => ({
   }) => {
     sliderRenders.push(props)
     return <div role="slider" />
+  },
+}))
+
+vi.mock("@workspace/ui/components/toggle-group", () => ({
+  ToggleGroup: ({
+    children,
+    onValueChange,
+  }: {
+    children: React.ReactNode
+    onValueChange?: (value: string) => void
+  }) => (
+    <div>
+      {React.Children.map(children, (child) =>
+        React.isValidElement<{ onClick?: () => void; value?: string }>(child)
+          ? React.cloneElement(child, {
+              onClick: () => onValueChange?.(child.props.value ?? ""),
+            })
+          : child
+      )}
+    </div>
+  ),
+  ToggleGroupItem: ({
+    children,
+    onClick,
+    value,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    value?: string
+  }) => {
+    toggleGroupItemRenders.push({ onClick, value })
+    return <button>{children}</button>
   },
 }))
 
@@ -97,6 +133,7 @@ describe("PreviewStage", () => {
     buttonRenders.length = 0
     inputRenders.length = 0
     sliderRenders.length = 0
+    toggleGroupItemRenders.length = 0
   })
 
   it("keeps upload and export side effects behind callbacks", () => {
@@ -109,6 +146,8 @@ describe("PreviewStage", () => {
         compareMode="processed"
         isDesktopViewScale
         original={buffer}
+        outputHeight={1}
+        outputWidth={1}
         preview={buffer}
         previewTargetHeight={1}
         previewTargetWidth={1}
@@ -146,6 +185,102 @@ describe("PreviewStage", () => {
     expect(onFileSelected).toHaveBeenCalledTimes(1)
     expect(onFileSelected).toHaveBeenCalledWith(file)
     expect(onExportPng).toHaveBeenCalledTimes(1)
+  })
+
+  it("centers manual zoom from full output dimensions while fit preview is reduced", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="slide"
+        isDesktopViewScale={false}
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(600, 450)}
+        previewTargetHeight={450}
+        previewTargetWidth={600}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 2000, y: 1500 },
+      mode: "manual",
+      zoom: 1,
+    })
+  })
+
+  it("shows undo and redo controls with availability states", () => {
+    const onUndoSettingsChange = vi.fn()
+    const onRedoSettingsChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="floyd-steinberg"
+        canRedoSettingsChange={false}
+        canUndoSettingsChange
+        compareMode="processed"
+        isDesktopViewScale
+        original={buffer}
+        preview={buffer}
+        previewTargetHeight={1}
+        previewTargetWidth={1}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+        onRedoSettingsChange={onRedoSettingsChange}
+        onUndoSettingsChange={onUndoSettingsChange}
+      />
+    )
+
+    const undoButton = buttonRenders.find(
+      (button) => button["aria-label"] === "Undo settings change"
+    )
+    const redoButton = buttonRenders.find(
+      (button) => button["aria-label"] === "Redo settings change"
+    )
+
+    undoButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+    redoButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(undoButton).toMatchObject({ disabled: false })
+    expect(redoButton).toMatchObject({ disabled: true })
+    expect(onUndoSettingsChange).toHaveBeenCalledTimes(1)
+    expect(onRedoSettingsChange).toHaveBeenCalledTimes(1)
   })
 
   it("shows quality only for formats that support it", () => {
@@ -315,7 +450,7 @@ describe("PreviewStage", () => {
 
     zoomSlider?.onValueChange?.([5])
     buttonRenders
-      .find((button) => button["aria-label"] === "Set zoom to 100 percent")
+      .find((button) => button["aria-label"] === "Set output pixels to 1:1")
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
     expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
@@ -330,7 +465,9 @@ describe("PreviewStage", () => {
     })
   })
 
-  it("shows zoom inspection controls only after manual zoom mode is selected", () => {
+  it("keeps zoom controls visible in fit mode and switches interactions to real pixels", () => {
+    const onPreviewViewportChange = vi.fn()
+
     renderToStaticMarkup(
       <PreviewStage
         algorithm="bayer"
@@ -356,21 +493,37 @@ describe("PreviewStage", () => {
         onFileSelected={vi.fn()}
         onInvalidDrop={vi.fn()}
         onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
       />
     )
 
-    expect(sliderRenders.some((slider) => slider.max === 16)).toBe(false)
+    const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
+
+    zoomSlider?.onValueChange?.([5])
+    buttonRenders
+      .find((button) => button["aria-label"] === "Set output pixels to 1:1")
+      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
     expect(
       buttonRenders.some(
-        (button) => button["aria-label"] === "Set zoom to 100 percent"
+        (button) => button["aria-label"] === "Set output pixels to 1:1"
       )
-    ).toBe(false)
+    ).toBe(true)
     expect(
       buttonRenders.some(
         (button) => button["aria-label"] === "Toggle pixel inspector"
       )
-    ).toBe(false)
+    ).toBe(true)
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      mode: "manual",
+      zoom: 5,
+    })
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      mode: "manual",
+      zoom: 1,
+      center: { x: 1, y: 1 },
+    })
   })
 
   it("hides the pixel inspector control on mobile", () => {

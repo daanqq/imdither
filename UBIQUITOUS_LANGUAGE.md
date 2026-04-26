@@ -21,24 +21,24 @@
 
 ## Export
 
-| Term                           | Definition                                                                                              | Aliases to avoid                   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Export Preferences**         | Persisted editor UI preferences that control how **Full Output** is encoded into an **Export File**.    | Export settings, output settings   |
-| **Export Format**              | The selected file format for an **Export File**, currently PNG, WebP, or JPEG.                          | File type, download type           |
-| **Export Format Option**       | A selectable **Export Format** entry with stable id, label, MIME type, extension, and quality support.  | Format item, select option         |
-| **Export Quality**             | The shared lossy encoder quality used for WebP and JPEG **Export Files**.                               | Compression, quality setting       |
-| **Quality Control**            | The **Preview Stage** control that changes **Export Quality** when the **Export Format** supports it.   | Quality slider, compression slider |
-| **Quality Slot**               | The reserved **Preview Stage** layout area for **Quality Control**, kept stable even when hidden.       | Slider area, quality wrapper       |
-| **Format Selector**            | The **Preview Stage** control that changes **Export Format**.                                           | Format dropdown, export dropdown   |
-| **Export Action**              | The format-neutral editor command that starts an **Export Job** and downloads an **Export File**.       | Export PNG button, download button |
-| **Export Layer**               | The browser-side layer that encodes a **Pixel Buffer** into an **Export File**.                         | Image helper, canvas helper        |
-| **Browser Encoder**            | The browser canvas encoder used by the **Export Layer** to create a file blob for an **Export Format**. | Canvas export, toBlob path         |
-| **Encoder Failure**            | The explicit failure state when a **Browser Encoder** cannot produce the requested **Export Format**.   | Fallback, silent PNG fallback      |
-| **JPEG Alpha Flattening**      | The export-time alpha compositing used before JPEG encoding because JPEG has no alpha channel.          | JPEG transparency handling         |
-| **Export Metadata Format**     | The actual **Export Format** recorded in **Processing Metadata** for the most recent **Export File**.   | Metadata format, output format     |
-| **Export Controls**            | The **Preview Stage** group containing **Export Action**, **Format Selector**, and **Quality Control**. | Export toolbar, download controls  |
-| **Centered Export Actions**    | The layout rule that **Upload** and **Export Action** stay centered relative to the **Preview**.        | Centered buttons, main actions     |
-| **Export Preference Controls** | The right-side **Preview Stage** controls for **Format Selector** and **Quality Slot**.                 | Format and quality controls        |
+| Term                           | Definition                                                                                                            | Aliases to avoid                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Export Preferences**         | Persisted editor UI preferences that control how **Full Output** is encoded into an **Export File**.                  | Export settings, output settings   |
+| **Export Format**              | The selected file format for an **Export File**, currently PNG, WebP, or JPEG.                                        | File type, download type           |
+| **Export Format Option**       | A selectable **Export Format** entry with stable id, label, MIME type, extension, and quality support.                | Format item, select option         |
+| **Export Quality**             | The shared lossy encoder quality used for WebP and JPEG **Export Files**.                                             | Compression, quality setting       |
+| **Quality Control**            | The hidden **Preview Stage** control wiring that changes **Export Quality** when the **Export Format** supports it.   | Quality slider, compression slider |
+| **Quality Slot**               | The reserved hidden **Preview Stage** layout area for **Quality Control** while export quality placement is deferred. | Slider area, quality wrapper       |
+| **Format Selector**            | The **Preview Stage** control that changes **Export Format**.                                                         | Format dropdown, export dropdown   |
+| **Export Action**              | The format-neutral editor command that starts an **Export Job** and downloads an **Export File**.                     | Export PNG button, download button |
+| **Export Layer**               | The browser-side layer that encodes a **Pixel Buffer** into an **Export File**.                                       | Image helper, canvas helper        |
+| **Browser Encoder**            | The browser canvas encoder used by the **Export Layer** to create a file blob for an **Export Format**.               | Canvas export, toBlob path         |
+| **Encoder Failure**            | The explicit failure state when a **Browser Encoder** cannot produce the requested **Export Format**.                 | Fallback, silent PNG fallback      |
+| **JPEG Alpha Flattening**      | The export-time alpha compositing used before JPEG encoding because JPEG has no alpha channel.                        | JPEG transparency handling         |
+| **Export Metadata Format**     | The actual **Export Format** recorded in **Processing Metadata** for the most recent **Export File**.                 | Metadata format, output format     |
+| **Export Controls**            | The **Preview Stage** group containing **Export Action**, **Format Selector**, and **Quality Control**.               | Export toolbar, download controls  |
+| **Centered Export Actions**    | The layout rule that **Upload** and **Export Action** stay centered relative to the **Preview**.                      | Centered buttons, main actions     |
+| **Export Preference Controls** | The right-side **Preview Stage** controls for **Format Selector** and **Quality Slot**.                               | Format and quality controls        |
 
 ## Public Contracts
 
@@ -62,6 +62,9 @@
 | **Editor Settings**            | The versioned processing configuration that determines the current **Processed Image**.                                                       | Config, preset, options                      |
 | **Settings JSON**              | A serialized **Editor Settings** payload used for reproducible clipboard copy and paste.                                                      | Preset JSON, config JSON, import/export JSON |
 | **Settings Transition**        | A user intent that produces one next **Editor Settings** value while preserving domain rules.                                                 | Settings patch, state update                 |
+| **Settings History**           | The session-local undo and redo stack for **Editor Settings** changes.                                                                        | History, edit history, undo stack            |
+| **Undo Settings Change**       | The command that restores the previous **Editor Settings** entry from **Settings History**.                                                   | Undo, revert change                          |
+| **Redo Settings Change**       | The command that reapplies the next **Editor Settings** entry from **Settings History** after undo.                                           | Redo, reapply change                         |
 | **Transition Context**         | The current source dimensions used by a **Settings Transition** when applying aspect rules.                                                   | Source context, transition data              |
 | **Aspect Lock**                | The rule that keeps **Output Size** proportional to the current **Source Image**.                                                             | Keep ratio, proportional resize              |
 | **Processing Preset**          | A curated starting recipe that applies selected processing fields without becoming stored state.                                              | Recipe mode, settings preset                 |
@@ -139,10 +142,13 @@
 | **Slide Compare**                  | A **Compare Mode** that overlays source and processed images in one frame with a draggable divider.                       | Split compare, before-after slider |
 | **Slide Divider**                  | The draggable vertical control that sets the reveal boundary in **Slide Compare**.                                        | Slider, handle, divider            |
 | **View Scale**                     | The legacy desktop preview sizing concept now represented by **Preview Viewport** mode.                                   | Zoom mode, scale mode              |
-| **Fit View**                       | A **View Scale** that fits the preview within the available preview area.                                                 | Fit, fit to screen                 |
+| **Screen Fit**                     | The user-facing **Fit View** control that shows the whole image as a screen-sized preview.                                | Fit, fit to screen                 |
+| **Real Pixels**                    | The user-facing **Manual View** control for inspecting output pixels with zoom, pan, 1:1, and **Pixel Inspector**.        | Pixels, 1:1 mode, actual pixels    |
+| **Fit View**                       | A **Preview Viewport** mode that fits the preview within the available preview area.                                      | Fit, fit to screen                 |
 | **1:1 View**                       | The legacy preview sizing mode that migrates to **Manual View** at 100% zoom.                                             | Actual size, pixel view            |
 | **Preview Viewport**               | The view-local preview state containing mode, zoom, image-space center, and inspector preference.                         | View scale, zoom state             |
 | **Manual View**                    | A **Preview Viewport** mode that uses numeric zoom and image-space center coordinates instead of fitting the whole image. | 1:1 view, actual mode              |
+| **1:1 Zoom**                       | The zoom command that sets **Manual View** to 100%, where one image pixel maps to one CSS pixel.                          | 100%, actual size button           |
 | **Wheel Zoom Step**                | The wheel zoom rule that rounds the resulting zoom percentage to 50% increments.                                          | Zoom tick, mouse step              |
 | **Pixel Inspector**                | A preview-local readout of image coordinates and visible original or processed hex values under the cursor.               | Loupe, eyedropper                  |
 | **Display Frame**                  | The actual on-screen rectangle used to display a **Preview Surface**.                                                     | Preview pane, container, frame     |
@@ -250,6 +256,9 @@
 - **Extraction Size** is a command input for **Palette Extraction**, not a persisted **Editor Settings** field.
 - A **Settings Transition** produces one next **Editor Settings** object.
 - A **Settings Transition** may use **Transition Context** to preserve **Aspect Lock**.
+- **Settings History** records **Editor Settings** snapshots, not **View-local State** or **Export Preferences**.
+- **Undo Settings Change** and **Redo Settings Change** produce **Editor Settings** changes through the same preview cycle as other settings transitions.
+- Source-intake output-size recommendations may bypass **Settings History** so loading a source does not create a confusing undo entry.
 - A **Processing Preset** applies through one **Settings Transition**.
 - A **Processing Recipe** controls one **Palette**, one **Dither Algorithm**, optionally **Bayer Size**, optionally **Color Mode**, and optionally **Matching Mode**.
 - A **Bayer Recipe** must control **Bayer Size**.
@@ -271,9 +280,12 @@
 - **Perceptual Matching** uses Oklab distance through the **Palette Matcher**.
 - **Matt Parker Dithering** is tonal and does not use **Matching Mode**.
 - **Mobile Experience** always uses **Mobile Fit Preview**.
-- **Desktop Experience** may use **Fit View** or **Manual View**.
+- **Desktop Experience** may use **Screen Fit** or **Real Pixels**.
+- **Screen Fit** maps to **Fit View**.
+- **Real Pixels** maps to **Manual View**.
 - **Fit View** may use **Screen-Sized Preview**.
 - **Manual View** displays inspectable preview pixels subject to preview budget behavior.
+- **1:1 Zoom**, the zoom slider, and **Pixel Inspector** switch the **Preview Viewport** into **Real Pixels** when used.
 - **Preview Viewport** is **View-local State**, not **Editor Settings**.
 - **Preview Viewport** must not be serialized into **Settings JSON**.
 - **Wheel Zoom Step** applies to mouse-wheel zoom, not to the toolbar zoom slider.
@@ -314,25 +326,21 @@
 
 ## Example Dialogue
 
-> **Dev:** "When the user chooses WebP in the **Format Selector**, should that update **Editor Settings** or **Settings JSON**?"
+> **Dev:** "When the user clicks **Undo Settings Change**, should it restore the last **Preview Viewport** too?"
 >
-> **Domain expert:** "No. WebP is an **Export Format**, so it belongs to **Export Preferences**. **Editor Settings** still describe how to produce the **Processed Image**."
+> **Domain expert:** "No. **Settings History** records **Editor Settings** only. **Preview Viewport** is **View-local State**."
 >
-> **Dev:** "Where should I document which fields Settings JSON accepts?"
+> **Dev:** "So **Screen Fit** versus **Real Pixels** never appears in **Settings JSON**?"
 >
-> **Domain expert:** "Use the **Settings Schema Reference**. It defines **Schema Version 2**, including processing fields and excluding **Export Preferences** and **View-local State**."
+> **Domain expert:** "Correct. **Screen Fit** maps to **Fit View**, **Real Pixels** maps to **Manual View**, and both stay outside **Editor Settings**."
 >
-> **Dev:** "If the user chooses **Limited Palette Depth**, do we delete colors from the **Custom Palette**?"
+> **Dev:** "What happens when they use **1:1 Zoom** from **Screen Fit**?"
 >
-> **Domain expert:** "No. **Color Depth** only changes the **Effective Palette** used for processing. **Palette Export** and palette editing still use the full active **Palette**."
+> **Domain expert:** "That switches the **Preview Viewport** into **Real Pixels** at 100% zoom. It does not change the **Processed Image**."
 >
-> **Dev:** "Does **Perceptual Matching** affect Matt Parker output?"
+> **Dev:** "Should the hidden **Quality Control** be undoable?"
 >
-> **Domain expert:** "No. **Perceptual Matching** goes through the **Palette Matcher** for nearest-color algorithms. **Matt Parker Dithering** is tonal."
->
-> **Dev:** "Can old copied settings still load?"
->
-> **Domain expert:** "Yes. **Schema Version 1** **Settings JSON** normalizes into **Schema Version 2** with **Full Palette Depth** and **RGB Matching**."
+> **Domain expert:** "No. **Export Quality** belongs to **Export Preferences**, so it is independent from **Settings History**."
 
 ## Flagged Ambiguities
 
@@ -374,7 +382,9 @@
 - "Cap", "limit", "budget", and "ready %" overlapped in UI and architecture discussion. Use **Output Cap** for the pixel budget and **Output Size** for the selected dimensions.
 - "Original" and **Source Image** overlap. Use **Source Image** for the image entity and **Original View** for the compare mode.
 - "Fit" was used for both preview zoom and resize fitting. Use **Fit View** for preview sizing and **Resize Fit** for contain / cover / stretch.
-- "1:1" was replaced by **Manual View** language for the current viewport model; use **Manual View** for zoom/pan inspection and reserve "100%" for the zoom value where one image pixel maps to one CSS pixel.
+- "Fit" and "Pixels" are short mobile labels. Use **Screen Fit** and **Real Pixels** for desktop-facing product language.
+- "1:1" was replaced by **Manual View** language for the current viewport model; use **Manual View** for zoom/pan inspection and **1:1 Zoom** for the command that sets zoom to 100%.
+- "History" is too broad by itself. Use **Settings History** when undo and redo apply only to **Editor Settings**, not source images, **Preview Viewport**, or **Export Preferences**.
 - "Loupe" was implemented as **Pixel Inspector** for coordinate and color readout, not as an optical magnifying sub-canvas.
 - "Full preview" suggested the screen should always catch up to full resolution. Use **Full Output** for selected output dimensions and keep it tied to export semantics.
 - "Split" and **Slide Compare** both referred to before/after comparison. Canonical term: **Slide Compare**; keep `split` only as legacy persisted state.

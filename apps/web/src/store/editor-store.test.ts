@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS } from "@workspace/core"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
@@ -27,6 +27,10 @@ describe("editor store compare mode migration", () => {
 })
 
 describe("editor store settings transitions", () => {
+  beforeEach(() => {
+    resetEditorStore()
+  })
+
   it("normalizes persisted schema version 1 settings even when Zustand version already matches", () => {
     const persisted = normalizePersistedEditorState({
       settings: {
@@ -49,6 +53,22 @@ describe("editor store settings transitions", () => {
         matchingMode: "rgb",
       },
     })
+  })
+
+  it("does not restore session-local settings history from persisted state", () => {
+    const persisted = normalizePersistedEditorState({
+      canRedoSettingsChange: true,
+      canUndoSettingsChange: true,
+      settings: DEFAULT_SETTINGS,
+      settingsHistory: {
+        future: [{ ...DEFAULT_SETTINGS, algorithm: "jarvis" }],
+        past: [{ ...DEFAULT_SETTINGS, algorithm: "atkinson" }],
+      },
+    })
+
+    expect(persisted).not.toHaveProperty("canRedoSettingsChange")
+    expect(persisted).not.toHaveProperty("canUndoSettingsChange")
+    expect(persisted).not.toHaveProperty("settingsHistory")
   })
 
   it("applies settings intents and stores transition Source Notices", () => {
@@ -169,6 +189,176 @@ describe("editor store settings transitions", () => {
       loupeEnabled: true,
     })
   })
+
+  it("undoes and redoes editor settings transitions", () => {
+    useEditorStore.getState().transitionSettings({
+      type: "set-algorithm",
+      algorithm: "floyd-steinberg",
+    })
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: true,
+      settings: { algorithm: "floyd-steinberg" },
+    })
+
+    useEditorStore.getState().undoSettingsChange()
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: true,
+      canUndoSettingsChange: false,
+      settings: { algorithm: DEFAULT_SETTINGS.algorithm },
+    })
+
+    useEditorStore.getState().redoSettingsChange()
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: true,
+      settings: { algorithm: "floyd-steinberg" },
+    })
+  })
+
+  it("resets manual preview viewport when undo or redo restores different output dimensions", () => {
+    useEditorStore.setState({
+      previewViewport: {
+        mode: "manual",
+        zoom: 8,
+        center: { x: 3200, y: 2400 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+      settings: DEFAULT_SETTINGS,
+    })
+
+    useEditorStore
+      .getState()
+      .transitionSettings(
+        { type: "set-output-width", width: 640 },
+        { sourceDimensions: { width: 4, height: 3 } }
+      )
+
+    useEditorStore.setState({
+      previewViewport: {
+        mode: "manual",
+        zoom: 8,
+        center: { x: 3200, y: 2400 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+    })
+
+    useEditorStore.getState().undoSettingsChange()
+
+    expect(useEditorStore.getState().previewViewport).toMatchObject({
+      mode: "fit",
+      zoom: 1,
+      center: { x: 0, y: 0 },
+      gridEnabled: true,
+      loupeEnabled: true,
+    })
+
+    useEditorStore.setState({
+      previewViewport: {
+        mode: "manual",
+        zoom: 8,
+        center: { x: 3200, y: 2400 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+    })
+
+    useEditorStore.getState().redoSettingsChange()
+
+    expect(useEditorStore.getState().previewViewport).toMatchObject({
+      mode: "fit",
+      zoom: 1,
+      center: { x: 0, y: 0 },
+      gridEnabled: true,
+      loupeEnabled: true,
+    })
+  })
+
+  it("clears redo when a new settings transition follows undo", () => {
+    useEditorStore.getState().transitionSettings({
+      type: "set-algorithm",
+      algorithm: "floyd-steinberg",
+    })
+    useEditorStore.getState().transitionSettings({
+      type: "set-matching-mode",
+      matchingMode: "perceptual",
+    })
+
+    useEditorStore.getState().undoSettingsChange()
+    expect(useEditorStore.getState().canRedoSettingsChange).toBe(true)
+
+    useEditorStore.getState().transitionSettings({
+      type: "set-color-mode",
+      colorMode: "color-preserve",
+    })
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: true,
+      settings: {
+        algorithm: "floyd-steinberg",
+        matchingMode: "rgb",
+        preprocess: { colorMode: "color-preserve" },
+      },
+    })
+  })
+
+  it("can apply source-driven output sizing without creating settings history", () => {
+    useEditorStore
+      .getState()
+      .transitionSettings(
+        { type: "set-output-size", width: 1024, height: 768 },
+        undefined,
+        { recordHistory: false }
+      )
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: false,
+      settings: {
+        resize: {
+          height: 768,
+          width: 1024,
+        },
+      },
+    })
+  })
+
+  it("keeps view, export, panel, runtime, notice, and metadata state out of settings history", () => {
+    useEditorStore.getState().setCompareMode("original")
+    useEditorStore.getState().setPreviewViewport({
+      mode: "manual",
+      zoom: 2,
+      center: { x: 8, y: 4 },
+    })
+    useEditorStore.getState().setExportFormat("jpeg")
+    useEditorStore.getState().setExportQuality(0.47)
+    useEditorStore.getState().setAdvancedOpen(true)
+    useEditorStore.getState().setStatus("ready")
+    useEditorStore.getState().setError("Preview failed")
+    useEditorStore.getState().setSourceNotice("[SOURCE LOADED]")
+    useEditorStore.getState().setMetadata({
+      algorithmName: DEFAULT_SETTINGS.algorithm,
+      exportFormat: "PNG",
+      outputHeight: 1,
+      outputWidth: 1,
+      paletteSize: 2,
+      processingTimeMs: 4.7,
+      sourceHeight: 1,
+      sourceWidth: 1,
+    })
+
+    expect(useEditorStore.getState()).toMatchObject({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: false,
+      settings: DEFAULT_SETTINGS,
+    })
+  })
 })
 
 function createMemoryStorage(): Storage {
@@ -184,4 +374,31 @@ function createMemoryStorage(): Storage {
     removeItem: (key) => entries.delete(key),
     setItem: (key, value) => entries.set(key, value),
   }
+}
+
+function resetEditorStore() {
+  useEditorStore.setState({
+    advancedOpen: false,
+    canRedoSettingsChange: false,
+    canUndoSettingsChange: false,
+    compareMode: "slide",
+    error: null,
+    exportFormat: "png",
+    exportQuality: 1,
+    metadata: null,
+    previewViewport: {
+      center: { x: 0, y: 0 },
+      gridEnabled: false,
+      loupeEnabled: false,
+      mode: "fit",
+      zoom: 1,
+    },
+    settings: DEFAULT_SETTINGS,
+    settingsHistory: {
+      future: [],
+      past: [],
+    },
+    sourceNotice: null,
+    status: "idle",
+  })
 }

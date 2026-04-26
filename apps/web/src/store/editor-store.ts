@@ -39,6 +39,9 @@ export type JobStatus =
 
 type EditorState = {
   settings: EditorSettings
+  canRedoSettingsChange: boolean
+  canUndoSettingsChange: boolean
+  settingsHistory: SettingsHistory
   compareMode: CompareMode
   previewViewport: PreviewViewport
   exportFormat: ExportFormat
@@ -50,8 +53,11 @@ type EditorState = {
   metadata: ProcessingMetadata | null
   transitionSettings: (
     transition: SettingsTransition,
-    context?: SettingsTransitionContext
+    context?: SettingsTransitionContext,
+    options?: SettingsHistoryOptions
   ) => SettingsTransitionResult
+  undoSettingsChange: () => void
+  redoSettingsChange: () => void
   setCompareMode: (mode: CompareMode) => void
   setPreviewViewport: (viewport: Partial<PreviewViewport>) => void
   setExportFormat: (format: ExportFormat) => void
@@ -63,10 +69,27 @@ type EditorState = {
   setMetadata: (metadata: ProcessingMetadata | null) => void
 }
 
+type SettingsHistoryOptions = {
+  recordHistory?: boolean
+}
+
+type SettingsHistory = {
+  future: EditorSettings[]
+  past: EditorSettings[]
+}
+
+const EMPTY_SETTINGS_HISTORY: SettingsHistory = {
+  future: [],
+  past: [],
+}
+
 export const useEditorStore = create<EditorState>()(
   persist(
     (set) => ({
       settings: DEFAULT_SETTINGS,
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: false,
+      settingsHistory: EMPTY_SETTINGS_HISTORY,
       compareMode: "slide",
       previewViewport: DEFAULT_PREVIEW_VIEWPORT,
       exportFormat: DEFAULT_EXPORT_FORMAT,
@@ -76,7 +99,7 @@ export const useEditorStore = create<EditorState>()(
       error: null,
       sourceNotice: null,
       metadata: null,
-      transitionSettings: (transition, context) => {
+      transitionSettings: (transition, context, options = {}) => {
         let transitionResult: SettingsTransitionResult | null = null
 
         set((state) => {
@@ -85,22 +108,31 @@ export const useEditorStore = create<EditorState>()(
             transition,
             context
           )
-          const resizeChanged =
-            state.settings.resize.width !== result.settings.resize.width ||
-            state.settings.resize.height !== result.settings.resize.height
+          const resizeChanged = outputDimensionsChanged(
+            state.settings,
+            result.settings
+          )
+          const recordHistory = options.recordHistory !== false
+          const settingsChanged = !areSettingsEqual(
+            state.settings,
+            result.settings
+          )
+          const settingsHistory =
+            recordHistory && settingsChanged
+              ? {
+                  future: [],
+                  past: [...state.settingsHistory.past, state.settings],
+                }
+              : state.settingsHistory
           transitionResult = result
 
           return {
+            canRedoSettingsChange: settingsHistory.future.length > 0,
+            canUndoSettingsChange: settingsHistory.past.length > 0,
             settings: result.settings,
+            settingsHistory,
             ...(resizeChanged
-              ? {
-                  previewViewport: normalizePreviewViewport({
-                    ...state.previewViewport,
-                    mode: "fit",
-                    zoom: 1,
-                    center: { x: 0, y: 0 },
-                  }),
-                }
+              ? resetPreviewViewportForOutputChange(state.previewViewport)
               : {}),
             ...(result.sourceNotice !== undefined
               ? { sourceNotice: result.sourceNotice }
@@ -114,6 +146,48 @@ export const useEditorStore = create<EditorState>()(
 
         return transitionResult
       },
+      undoSettingsChange: () =>
+        set((state) => {
+          const previous = state.settingsHistory.past.at(-1)
+
+          if (!previous) {
+            return state
+          }
+
+          const past = state.settingsHistory.past.slice(0, -1)
+          const future = [state.settings, ...state.settingsHistory.future]
+
+          return {
+            canRedoSettingsChange: true,
+            canUndoSettingsChange: past.length > 0,
+            settings: previous,
+            settingsHistory: { future, past },
+            ...(outputDimensionsChanged(state.settings, previous)
+              ? resetPreviewViewportForOutputChange(state.previewViewport)
+              : {}),
+          }
+        }),
+      redoSettingsChange: () =>
+        set((state) => {
+          const next = state.settingsHistory.future[0]
+
+          if (!next) {
+            return state
+          }
+
+          const future = state.settingsHistory.future.slice(1)
+          const past = [...state.settingsHistory.past, state.settings]
+
+          return {
+            canRedoSettingsChange: future.length > 0,
+            canUndoSettingsChange: true,
+            settings: next,
+            settingsHistory: { future, past },
+            ...(outputDimensionsChanged(state.settings, next)
+              ? resetPreviewViewportForOutputChange(state.previewViewport)
+              : {}),
+          }
+        }),
       setCompareMode: (compareMode) => set({ compareMode }),
       setPreviewViewport: (previewViewport) =>
         set((state) => ({
@@ -182,7 +256,7 @@ export function normalizePersistedEditorState(
   }
 
   return {
-    ...persistedState,
+    advancedOpen: persistedState.advancedOpen === true,
     compareMode: normalizeCompareMode(persistedState.compareMode),
     previewViewport: normalizePreviewViewport(
       persistedState.previewViewport ?? persistedState.viewScale
@@ -208,8 +282,39 @@ function settingsWithoutPersistedDimensions(
   }
 }
 
+function areSettingsEqual(
+  left: EditorSettings,
+  right: EditorSettings
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+function outputDimensionsChanged(
+  current: EditorSettings,
+  next: EditorSettings
+): boolean {
+  return (
+    current.resize.width !== next.resize.width ||
+    current.resize.height !== next.resize.height
+  )
+}
+
+function resetPreviewViewportForOutputChange(
+  previewViewport: PreviewViewport
+): { previewViewport: PreviewViewport } {
+  return {
+    previewViewport: normalizePreviewViewport({
+      ...previewViewport,
+      mode: "fit",
+      zoom: 1,
+      center: { x: 0, y: 0 },
+    }),
+  }
+}
+
 function isPersistedEditorState(value: unknown): value is {
   settings: unknown
+  advancedOpen?: unknown
   compareMode?: unknown
   previewViewport?: unknown
   viewScale?: unknown

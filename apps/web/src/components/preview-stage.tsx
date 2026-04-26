@@ -26,7 +26,9 @@ import {
   CrosshairIcon,
   DownloadIcon,
   MaximizeIcon,
+  Redo2Icon,
   ScanSearchIcon,
+  Undo2Icon,
   UploadIcon,
 } from "lucide-react"
 
@@ -64,11 +66,15 @@ import {
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
 import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
 
+const noop = () => {}
+
 export type PreviewStageProps = {
   algorithm: DitherAlgorithm
   compareMode: CompareMode
   isDesktopViewScale: boolean
   original: PixelBuffer | null
+  outputHeight?: number
+  outputWidth?: number
   preview: PixelBuffer | null
   status: JobStatus
   previewTargetHeight: number
@@ -76,6 +82,8 @@ export type PreviewStageProps = {
   previewViewport: PreviewViewport
   exportFormat: ExportFormat
   exportQuality: number
+  canRedoSettingsChange?: boolean
+  canUndoSettingsChange?: boolean
   onExport: () => void
   onExportFormatChange: (format: ExportFormat) => void
   onExportQualityChange: (quality: number) => void
@@ -83,6 +91,8 @@ export type PreviewStageProps = {
   onInvalidDrop: (message: string) => void
   onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
   onPreviewViewportChange: (viewport: Partial<PreviewViewport>) => void
+  onRedoSettingsChange?: () => void
+  onUndoSettingsChange?: () => void
 }
 
 export const PreviewStage = React.memo(function PreviewStage({
@@ -90,6 +100,8 @@ export const PreviewStage = React.memo(function PreviewStage({
   compareMode,
   isDesktopViewScale,
   original,
+  outputHeight,
+  outputWidth,
   preview,
   previewTargetHeight,
   previewTargetWidth,
@@ -97,6 +109,8 @@ export const PreviewStage = React.memo(function PreviewStage({
   previewViewport,
   exportFormat,
   exportQuality,
+  canRedoSettingsChange = false,
+  canUndoSettingsChange = false,
   onExport,
   onExportFormatChange,
   onExportQualityChange,
@@ -104,6 +118,8 @@ export const PreviewStage = React.memo(function PreviewStage({
   onInvalidDrop,
   onPreviewDisplaySizeChange,
   onPreviewViewportChange,
+  onRedoSettingsChange,
+  onUndoSettingsChange,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
   const [slideDividerPercent, setSlideDividerPercent] = React.useState(
@@ -115,14 +131,16 @@ export const PreviewStage = React.memo(function PreviewStage({
   const viewScale: ViewScale = previewViewport.mode === "fit" ? "fit" : "actual"
   const comparisonFrameWidth = preview?.width ?? original?.width
   const comparisonFrameHeight = preview?.height ?? original?.height
+  const fullOutputWidth = outputWidth ?? previewTargetWidth
+  const fullOutputHeight = outputHeight ?? previewTargetHeight
   const toolbarFrameWidth =
     showOriginal && comparisonFrameWidth
       ? comparisonFrameWidth
-      : previewTargetWidth
+      : fullOutputWidth
   const toolbarFrameHeight =
     showOriginal && comparisonFrameHeight
       ? comparisonFrameHeight
-      : previewTargetHeight
+      : fullOutputHeight
   const previewReduced = preview
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
@@ -250,8 +268,8 @@ export const PreviewStage = React.memo(function PreviewStage({
               </div>
             )}
           </div>
-          <div className="mx-2 grid shrink-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-            <div className="order-1 grid min-w-0 grid-cols-2 items-center gap-2 md:relative md:order-2 md:flex md:h-full md:min-h-9 md:justify-center">
+          <div className="mx-2 grid shrink-0 grid-cols-1 justify-items-center gap-3">
+            <div className="grid w-full min-w-0 items-center justify-center gap-2 md:relative md:flex md:h-full md:min-h-9">
               <Input
                 ref={fileInputRef}
                 className="sr-only"
@@ -259,50 +277,30 @@ export const PreviewStage = React.memo(function PreviewStage({
                 accept="image/*"
                 onChange={handleFileInput}
               />
-              <div className="contents md:grid md:h-full md:grid-cols-[9rem_9rem] md:gap-2">
+              <div className="grid h-8 w-full max-w-[30rem] grid-cols-[2fr_2fr_2fr_2fr] items-stretch gap-2 md:h-full md:w-[34rem] md:max-w-[34rem]">
                 <Button
-                  className="min-w-0 md:h-full"
+                  className="h-full w-full min-w-0"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <UploadIcon data-icon="inline-start" />
                   Upload
                 </Button>
-                <div className="grid h-8 min-w-0 grid-cols-[minmax(0,1fr)_5.25rem] md:contents">
-                  <Button
-                    className="h-8 min-w-0 rounded-r-none border-r-0 border-input md:h-full md:rounded-r-md md:border-r"
-                    disabled={!original || status === "exporting"}
-                    onClick={onExport}
-                  >
-                    <DownloadIcon data-icon="inline-start" />
-                    {status === "exporting" ? "Exporting" : "Export"}
-                  </Button>
-                  <div className="min-w-0 md:hidden">
-                    <Select
-                      value={exportFormat}
-                      onValueChange={(value) =>
-                        onExportFormatChange(value as ExportFormat)
-                      }
-                    >
-                      <SelectTrigger
-                        aria-label="Export format"
-                        className="h-8 w-full rounded-l-none"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EXPORT_FORMAT_OPTIONS.map((option) => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <div className="contents md:absolute md:top-1/2 md:left-[calc(50%+9.75rem)] md:grid md:w-80 md:-translate-y-1/2 md:grid-cols-[6rem_minmax(0,1fr)] md:items-center md:gap-2">
-                <div className="hidden min-w-0 md:block">
+                <HistoryControls
+                  canRedo={canRedoSettingsChange}
+                  canUndo={canUndoSettingsChange}
+                  onRedo={onRedoSettingsChange}
+                  onUndo={onUndoSettingsChange}
+                />
+                <Button
+                  className="h-full w-full min-w-0"
+                  disabled={!original || status === "exporting"}
+                  onClick={onExport}
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  {status === "exporting" ? "Exporting" : "Export"}
+                </Button>
+                <div className="h-full min-w-0">
                   <Select
                     value={exportFormat}
                     onValueChange={(value) =>
@@ -311,7 +309,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                   >
                     <SelectTrigger
                       aria-label="Export format"
-                      className="h-8 w-full md:h-full"
+                      className="!h-full min-h-0 w-full"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -324,13 +322,15 @@ export const PreviewStage = React.memo(function PreviewStage({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="hidden md:absolute md:top-1/2 md:left-[calc(50%+15.75rem)] md:w-48 md:-translate-y-1/2">
                 {selectedExportFormat.supportsQuality ? (
-                  <div className="col-span-2 min-w-0 md:col-span-1">
-                    <label className="flex h-8 min-w-0 items-center gap-2 font-mono text-[10px] text-muted-foreground md:h-full">
+                  <div className="min-w-0">
+                    <label className="flex h-8 min-w-0 items-center gap-2 font-mono text-[10px] text-muted-foreground md:grid md:h-auto md:grid-cols-[minmax(0,1fr)_4ch] md:gap-x-2 md:gap-y-1">
                       <span>Quality</span>
                       <Slider
                         aria-label="Export quality"
-                        className="min-w-0 flex-1"
+                        className="min-w-0 flex-1 md:col-span-2 md:row-start-2 md:flex-none"
                         max={MAX_EXPORT_QUALITY}
                         min={MIN_EXPORT_QUALITY}
                         step={EXPORT_QUALITY_STEP}
@@ -339,7 +339,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                           onExportQualityChange(value[0] ?? exportQuality)
                         }
                       />
-                      <span className="w-[4ch] text-right tabular-nums">
+                      <span className="w-[4ch] text-right tabular-nums md:col-start-2 md:row-start-1">
                         {exportQualityPercent}%
                       </span>
                     </label>
@@ -354,16 +354,49 @@ export const PreviewStage = React.memo(function PreviewStage({
               viewport={previewViewport}
               onViewportChange={onPreviewViewportChange}
             />
-            <div
-              aria-hidden="true"
-              className="order-3 hidden min-w-0 md:block"
-            />
           </div>
         </CardContent>
       </Card>
     </div>
   )
 })
+
+function HistoryControls({
+  canRedo,
+  canUndo,
+  onRedo,
+  onUndo,
+}: {
+  canRedo: boolean
+  canUndo: boolean
+  onRedo?: () => void
+  onUndo?: () => void
+}) {
+  return (
+    <div className="grid h-full w-full grid-cols-2 gap-2">
+      <Button
+        aria-label="Undo settings change"
+        className="h-full w-full"
+        disabled={!canUndo}
+        size="icon"
+        variant="outline"
+        onClick={onUndo ?? noop}
+      >
+        <Undo2Icon />
+      </Button>
+      <Button
+        aria-label="Redo settings change"
+        className="h-full w-full"
+        disabled={!canRedo}
+        size="icon"
+        variant="outline"
+        onClick={onRedo ?? noop}
+      >
+        <Redo2Icon />
+      </Button>
+    </div>
+  )
+}
 
 function usePreviewDisplayMeasurement(
   onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
@@ -505,23 +538,17 @@ function PreviewViewportToolbar({
     }),
     [imageHeight, imageWidth]
   )
-  const zoomControlsVisible = viewport.mode === "manual"
-  const gridColumns = zoomControlsVisible
-    ? "grid-cols-[auto_auto_minmax(6rem,1fr)_auto]"
-    : "grid-cols-[auto]"
-
   return (
     <div
       className={cn(
-        "order-2 grid h-full min-w-0 items-center gap-1.5 md:order-1 md:max-w-[26rem]",
-        gridColumns
+        "grid h-full w-full max-w-[30rem] min-w-0 grid-cols-[repeat(4,minmax(0,1fr))] items-center gap-2 md:max-w-[34rem] md:grid-cols-[repeat(8,minmax(0,1fr))]"
       )}
     >
       <ToggleGroup
         type="single"
         value={viewport.mode}
         variant="outline"
-        className="h-full"
+        className="col-span-2 grid h-10 w-full max-w-full grid-cols-2 md:col-span-4"
         onValueChange={(value) => {
           if (value === "fit") {
             onViewportChange({ mode: "fit" })
@@ -535,59 +562,65 @@ function PreviewViewportToolbar({
         <ToggleGroupItem
           aria-label="Fit preview"
           value="fit"
-          className="h-full min-w-10"
+          className="h-full min-w-10 px-2"
         >
           <MaximizeIcon data-icon="inline-start" />
-          <span className="hidden lg:inline">Fit</span>
+          <span className="md:hidden">Fit</span>
+          <span className="hidden md:inline">Screen Fit</span>
         </ToggleGroupItem>
         <ToggleGroupItem
-          aria-label="Manual zoom"
+          aria-label="Inspect output pixels"
           value="manual"
-          className="h-full min-w-10"
+          className="h-full min-w-10 px-2"
         >
           <ScanSearchIcon data-icon="inline-start" />
-          <span className="hidden lg:inline">Zoom</span>
+          <span className="md:hidden">Pixels</span>
+          <span className="hidden md:inline">Real Pixels</span>
         </ToggleGroupItem>
       </ToggleGroup>
-      {zoomControlsVisible ? (
-        <>
-          <Button
-            type="button"
-            aria-label="Set zoom to 100 percent"
-            variant="outline"
-            className="h-full min-w-10 px-2 font-mono text-[10px]"
-            onClick={() => onViewportChange(centeredViewport)}
-          >
-            100%
-          </Button>
-          <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_4ch] items-center gap-2 font-mono text-[10px] text-muted-foreground">
-            <Slider
-              aria-label="Preview zoom"
-              className="min-w-0"
-              min={0.25}
-              max={16}
-              step={0.25}
-              value={[viewport.zoom]}
-              onValueChange={(value) =>
-                onViewportChange({
-                  mode: "manual",
-                  zoom: clampZoom(value[0] ?? viewport.zoom),
-                })
-              }
-            />
-            <span className="text-right tabular-nums">{zoomPercent}%</span>
-          </label>
-        </>
-      ) : null}
-      {zoomControlsVisible && pixelInspectorEnabled ? (
+      <div className="col-span-2 grid h-full min-w-0 grid-cols-4 items-center gap-2 md:contents">
+        <Button
+          type="button"
+          aria-label="Set output pixels to 1:1"
+          variant="outline"
+          className="h-full min-w-10 px-2 font-mono text-[10px] md:col-span-1"
+          onClick={() => onViewportChange(centeredViewport)}
+        >
+          1:1
+        </Button>
+        <label className="col-span-3 mx-2 grid min-w-0 grid-cols-[minmax(0,1fr)_4ch] items-center gap-x-2 gap-y-1 font-mono text-[10px] text-muted-foreground md:col-span-2">
+          <span className="col-start-1 row-start-1">Zoom</span>
+          <Slider
+            aria-label="Preview zoom"
+            className="col-span-2 row-start-2 min-w-0"
+            min={0.25}
+            max={16}
+            step={0.25}
+            value={[viewport.zoom]}
+            onValueChange={(value) =>
+              onViewportChange({
+                mode: "manual",
+                zoom: clampZoom(value[0] ?? viewport.zoom),
+              })
+            }
+          />
+          <span className="col-start-2 row-start-1 text-right tabular-nums">
+            {zoomPercent}%
+          </span>
+        </label>
+      </div>
+      {pixelInspectorEnabled ? (
         <Button
           type="button"
           aria-label="Toggle pixel inspector"
           aria-pressed={viewport.loupeEnabled}
           variant={viewport.loupeEnabled ? "default" : "outline"}
-          className="ml-1.5 h-full min-w-10 px-2"
+          className="ml-1.5 h-full min-w-10 px-2 md:col-span-1 md:ml-0"
           onClick={() =>
-            onViewportChange({ loupeEnabled: !viewport.loupeEnabled })
+            onViewportChange({
+              loupeEnabled: !viewport.loupeEnabled,
+              mode: "manual",
+            })
           }
         >
           <CrosshairIcon data-icon="inline-start" />
@@ -629,6 +662,11 @@ const CanvasPanel = React.memo(function CanvasPanel({
     height: number
     width: number
   } | null>(null)
+  const centeredManualViewport =
+    previewViewport?.mode === "manual" &&
+    previewViewport.zoom === 1 &&
+    Math.round(previewViewport.center.x) === Math.round(expectedWidth / 2) &&
+    Math.round(previewViewport.center.y) === Math.round(expectedHeight / 2)
   const manualScale =
     previewViewport?.mode === "manual"
       ? getManualViewportScale({
@@ -652,10 +690,10 @@ const CanvasPanel = React.memo(function CanvasPanel({
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: expectedHeight,
     sourceWidth: expectedWidth,
-    viewScale,
+    viewScale: centeredManualViewport ? "fit" : viewScale,
   })
   const manualFrameStyle =
-    previewViewport?.mode === "manual"
+    previewViewport?.mode === "manual" && !centeredManualViewport
       ? {
           height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(expectedHeight * manualScale))}px`,
           left: "50%",
@@ -749,6 +787,23 @@ const CanvasPanel = React.memo(function CanvasPanel({
   React.useLayoutEffect(() => {
     viewportRef.current = previewViewport ?? null
   }, [previewViewport])
+
+  React.useLayoutEffect(() => {
+    if (
+      previewViewport?.mode !== "manual" ||
+      centeredManualViewport ||
+      !viewportBox
+    ) {
+      return
+    }
+
+    applyManualFrameViewport(previewViewport)
+  }, [
+    applyManualFrameViewport,
+    centeredManualViewport,
+    previewViewport,
+    viewportBox,
+  ])
 
   React.useEffect(() => {
     return () => {
@@ -890,7 +945,11 @@ const CanvasPanel = React.memo(function CanvasPanel({
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        style={viewScale === "fit" ? { containerType: "size" } : undefined}
+        style={
+          viewScale === "fit" || centeredManualViewport
+            ? { containerType: "size" }
+            : undefined
+        }
         onWheel={handleWheel}
         onPointerDown={panPointer}
         onPointerMove={(event) => {

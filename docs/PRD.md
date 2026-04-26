@@ -479,6 +479,7 @@ The web app owns browser-specific and React-specific layers:
 
 - Source Intake
 - Editor Settings Transition Module
+- Settings History
 - Processing Jobs
 - Worker Client
 - Preview Stage
@@ -499,13 +500,14 @@ Persisted editor preferences include:
 
 - normalized settings without stale output dimensions
 - compare mode
-- view scale
+- preview viewport
 - export format
 - export quality
 - advanced panel state
 
 Runtime state includes:
 
+- session-local settings history
 - source image buffer
 - processed preview buffer
 - source id/name
@@ -516,6 +518,10 @@ Runtime state includes:
 - slide divider position
 
 Large source and processed pixel buffers must not be stored in Zustand.
+
+Settings History is session-local and wraps Editor Settings transitions only.
+Undo and redo do not include source images, preview viewport, compare mode,
+export preferences, runtime status, notices, metadata, or panel state.
 
 ### 10.7 Settings Schema
 

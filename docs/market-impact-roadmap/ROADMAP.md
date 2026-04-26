@@ -122,7 +122,7 @@ Success signal: shipped. Users can intentionally control palette size, compare R
 
 ### Phase 3: Look-Building Workflow
 
-- [ ] Add undo and redo for editor settings changes.
+- [x] Add undo and redo for editor settings changes.
 - [ ] Add immutable look snapshots.
 - [ ] Add shareable looks through URL-safe or clipboard-safe payloads.
 - [ ] Add an Auto-Tune analysis pass over histogram, entropy, edge density, palette suitability, and output size.

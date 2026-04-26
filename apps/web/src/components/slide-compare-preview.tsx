@@ -68,6 +68,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const frameWidth = displayWidth ?? processed?.width ?? original.width
   const frameHeight = displayHeight ?? processed?.height ?? original.height
   const clampedDivider = clampSlideDivider(dividerPercent)
+  const centeredManualViewport =
+    previewViewport?.mode === "manual" &&
+    previewViewport.zoom === 1 &&
+    Math.round(previewViewport.center.x) === Math.round(frameWidth / 2) &&
+    Math.round(previewViewport.center.y) === Math.round(frameHeight / 2)
   const manualScale =
     previewViewport?.mode === "manual"
       ? getManualViewportScale({
@@ -91,10 +96,10 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const frameStyle = getPreviewFrameStyle({
     sourceHeight: frameHeight,
     sourceWidth: frameWidth,
-    viewScale,
+    viewScale: centeredManualViewport ? "fit" : viewScale,
   })
   const effectiveFrameStyle =
-    previewViewport?.mode === "manual"
+    previewViewport?.mode === "manual" && !centeredManualViewport
       ? {
           height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(frameHeight * manualScale))}px`,
           left: "50%",
@@ -223,6 +228,23 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   React.useLayoutEffect(() => {
     viewportRef.current = previewViewport ?? null
   }, [previewViewport])
+
+  React.useLayoutEffect(() => {
+    if (
+      previewViewport?.mode !== "manual" ||
+      centeredManualViewport ||
+      !viewportBox
+    ) {
+      return
+    }
+
+    applyManualFrameViewport(previewViewport)
+  }, [
+    applyManualFrameViewport,
+    centeredManualViewport,
+    previewViewport,
+    viewportBox,
+  ])
 
   function scheduleManualFramePosition(center: { x: number; y: number }) {
     if (panAnimationFrameRef.current !== null) {
@@ -432,7 +454,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        style={viewScale === "fit" ? { containerType: "size" } : undefined}
+        style={
+          viewScale === "fit" || centeredManualViewport
+            ? { containerType: "size" }
+            : undefined
+        }
       >
         <div
           ref={frameRef}

@@ -42,7 +42,15 @@ export function App() {
   const exportQuality = useEditorStore((state) => state.exportQuality)
   const advancedOpen = useEditorStore((state) => state.advancedOpen)
   const status = useEditorStore((state) => state.status)
+  const canRedoSettingsChange = useEditorStore(
+    (state) => state.canRedoSettingsChange
+  )
+  const canUndoSettingsChange = useEditorStore(
+    (state) => state.canUndoSettingsChange
+  )
   const transitionSettings = useEditorStore((state) => state.transitionSettings)
+  const undoSettingsChange = useEditorStore((state) => state.undoSettingsChange)
+  const redoSettingsChange = useEditorStore((state) => state.redoSettingsChange)
   const setCompareMode = useEditorStore((state) => state.setCompareMode)
   const setPreviewViewport = useEditorStore((state) => state.setPreviewViewport)
   const setExportFormat = useEditorStore((state) => state.setExportFormat)
@@ -107,11 +115,15 @@ export function App() {
       setPreview(null)
       setError(null)
       setSourceNotice(formatSourceNotices(result.notices))
-      transitionSettings({
-        type: "set-output-size",
-        width: result.outputSize.width,
-        height: result.outputSize.height,
-      })
+      transitionSettings(
+        {
+          type: "set-output-size",
+          width: result.outputSize.width,
+          height: result.outputSize.height,
+        },
+        undefined,
+        { recordHistory: false }
+      )
       return true
     },
     [setError, setSourceNotice, setStatus, transitionSettings]
@@ -523,6 +535,8 @@ export function App() {
             compareMode={compareMode}
             isDesktopViewScale={isDesktopViewScale}
             original={source?.buffer ?? null}
+            outputHeight={settings.resize.height}
+            outputWidth={settings.resize.width}
             preview={preview}
             previewTargetHeight={
               previewTarget?.height ?? settings.resize.height
@@ -532,6 +546,8 @@ export function App() {
             previewViewport={previewViewport}
             exportFormat={exportFormat}
             exportQuality={exportQuality}
+            canRedoSettingsChange={canRedoSettingsChange}
+            canUndoSettingsChange={canUndoSettingsChange}
             onExport={handleExport}
             onExportFormatChange={setExportFormat}
             onExportQualityChange={setExportQuality}
@@ -539,6 +555,8 @@ export function App() {
             onInvalidDrop={handleInvalidDrop}
             onPreviewDisplaySizeChange={setPreviewDisplaySize}
             onPreviewViewportChange={handlePreviewViewportChange}
+            onRedoSettingsChange={redoSettingsChange}
+            onUndoSettingsChange={undoSettingsChange}
           />
 
           <ControlPanel

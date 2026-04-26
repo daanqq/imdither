@@ -1,7 +1,7 @@
 # Screen-Sized Preview PRD
 
 Status: done
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 ## Problem Statement
 
@@ -13,15 +13,15 @@ From the user's perspective, this is confusing: the preview appears to contain a
 
 In `Fit` mode, generate the processed preview at the measured on-screen display size instead of generating a larger dithered image and relying on CSS canvas scaling. The preview worker should receive an optional screen-sized target that is separate from the user's final output settings. The final PNG export must continue to use the full selected output size.
 
-The original layer in compare views should be drawn into the same display-sized canvas dimensions as the processed layer, so slide comparison remains geometrically aligned. The `1:1` view should keep showing the true output dimensions.
+The original layer in compare views should be drawn into the same display-sized canvas dimensions as the processed layer, so slide comparison remains geometrically aligned. The Real Pixels view should keep showing the true output dimensions.
 
-The feature should be mostly invisible to the user: `Fit` becomes cleaner and less misleading, while the existing `1:1` mode remains the way to inspect actual output pixels.
+The feature should be mostly invisible to the user: Screen Fit becomes cleaner and less misleading, while Real Pixels remains the way to inspect actual output pixels.
 
 ## User Stories
 
 1. As an image editor user, I want the `Fit` preview to avoid browser scaling artifacts, so that I do not mistake preview-only moire for real output.
 2. As an image editor user, I want exported PNG files to remain full resolution, so that preview optimization does not reduce final quality.
-3. As an image editor user, I want `1:1` mode to show real output pixels, so that I can inspect the final dither pattern exactly.
+3. As an image editor user, I want Real Pixels mode to show real output pixels, so that I can inspect the final dither pattern exactly.
 4. As an image editor user, I want slide comparison to keep original and processed layers aligned, so that the divider compares the same image geometry on both sides.
 5. As an image editor user, I want the original layer to match the processed preview size in `Fit`, so that comparison is not distorted by mismatched canvas dimensions.
 6. As an image editor user, I want preview updates to stay responsive while changing settings, so that controls do not feel blocked by image processing.
@@ -37,7 +37,7 @@ The feature should be mostly invisible to the user: `Fit` becomes cleaner and le
 16. As an image editor user, I want refined `Fit` preview to stop at the measured display size, so that the browser does not downscale a larger dithered buffer.
 17. As an image editor user, I want `Fit` preview to avoid upscaling beyond the final output dimensions, so that the app does not imply extra detail.
 18. As a mobile user, I want `Fit` mode to remain the enforced preview mode, so that the layout stays usable on small screens.
-19. As a desktop user, I want toggling between `Fit` and `1:1` to produce predictable preview behavior, so that I can choose between clean screen preview and exact pixel inspection.
+19. As a desktop user, I want toggling between Screen Fit and Real Pixels to produce predictable preview behavior, so that I can choose between clean screen preview and exact pixel inspection.
 20. As a maintainer, I want preview sizing logic isolated behind small module interfaces, so that it can be tested without browser rendering details.
 21. As a maintainer, I want processing jobs to accept preview sizing as an override, so that editor settings remain a stable final-output contract.
 22. As a maintainer, I want worker calls to remain deterministic for a given source, settings, and preview target, so that tests can assert processing behavior.
@@ -59,7 +59,7 @@ The feature should be mostly invisible to the user: `Fit` becomes cleaner and le
 - Preserve the existing two-stage preview model: a quick interactive preview followed by a refined preview.
 - In `Fit`, refined preview should clamp to the desired display target and existing preview pixel budget.
 - In `Fit`, quick preview should clamp to the refined target and the interactive pixel budget.
-- In `1:1`, preview target should remain the full output size subject to existing budget behavior.
+- In Real Pixels, preview target should remain the full output size subject to existing budget behavior.
 - Export jobs must continue to use full final settings and must not accept or apply display preview targets.
 - Correct preview metadata should continue to report the full intended output dimensions where the UI expects output metadata.
 - Draw the original layer into a canvas with the same display dimensions as the processed layer for slide comparison.
@@ -74,7 +74,7 @@ The feature should be mostly invisible to the user: `Fit` becomes cleaner and le
 
 - Good tests should assert external behavior and stable contracts, not incidental implementation details such as exact hook ordering or private timer names.
 - Test the screen-preview sizing module directly with pure inputs and outputs.
-- Cover aspect-ratio preservation, integer rounding, clamping to final output dimensions, and `Fit` versus `1:1` behavior.
+- Cover aspect-ratio preservation, integer rounding, clamping to final output dimensions, and Screen Fit versus Real Pixels behavior.
 - Test that display-size preview target generation uses CSS pixels rather than `devicePixelRatio`.
 - Test the processing job module with a preview target override to confirm worker settings use display target dimensions for preview work.
 - Test that preview target overrides do not mutate final editor settings.
@@ -101,12 +101,12 @@ The feature should be mostly invisible to the user: `Fit` becomes cleaner and le
 - Changing the source image intake limits.
 - Changing the dithering algorithms themselves.
 - Changing the visual style of the preview stage beyond removing the misleading artifact.
-- Removing the existing `Fit` and `1:1` controls.
+- Removing the existing Screen Fit and Real Pixels controls.
 - Using `devicePixelRatio` scaled preview targets in the initial implementation.
 
 ## Further Notes
 
-The core product decision is that `Fit` is a screen preview, while `1:1` is exact pixel inspection. This keeps the preview honest for the current viewport without weakening final export semantics.
+The core product decision is that Screen Fit is a screen preview, while Real Pixels is exact pixel inspection. This keeps the preview honest for the current viewport without weakening final export semantics.
 
 The main technical risk is excess worker churn during resize. The measurement threshold and debounce should keep that under control while still updating the preview when the visible frame meaningfully changes.
 
