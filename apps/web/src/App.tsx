@@ -406,7 +406,8 @@ export function App() {
       const parsed = safeNormalizeSettings(JSON.parse(clipboardText))
 
       if (!parsed) {
-        throw new Error("Clipboard JSON does not match settings schema v1")
+        setError("Clipboard JSON does not match settings schema v1")
+        return
       }
 
       const result = transitionSettings(
@@ -536,13 +537,14 @@ export function App() {
   }, [applyPaletteText, setError])
 
   const handleCopyPaletteJson = React.useCallback(async () => {
+    const colors = settings.customPalette
+
+    if (!colors) {
+      setError("Convert the current preset to Custom before copy")
+      return
+    }
+
     try {
-      const colors = settings.customPalette
-
-      if (!colors) {
-        throw new Error("Convert the current preset to Custom before copy")
-      }
-
       await navigator.clipboard.writeText(exportPaletteJson(colors))
       setError(null)
       setSourceNotice("[PALETTE JSON COPIED TO CLIPBOARD]")
@@ -556,13 +558,14 @@ export function App() {
   }, [setError, setSourceNotice, settings.customPalette])
 
   const handleExportPaletteJson = React.useCallback(() => {
+    const colors = settings.customPalette
+
+    if (!colors) {
+      setError("Convert the current preset to Custom before export")
+      return
+    }
+
     try {
-      const colors = settings.customPalette
-
-      if (!colors) {
-        throw new Error("Convert the current preset to Custom before export")
-      }
-
       downloadBlob(
         new Blob([exportPaletteJson(colors)], { type: "application/json" }),
         "imdither-palette.json"
@@ -579,13 +582,14 @@ export function App() {
   }, [setError, setSourceNotice, settings.customPalette])
 
   const handleExportPaletteGpl = React.useCallback(() => {
+    const colors = settings.customPalette
+
+    if (!colors) {
+      setError("Convert the current preset to Custom before export")
+      return
+    }
+
     try {
-      const colors = settings.customPalette
-
-      if (!colors) {
-        throw new Error("Convert the current preset to Custom before export")
-      }
-
       downloadBlob(
         new Blob([exportPaletteGpl(colors)], { type: "text/plain" }),
         "imdither-palette.gpl"
@@ -603,11 +607,12 @@ export function App() {
 
   const handleExtractPalette = React.useCallback(
     (size: PaletteExtractionSize) => {
-      try {
-        if (!source) {
-          throw new Error("Load a Source Image before extracting a palette")
-        }
+      if (!source) {
+        setError("Load a Source Image before extracting a palette")
+        return
+      }
 
+      try {
         transitionSettings(
           {
             type: "set-custom-palette",

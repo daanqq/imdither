@@ -25,6 +25,7 @@ import {
 } from "@workspace/ui/components/collapsible"
 import {
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -81,7 +82,7 @@ import { getNextPaletteColor } from "@/lib/palette-add-color"
 import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
 import { getRandomDifferentValue } from "@/lib/random-options"
 
-export type InspectorPanelProps = {
+type InspectorPanelProps = {
   advancedOpen: boolean
   appliedRecommendationId: string | null
   autoTuneError: string | null
@@ -836,6 +837,9 @@ function PaletteEditorDrawer(
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>Custom Palette Editor</DrawerTitle>
+          <DrawerDescription>
+            Add, edit, copy, or export custom palette colors.
+          </DrawerDescription>
         </DrawerHeader>
         <div className="min-h-0 overflow-y-auto p-3">
           <PaletteEditor {...props} />

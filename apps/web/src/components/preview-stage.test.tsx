@@ -53,7 +53,14 @@ vi.mock("@workspace/ui/components/slider", () => ({
     onValueChange?: (value: number[]) => void
   }) => {
     sliderRenders.push(props)
-    return <div role="slider" />
+    return (
+      <div
+        aria-valuemax={props.max}
+        aria-valuemin={props.min}
+        aria-valuenow={props.value?.[0]}
+        role="slider"
+      />
+    )
   },
 }))
 

@@ -74,7 +74,7 @@ import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
 import { getRandomDifferentValue } from "@/lib/random-options"
 import type { CompareMode } from "@/store/editor-store"
 
-export type ControlPanelProps = {
+type ControlPanelProps = {
   advancedOpen: boolean
   appliedRecommendationId?: string | null
   autoTuneError?: string | null

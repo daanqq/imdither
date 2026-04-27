@@ -23,10 +23,10 @@ export const DEFAULT_PREVIEW_VIEWPORT: PreviewViewport = {
   loupeEnabled: false,
 }
 
-export const WHEEL_ZOOM_IN_FACTOR = 2 ** 0.25
-export const WHEEL_ZOOM_OUT_FACTOR = 1 / WHEEL_ZOOM_IN_FACTOR
+const WHEEL_ZOOM_IN_FACTOR = 2 ** 0.25
+const WHEEL_ZOOM_OUT_FACTOR = 1 / WHEEL_ZOOM_IN_FACTOR
 export const MIN_PREVIEW_ZOOM = 0.25
-export const MAX_PREVIEW_ZOOM = 16
+const MAX_PREVIEW_ZOOM = 16
 
 type ImageDimensions = {
   imageHeight: number

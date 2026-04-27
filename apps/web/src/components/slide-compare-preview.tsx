@@ -47,6 +47,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 }: SlideComparePreviewProps) {
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
+  const viewportElementRef = React.useRef<HTMLDivElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
   const viewportRef = React.useRef(previewViewport ?? null)
   const dividerLineRef = React.useRef<HTMLDivElement>(null)
@@ -441,56 +442,85 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     commitDividerVisual(nextPercent)
   }
 
-  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
-    const currentViewport = viewportRef.current ?? previewViewport
+  const handleWheel = React.useCallback(
+    (event: WheelEvent, viewportElement: HTMLDivElement) => {
+      const currentViewport = viewportRef.current ?? previewViewport
 
-    if (!currentViewport || !frameRef.current) {
+      if (!currentViewport || !frameRef.current) {
+        return
+      }
+
+      event.preventDefault()
+
+      const viewportRect = viewportElement.getBoundingClientRect()
+      const anchorViewportPoint = {
+        x: event.clientX - viewportRect.left,
+        y: event.clientY - viewportRect.top,
+      }
+      const coordinates = getViewportPointImageCoordinates({
+        imageHeight: frameHeight,
+        imageWidth: frameWidth,
+        viewport: currentViewport,
+        viewportHeight: viewportRect.height,
+        viewportPoint: anchorViewportPoint,
+        viewportWidth: viewportRect.width,
+      })
+
+      const nextZoom = getWheelZoom(currentViewport.zoom, event.deltaY)
+      const nextViewport = coordinates
+        ? getAnchoredZoomViewport({
+            anchorImagePoint: coordinates,
+            anchorViewportPoint,
+            imageHeight: frameHeight,
+            imageWidth: frameWidth,
+            nextZoom,
+            viewport: currentViewport,
+            viewportHeight: viewportRect.height,
+            viewportWidth: viewportRect.width,
+          })
+        : {
+            ...currentViewport,
+            mode: "manual" as const,
+            zoom: nextZoom,
+          }
+
+      viewportRef.current = nextViewport
+      applyManualFrameViewport(nextViewport)
+
+      onViewportChange?.({
+        mode: "manual",
+        zoom: nextViewport.zoom,
+        center: nextViewport.center,
+      })
+    },
+    [
+      applyManualFrameViewport,
+      frameHeight,
+      frameWidth,
+      onViewportChange,
+      previewViewport,
+    ]
+  )
+
+  React.useEffect(() => {
+    const viewportElement = viewportElementRef.current
+
+    if (!viewportElement) {
       return
     }
 
-    event.preventDefault()
-
-    const viewportRect = event.currentTarget.getBoundingClientRect()
-    const anchorViewportPoint = {
-      x: event.clientX - viewportRect.left,
-      y: event.clientY - viewportRect.top,
+    const handleNativeWheel = (event: WheelEvent) => {
+      handleWheel(event, viewportElement)
     }
-    const coordinates = getViewportPointImageCoordinates({
-      imageHeight: frameHeight,
-      imageWidth: frameWidth,
-      viewport: currentViewport,
-      viewportHeight: viewportRect.height,
-      viewportPoint: anchorViewportPoint,
-      viewportWidth: viewportRect.width,
+
+    viewportElement.addEventListener("wheel", handleNativeWheel, {
+      passive: false,
     })
 
-    const nextZoom = getWheelZoom(currentViewport.zoom, event.deltaY)
-    const nextViewport = coordinates
-      ? getAnchoredZoomViewport({
-          anchorImagePoint: coordinates,
-          anchorViewportPoint,
-          imageHeight: frameHeight,
-          imageWidth: frameWidth,
-          nextZoom,
-          viewport: currentViewport,
-          viewportHeight: viewportRect.height,
-          viewportWidth: viewportRect.width,
-        })
-      : {
-          ...currentViewport,
-          mode: "manual" as const,
-          zoom: nextZoom,
-        }
-
-    viewportRef.current = nextViewport
-    applyManualFrameViewport(nextViewport)
-
-    onViewportChange?.({
-      mode: "manual",
-      zoom: nextViewport.zoom,
-      center: nextViewport.center,
-    })
-  }
+    return () => {
+      viewportElement.removeEventListener("wheel", handleNativeWheel)
+    }
+  }, [handleWheel])
 
   function startPinchGesture() {
     const currentViewport = viewportRef.current ?? previewViewport
@@ -607,6 +637,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
       <div
+        ref={viewportElementRef}
         className={cn(
           "relative flex min-h-0 min-w-0 flex-1 items-center justify-center",
           "overflow-hidden",
@@ -620,7 +651,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             ? { containerType: "size", touchAction: "none" }
             : { touchAction: "none" }
         }
-        onWheel={handleWheel}
         onPointerDown={(event) => {
           if (!processedReady) {
             return

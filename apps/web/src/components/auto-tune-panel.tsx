@@ -7,7 +7,7 @@ import {
 import { Spinner } from "@workspace/ui/components/spinner"
 import { SparklesIcon } from "lucide-react"
 
-export type AutoTunePanelProps = {
+type AutoTunePanelProps = {
   appliedRecommendationId: string | null
   error: string | null
   isLoading: boolean

@@ -464,6 +464,14 @@ function usePreviewDisplayMeasurement(
   return { previewDisplayRef, previewDisplaySize }
 }
 
+const PROCESSING_OVERLAY_PULSE_STEPS = Array.from(
+  { length: 10 },
+  (_, index) => ({
+    delayMs: index * 70,
+    id: `pulse-${index}`,
+  })
+)
+
 function ProcessingOverlay({
   algorithm,
   busy,
@@ -506,11 +514,11 @@ function ProcessingOverlay({
           </div>
         </div>
         <div className="grid shrink-0 grid-cols-5 gap-1" aria-hidden="true">
-          {Array.from({ length: 10 }, (_, index) => (
+          {PROCESSING_OVERLAY_PULSE_STEPS.map((step) => (
             <span
-              key={index}
+              key={step.id}
               className="h-3 w-3 animate-pulse bg-primary"
-              style={{ animationDelay: `${index * 70}ms` }}
+              style={{ animationDelay: `${step.delayMs}ms` }}
             />
           ))}
         </div>
@@ -761,7 +769,10 @@ function ExportDrawerContent({
       </DrawerHeader>
       <div className="grid min-w-0 gap-3 p-3">
         <div className="grid min-w-0 grid-cols-[minmax(8rem,0.75fr)_minmax(0,1.25fr)] gap-3">
-          <label className="grid min-w-0 content-start gap-1.5 pr-3 text-sm font-medium">
+          <label
+            className="grid min-w-0 content-start gap-1.5 pr-3 text-sm font-medium"
+            htmlFor="export-format"
+          >
             Export Format
             <Select
               value={exportFormat}
@@ -769,7 +780,11 @@ function ExportDrawerContent({
                 onExportFormatChange(value as ExportFormat)
               }
             >
-              <SelectTrigger aria-label="Export format" className="min-w-0">
+              <SelectTrigger
+                aria-label="Export format"
+                className="min-w-0"
+                id="export-format"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1097,6 +1112,22 @@ const CanvasPanel = React.memo(function CanvasPanel({
     )
   }
 
+  const startPinchGesture = React.useCallback(() => {
+    const currentViewport = viewportRef.current ?? previewViewport
+    const pointerPair = getActivePointerPair(activePointersRef.current)
+
+    if (!currentViewport || !pointerPair) {
+      return
+    }
+
+    pinchStateRef.current = {
+      latestViewport: null,
+      startPointers: pointerPair,
+      startViewport: currentViewport,
+    }
+    panStateRef.current = null
+  }, [previewViewport])
+
   function panPointer(event: React.PointerEvent<HTMLDivElement>) {
     const currentViewport = viewportRef.current ?? previewViewport
 
@@ -1171,22 +1202,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
       zoom: nextViewport.zoom,
       center: nextViewport.center,
     })
-  }
-
-  function startPinchGesture() {
-    const currentViewport = viewportRef.current ?? previewViewport
-    const pointerPair = getActivePointerPair(activePointersRef.current)
-
-    if (!currentViewport || !pointerPair) {
-      return
-    }
-
-    pinchStateRef.current = {
-      latestViewport: null,
-      startPointers: pointerPair,
-      startViewport: currentViewport,
-    }
-    panStateRef.current = null
   }
 
   function updatePinchGesture(element: HTMLElement) {
