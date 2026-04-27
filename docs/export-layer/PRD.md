@@ -76,7 +76,7 @@ If a browser cannot encode the selected format, export fails explicitly with a c
 - Keep export format and export quality outside Editor Settings.
 - Keep export format and export quality outside Settings JSON clipboard copy and paste.
 - Use one shared quality value for WebP and JPEG.
-- Use a default quality of `0.92`.
+- Use a default quality of `0.9`.
 - Use a quality range from `0.1` to `1.0`.
 - Use a quality step of `0.05`.
 - Show the quality control only for formats that support lossy quality.

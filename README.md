@@ -14,8 +14,10 @@ in the browser; the app does not upload source images to a server.
   selected output.
 - Compare original and processed output with a slide before/after preview,
   processed-only view, or original-only view.
-- Use Fit or Manual preview on desktop, with zoom, pan, and pixel inspection;
-  mobile keeps the preview in Fit mode.
+- Use Fit or Real Pixels preview with zoom and pan; desktop also exposes pixel
+  inspection.
+- Review generated Auto-Tune looks after each source load and apply one as a
+  normal editable look.
 - Export the current result as PNG, WebP, or JPEG.
 - Create, edit, import, export, and extract one active custom palette.
 - Copy and paste versioned settings JSON through the system clipboard.
@@ -78,7 +80,7 @@ flowchart LR
   store["Editor Store<br/>Committed Settings<br/>View State<br/>Job Status"]
   worker["Worker Jobs<br/>Preview Job<br/>Preview Refinement<br/>Export Job"]
   preview["Preview Stage<br/>Canvas Preview<br/>Slide Compare<br/>Local UI State"]
-  png["PNG Download"]
+  file["Export File<br/>PNG / WebP / JPEG"]
 
   user --> app
   app --> store
@@ -86,7 +88,7 @@ flowchart LR
   store --> worker
   app --> worker
   worker -->|preview buffer| preview
-  worker -->|full output| png
+  worker -->|full output| file
   preview -. status-only updates do not redraw ready canvases .-> preview
 ```
 

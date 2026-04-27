@@ -33,6 +33,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
   displayHeight,
   displayWidth,
+  initialViewportBox,
   original,
   pixelInspectorEnabled = true,
   processed,
@@ -41,6 +42,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   viewScale,
   onDividerChange,
   onViewportChange,
+  onViewportBoxChange,
 }: SlideComparePreviewProps) {
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
@@ -63,7 +65,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const [viewportBox, setViewportBox] = React.useState<{
     height: number
     width: number
-  } | null>(null)
+  } | null>(initialViewportBox ?? null)
   const processedReady = Boolean(processed)
   const frameWidth = displayWidth ?? processed?.width ?? original.width
   const frameHeight = displayHeight ?? processed?.height ?? original.height
@@ -211,10 +213,13 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 
     const updateViewportBox = () => {
       const rect = viewportElement.getBoundingClientRect()
-      setViewportBox({
+      const nextViewportBox = {
         height: Math.max(1, Math.round(rect.height)),
         width: Math.max(1, Math.round(rect.width)),
-      })
+      }
+
+      setViewportBox(nextViewportBox)
+      onViewportBoxChange?.(nextViewportBox)
     }
 
     updateViewportBox()
@@ -223,7 +228,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     observer.observe(viewportElement)
 
     return () => observer.disconnect()
-  }, [])
+  }, [onViewportBoxChange])
 
   React.useLayoutEffect(() => {
     viewportRef.current = previewViewport ?? null
@@ -574,7 +579,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               }}
             />
           ) : null}
-          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/80">
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/80">
             <span className="bg-background/80 px-1.5 py-0.5">Original</span>
             <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
           </div>

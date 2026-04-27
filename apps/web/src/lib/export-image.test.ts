@@ -49,7 +49,7 @@ describe("export image layer", () => {
         supportsQuality: true,
       },
     ])
-    expect(DEFAULT_EXPORT_QUALITY).toBe(0.92)
+    expect(DEFAULT_EXPORT_QUALITY).toBe(0.9)
     expect(makeExportName("source photo.png", "webp")).toBe(
       "imdither-source-photo.webp"
     )

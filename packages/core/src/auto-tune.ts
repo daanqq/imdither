@@ -10,7 +10,6 @@ export type AutoTuneArchetypeId =
   | "screenprint-color"
   | "texture-noise-look"
   | "soft-poster"
-  | "newsprint-mono"
   | "low-noise-photo"
   | "arcade-color"
   | "ink-wash"
@@ -158,10 +157,11 @@ export function recommendAutoTuneLooks(
   source: PixelBuffer,
   context: AutoTuneContext
 ): AutoTuneRecommendation[] {
-  const analysis = analyzeAutoTuneImage(source, context)
+  const sample = sampleSource(source)
+  const analysis = analyzeAutoTuneImage(sample, context)
 
   return rankAutoTuneLookCandidatesFromAnalysis(
-    source,
+    sample,
     context,
     analysis
   ).slice(0, getRecommendationCount(analysis))
@@ -171,9 +171,10 @@ export function rankAutoTuneLookCandidates(
   source: PixelBuffer,
   context: AutoTuneContext
 ): AutoTuneRecommendation[] {
-  const analysis = analyzeAutoTuneImage(source, context)
+  const sample = sampleSource(source)
+  const analysis = analyzeAutoTuneImage(sample, context)
 
-  return rankAutoTuneLookCandidatesFromAnalysis(source, context, analysis)
+  return rankAutoTuneLookCandidatesFromAnalysis(sample, context, analysis)
 }
 
 function rankAutoTuneLookCandidatesFromAnalysis(
@@ -347,25 +348,6 @@ function createCandidates(
       }),
     },
     {
-      id: "newsprint-mono",
-      label: "Newsprint Mono",
-      intent: "Halftone newspaper texture with a hard monochrome palette.",
-      snapshot: snapshot("Newsprint Mono", {
-        ...base,
-        algorithm: "halftone-dot",
-        paletteId: "black-white",
-        customPalette: undefined,
-        colorDepth: { mode: "full" },
-        matchingMode: "rgb",
-        preprocess: {
-          ...base.preprocess,
-          contrast: 22,
-          gamma: 0.95,
-          colorMode: "grayscale-first",
-        },
-      }),
-    },
-    {
       id: "low-noise-photo",
       label: "Low Noise Photo",
       intent: "Gentler diffusion for scans and noisy photographic sources.",
@@ -473,12 +455,6 @@ function scoreCandidate(
         (1 - analysis.edgeDensity) * 0.5 -
         analysis.noiseEstimate * 0.4
       )
-    case "newsprint-mono":
-      return (
-        (1 - analysis.meanSaturation) * 0.7 +
-        analysis.histogramSpread * 0.7 +
-        analysis.edgeDensity * 0.5
-      )
     case "low-noise-photo":
       return (
         analysis.noiseEstimate * 1.8 +
@@ -530,7 +506,7 @@ function extractPaletteOrFallback(
           ? 16
           : size
 
-    return extractPaletteFromSource(source, targetSize)
+    return extractPaletteFromSource(sampleSource(source), targetSize)
   } catch {
     return size === 32
       ? [
@@ -556,7 +532,7 @@ function extractPaletteOrFallback(
 }
 
 function sampleSource(source: PixelBuffer): PixelBuffer {
-  const maxLongEdge = 512
+  const maxLongEdge = 256
   const longEdge = Math.max(source.width, source.height)
 
   if (longEdge <= maxLongEdge) {

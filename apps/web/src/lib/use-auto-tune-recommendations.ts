@@ -6,7 +6,7 @@ import {
   type PixelBuffer,
 } from "@workspace/core"
 
-import { DEMO_AUTO_TUNE_RECOMMENDATIONS } from "./demo-auto-tune"
+import { applyAutoTuneLookSettings } from "./auto-tune-application"
 
 type AutoTuneSource = {
   id: string
@@ -18,7 +18,6 @@ export type AutoTuneRecommendationState = {
   isLoading: boolean
   error: string | null
   appliedRecommendationId: string | null
-  runAutoTune: () => void
   markApplied: (recommendationId: string) => void
   clearAppliedMarker: () => void
 }
@@ -45,64 +44,108 @@ export function useAutoTuneRecommendations({
   const [appliedSourceId, setAppliedSourceId] = React.useState<string | null>(
     null
   )
+  const generationIdRef = React.useRef(0)
+  const settingsRef = React.useRef(settings)
   const sourceId = source?.id ?? null
   const visibleRecommendations =
-    recommendationsSourceId === sourceId
-      ? recommendations
-      : sourceId === "demo"
-        ? DEMO_AUTO_TUNE_RECOMMENDATIONS
-        : []
+    recommendationsSourceId === sourceId ? recommendations : []
   const visibleError = errorSourceId === sourceId ? error : null
+  const derivedAppliedRecommendationId = findAppliedRecommendationId({
+    recommendations: visibleRecommendations,
+    settings,
+  })
+  const explicitAppliedRecommendationId =
+    appliedSourceId === sourceId &&
+    appliedRecommendationId === derivedAppliedRecommendationId
+      ? appliedRecommendationId
+      : null
   const visibleAppliedRecommendationId =
-    appliedSourceId === sourceId ? appliedRecommendationId : null
+    explicitAppliedRecommendationId ?? derivedAppliedRecommendationId
 
-  const runAutoTune = React.useCallback(() => {
-    if (!source) {
-      setError("Load a Source Image before running Auto-Tune")
-      setErrorSourceId(null)
-      setRecommendations([])
-      setRecommendationsSourceId(null)
-      setAppliedRecommendationId(null)
-      setAppliedSourceId(null)
-      return
-    }
+  React.useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
 
-    setIsLoading(true)
-    setError(null)
-    setErrorSourceId(null)
+  React.useEffect(() => {
+    const generationId = generationIdRef.current + 1
+    generationIdRef.current = generationId
 
-    try {
-      const nextRecommendations = recommendAutoTuneLooks(source.buffer, {
-        settings,
-        sourceDimensions: {
-          width: source.buffer.width,
-          height: source.buffer.height,
-        },
-        outputDimensions: {
-          width: settings.resize.width,
-          height: settings.resize.height,
-        },
+    if (!sourceId || !source) {
+      queueMicrotask(() => {
+        if (generationIdRef.current !== generationId) {
+          return
+        }
+
+        setError(null)
+        setErrorSourceId(null)
+        setRecommendations([])
+        setRecommendationsSourceId(null)
+        setAppliedRecommendationId(null)
+        setAppliedSourceId(null)
+        setIsLoading(false)
       })
-
-      setRecommendations(nextRecommendations)
-      setRecommendationsSourceId(source.id)
-      setAppliedRecommendationId(null)
-      setAppliedSourceId(null)
-    } catch (autoTuneError) {
-      setRecommendations([])
-      setRecommendationsSourceId(null)
-      setAppliedRecommendationId(null)
-      setAppliedSourceId(null)
-      setError(
-        autoTuneError instanceof Error
-          ? autoTuneError.message
-          : "Auto-Tune failed"
-      )
-      setErrorSourceId(source.id)
-    } finally {
-      setIsLoading(false)
+      return undefined
     }
-  }, [settings, source])
+
+    const currentSource = source
+
+    async function generateAutoTune() {
+      try {
+        setIsLoading(true)
+        setError(null)
+        setErrorSourceId(null)
+        await waitForLoadingPaint()
+        const currentSettings = settingsRef.current
+
+        const nextRecommendations = recommendAutoTuneLooks(
+          currentSource.buffer,
+          {
+            settings: currentSettings,
+            sourceDimensions: {
+              width: currentSource.buffer.width,
+              height: currentSource.buffer.height,
+            },
+            outputDimensions: {
+              width: currentSettings.resize.width,
+              height: currentSettings.resize.height,
+            },
+          }
+        )
+
+        if (generationIdRef.current !== generationId) {
+          return
+        }
+
+        setRecommendations(nextRecommendations)
+        setRecommendationsSourceId(currentSource.id)
+        setAppliedRecommendationId(null)
+        setAppliedSourceId(null)
+      } catch (autoTuneError) {
+        if (generationIdRef.current !== generationId) {
+          return
+        }
+
+        setRecommendations([])
+        setRecommendationsSourceId(null)
+        setAppliedRecommendationId(null)
+        setAppliedSourceId(null)
+        setError(
+          autoTuneError instanceof Error
+            ? autoTuneError.message
+            : "Auto-Tune failed"
+        )
+        setErrorSourceId(currentSource.id)
+      } finally {
+        if (generationIdRef.current === generationId) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void generateAutoTune()
+
+    return undefined
+  }, [source, sourceId])
 
   const markApplied = React.useCallback(
     (recommendationId: string) => {
@@ -122,8 +165,42 @@ export function useAutoTuneRecommendations({
     isLoading,
     error: visibleError,
     appliedRecommendationId: visibleAppliedRecommendationId,
-    runAutoTune,
     markApplied,
     clearAppliedMarker,
   }
+}
+
+function waitForLoadingPaint() {
+  return new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve())
+      return
+    }
+
+    setTimeout(resolve, 0)
+  })
+}
+
+function findAppliedRecommendationId({
+  recommendations,
+  settings,
+}: {
+  recommendations: AutoTuneRecommendation[]
+  settings: EditorSettings
+}): string | null {
+  const matchingRecommendation = recommendations.find((recommendation) =>
+    areSettingsEqual(
+      settings,
+      applyAutoTuneLookSettings({
+        current: settings,
+        recommended: recommendation.snapshot.settings,
+      })
+    )
+  )
+
+  return matchingRecommendation?.id ?? null
+}
+
+function areSettingsEqual(a: EditorSettings, b: EditorSettings) {
+  return JSON.stringify(a) === JSON.stringify(b)
 }

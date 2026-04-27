@@ -96,7 +96,7 @@ describe("editor store settings transitions", () => {
   it("stores export preferences separately from editor settings", () => {
     useEditorStore.setState({
       exportFormat: "png",
-      exportQuality: 0.92,
+      exportQuality: 0.9,
       settings: DEFAULT_SETTINGS,
     })
 

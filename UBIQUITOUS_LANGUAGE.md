@@ -21,24 +21,23 @@
 
 ## Export
 
-| Term                           | Definition                                                                                                            | Aliases to avoid                   |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Export Preferences**         | Persisted editor UI preferences that control how **Full Output** is encoded into an **Export File**.                  | Export settings, output settings   |
-| **Export Format**              | The selected file format for an **Export File**, currently PNG, WebP, or JPEG.                                        | File type, download type           |
-| **Export Format Option**       | A selectable **Export Format** entry with stable id, label, MIME type, extension, and quality support.                | Format item, select option         |
-| **Export Quality**             | The shared lossy encoder quality used for WebP and JPEG **Export Files**.                                             | Compression, quality setting       |
-| **Quality Control**            | The hidden **Preview Stage** control wiring that changes **Export Quality** when the **Export Format** supports it.   | Quality slider, compression slider |
-| **Quality Slot**               | The reserved hidden **Preview Stage** layout area for **Quality Control** while export quality placement is deferred. | Slider area, quality wrapper       |
-| **Format Selector**            | The **Preview Stage** control that changes **Export Format**.                                                         | Format dropdown, export dropdown   |
-| **Export Action**              | The format-neutral editor command that starts an **Export Job** and downloads an **Export File**.                     | Export PNG button, download button |
-| **Export Layer**               | The browser-side layer that encodes a **Pixel Buffer** into an **Export File**.                                       | Image helper, canvas helper        |
-| **Browser Encoder**            | The browser canvas encoder used by the **Export Layer** to create a file blob for an **Export Format**.               | Canvas export, toBlob path         |
-| **Encoder Failure**            | The explicit failure state when a **Browser Encoder** cannot produce the requested **Export Format**.                 | Fallback, silent PNG fallback      |
-| **JPEG Alpha Flattening**      | The export-time alpha compositing used before JPEG encoding because JPEG has no alpha channel.                        | JPEG transparency handling         |
-| **Export Metadata Format**     | The actual **Export Format** recorded in **Processing Metadata** for the most recent **Export File**.                 | Metadata format, output format     |
-| **Export Controls**            | The **Preview Stage** group containing **Export Action**, **Format Selector**, and **Quality Control**.               | Export toolbar, download controls  |
-| **Centered Export Actions**    | The layout rule that **Upload** and **Export Action** stay centered relative to the **Preview**.                      | Centered buttons, main actions     |
-| **Export Preference Controls** | The right-side **Preview Stage** controls for **Format Selector** and **Quality Slot**.                               | Format and quality controls        |
+| Term                       | Definition                                                                                                      | Aliases to avoid                   |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Export Preferences**     | Persisted editor UI preferences that control how **Full Output** is encoded into an **Export File**.            | Export settings, output settings   |
+| **Export Format**          | The selected file format for an **Export File**, currently PNG, WebP, or JPEG.                                  | File type, download type           |
+| **Export Format Option**   | A selectable **Export Format** entry with stable id, label, MIME type, extension, and quality support.          | Format item, select option         |
+| **Export Quality**         | The shared lossy encoder quality used for WebP and JPEG **Export Files**.                                       | Compression, quality setting       |
+| **Quality Control**        | The **Export Drawer** control that changes **Export Quality** when the **Export Format** supports it.           | Quality slider, compression slider |
+| **Format Selector**        | The **Export Drawer** control that changes **Export Format**.                                                   | Format dropdown, export dropdown   |
+| **Export Action**          | The format-neutral editor command that starts an **Export Job** and downloads an **Export File**.               | Export PNG button, download button |
+| **Export Drawer**          | The responsive drawer that owns **Export Format**, **Export Quality**, and the final **Export Action**.         | Export panel, download drawer      |
+| **Export Layer**           | The browser-side layer that encodes a **Pixel Buffer** into an **Export File**.                                 | Image helper, canvas helper        |
+| **Browser Encoder**        | The browser canvas encoder used by the **Export Layer** to create a file blob for an **Export Format**.         | Canvas export, toBlob path         |
+| **Encoder Failure**        | The explicit failure state when a **Browser Encoder** cannot produce the requested **Export Format**.           | Fallback, silent PNG fallback      |
+| **JPEG Alpha Flattening**  | The export-time alpha compositing used before JPEG encoding because JPEG has no alpha channel.                  | JPEG transparency handling         |
+| **Export Metadata Format** | The actual **Export Format** recorded in **Processing Metadata** for the most recent **Export File**.           | Metadata format, output format     |
+| **Export Entry Point**     | The **Preview Stage** button that opens the **Export Drawer**.                                                  | Export button, download entry      |
+| **Preview Action Row**     | The row below the preview where `Upload` and **Export Entry Point** align left while undo and redo align right. | Bottom toolbar, preview buttons    |
 
 ## Public Contracts
 
@@ -137,17 +136,17 @@
 
 ## Auto-Tune
 
-| Term                              | Definition                                                                                                | Aliases to avoid                      |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Auto-Tune**                     | The image-aware workflow that recommends normal **Look Snapshots** from the current **Source Image**.     | Magic preset, AI preset, auto mode    |
-| **Auto-Tune Panel**               | The editor sidebar panel that owns the `Auto` action, inline Auto-Tune states, and recommendation list.   | Assistant panel, smart controls       |
-| **Auto-Tune Candidate**           | One deterministic candidate look generated and ranked by core before shortlist selection.                 | Hidden recommendation, generated item |
-| **Auto-Tune Recommendation**      | A ranked candidate look shown to the user as a normal applicable **Look Snapshot**.                       | Auto preset, suggested preset         |
-| **Auto-Tune Shortlist**           | The visible 3 to 5 **Auto-Tune Recommendations** selected from the ranked candidate pool.                 | Results, recommendation pool          |
-| **Recommended Marker**            | The visual marker on the top-ranked **Auto-Tune Recommendation**.                                         | Best badge, confidence score          |
-| **Applied Recommendation Marker** | The runtime marker showing which visible **Auto-Tune Recommendation** was last applied.                   | Active auto preset, selected look     |
-| **Demo Auto-Tune Seed**           | The bundled demo recommendation fixture shown immediately for the **Demo Image** before runtime analysis. | Demo preset list, cached results      |
-| **Auto-Tune Analysis**            | The deterministic source-image metrics used to rank **Auto-Tune Candidates**.                             | Reasoning, ML inference, score data   |
+| Term                              | Definition                                                                                                   | Aliases to avoid                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| **Auto-Tune**                     | The image-aware workflow that recommends normal **Look Snapshots** from the current **Source Image**.        | Magic preset, AI preset, auto mode    |
+| **Auto-Tune Panel**               | The editor panel that shows generated Auto-Tune looks, inline Auto-Tune states, and the recommendation list. | Assistant panel, smart controls       |
+| **Auto-Tune Candidate**           | One deterministic candidate look generated and ranked by core before shortlist selection.                    | Hidden recommendation, generated item |
+| **Auto-Tune Recommendation**      | A ranked candidate look shown to the user as a normal applicable **Look Snapshot**.                          | Auto preset, suggested preset         |
+| **Auto-Tune Shortlist**           | The visible 3 to 5 **Auto-Tune Recommendations** selected from the ranked candidate pool.                    | Results, recommendation pool          |
+| **Recommended Marker**            | The visual marker on the top-ranked **Auto-Tune Recommendation**.                                            | Best badge, confidence score          |
+| **Applied Recommendation Marker** | The runtime marker showing which visible **Auto-Tune Recommendation** was last applied.                      | Active auto preset, selected look     |
+| **Demo Auto-Tune Seed**           | The bundled demo recommendation fixture shown immediately for the **Demo Image** before runtime analysis.    | Demo preset list, cached results      |
+| **Auto-Tune Analysis**            | The deterministic source-image metrics used to rank **Auto-Tune Candidates**.                                | Reasoning, ML inference, score data   |
 
 ## Preview And Comparison
 
@@ -167,7 +166,8 @@
 | **Preview Viewport**               | The view-local preview state containing mode, zoom, image-space center, and inspector preference.                         | View scale, zoom state             |
 | **Manual View**                    | A **Preview Viewport** mode that uses numeric zoom and image-space center coordinates instead of fitting the whole image. | 1:1 view, actual mode              |
 | **1:1 Zoom**                       | The zoom command that sets **Manual View** to 100%, where one image pixel maps to one CSS pixel.                          | 100%, actual size button           |
-| **Wheel Zoom Step**                | The wheel zoom rule that rounds the resulting zoom percentage to 50% increments.                                          | Zoom tick, mouse step              |
+| **Wheel Zoom Step**                | The reciprocal quarter-octave wheel zoom rule that can return to 100% from the 25% and 1600% bounds.                      | Zoom tick, mouse step              |
+| **Preview Surface Controls**       | The floating compare and view controls rendered over the loaded **Preview Surface**.                                      | Preview toolbar, overlay controls  |
 | **Pixel Inspector**                | A preview-local readout of image coordinates and visible original or processed hex values under the cursor.               | Loupe, eyedropper                  |
 | **Display Frame**                  | The actual on-screen rectangle used to display a **Preview Surface**.                                                     | Preview pane, container, frame     |
 | **Fit Inset**                      | The spacing subtracted from the measured preview area before sizing a **Display Frame** in **Fit View**.                  | Padding, margin, frame gap         |
@@ -207,19 +207,19 @@
 
 ## Editor Experience
 
-| Term                   | Definition                                                                                                                            | Aliases to avoid                           |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| **Editor**             | The single-screen workstation where users load, adjust, preview, and export an image.                                                 | App, tool, workspace                       |
-| **Control Panel**      | The panel containing processing, resize, compare, clipboard, and advanced settings.                                                   | Settings panel, sidebar                    |
-| **Advanced Controls**  | Collapsible controls for less frequent or more technical settings.                                                                    | Advanced panel, extra settings             |
-| **Theme**              | The persistent light or dark visual appearance selected from the header.                                                              | Color scheme, mode                         |
-| **Local Processing**   | The app behavior where images are decoded, processed, previewed, and exported in the browser.                                         | Client-side processing, offline processing |
-| **Processing Job**     | A browser processing run that produces a **Processed Image** for preview or export.                                                   | Worker job, render job                     |
-| **Preview Job**        | A cancellable **Processing Job** that updates the on-screen **Preview**.                                                              | Worker job, render job                     |
-| **Preview Cycle**      | The user-visible sequence from a **Settings Transition** through **Processing Preview** to an updated **Preview**.                    | Render cycle, processing cycle             |
-| **Export Job**         | A **Processing Job** that produces **Full Output** for an **Export File**.                                                            | Download job, final job                    |
-| **Clipboard Settings** | The copy/paste flow that transfers **Settings JSON** through the system clipboard.                                                    | Settings file, import/export file          |
-| **Responsive Editing** | The property that editor controls remain interactive during **Source Intake**, **Preview Jobs**, and **Export Jobs** where practical. | Non-blocking UI, smooth UI                 |
+| Term                   | Definition                                                                                                                             | Aliases to avoid                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Editor**             | The single-screen workstation where users load, adjust, preview, and export an image.                                                  | App, tool, workspace                       |
+| **Inspector**          | The tabbed editor panel containing generated looks, adjustment controls, palette management, clipboard actions, and advanced settings. | Control panel, settings panel, sidebar     |
+| **Advanced Controls**  | Collapsible controls for less frequent or more technical settings.                                                                     | Advanced panel, extra settings             |
+| **Theme**              | The persistent light or dark visual appearance selected from the header.                                                               | Color scheme, mode                         |
+| **Local Processing**   | The app behavior where images are decoded, processed, previewed, and exported in the browser.                                          | Client-side processing, offline processing |
+| **Processing Job**     | A browser processing run that produces a **Processed Image** for preview or export.                                                    | Worker job, render job                     |
+| **Preview Job**        | A cancellable **Processing Job** that updates the on-screen **Preview**.                                                               | Worker job, render job                     |
+| **Preview Cycle**      | The user-visible sequence from a **Settings Transition** through **Processing Preview** to an updated **Preview**.                     | Render cycle, processing cycle             |
+| **Export Job**         | A **Processing Job** that produces **Full Output** for an **Export File**.                                                             | Download job, final job                    |
+| **Clipboard Settings** | The copy/paste flow that transfers **Settings JSON** through the system clipboard.                                                     | Settings file, import/export file          |
+| **Responsive Editing** | The property that editor controls remain interactive during **Source Intake**, **Preview Jobs**, and **Export Jobs** where practical.  | Non-blocking UI, smooth UI                 |
 
 ## Platform Behavior
 
@@ -248,9 +248,11 @@
 - **JPEG Alpha Flattening** uses **Alpha Background** at export time.
 - **Encoder Failure** must not silently produce a different **Export Format**.
 - **Export Metadata Format** records the **Export Format** actually downloaded by the last **Export Action**.
-- **Export Controls** live in **Preview Stage**, not in **Control Panel**.
-- **Centered Export Actions** must not move when **Quality Control** appears or disappears.
-- **Export Preference Controls** may sit beside **Centered Export Actions** but must not participate in their centering.
+- **Export Entry Point** lives in **Preview Stage**, not in the inspector.
+- **Export Drawer** owns **Format Selector**, **Quality Control**, and final
+  **Export Action**.
+- **Preview Action Row** keeps `Upload` and **Export Entry Point** on the left
+  and undo/redo on the right.
 - **Reduced Preview** may differ in dimensions from **Output Size**.
 - **Screen Preview** may differ in dimensions from **Output Size**.
 - **Screen Preview** must not exceed **Full Output** dimensions.
@@ -295,6 +297,8 @@
 - **URL Look Import** is one-shot import, not general URL state sync.
 - **Auto-Tune** analyzes one current **Source Image** and ranks ten **Auto-Tune
   Candidates**.
+- **Auto-Tune** regenerates the **Auto-Tune Shortlist** when a **Source Image**
+  is loaded or replaced.
 - **Auto-Tune Shortlist** contains 3 to 5 **Auto-Tune Recommendations**.
 - An **Auto-Tune Recommendation** contains one normal **Look Snapshot**.
 - Applying an **Auto-Tune Recommendation** uses **Settings Transition** and
@@ -325,6 +329,8 @@
 - **Preview Viewport** is **View-local State**, not **Editor Settings**.
 - **Preview Viewport** must not be serialized into **Settings JSON**.
 - **Wheel Zoom Step** applies to mouse-wheel zoom, not to the toolbar zoom slider.
+- **Preview Surface Controls** must not affect **Editor Settings** or **Export
+  Preferences**.
 - **Pixel Inspector** must not affect **Processed Image**, **Full Output**, or **Export File**.
 - A **CSS Pixel Preview Target** must account for the **Fit Inset** so the processed buffer matches the **Display Frame**.
 - **Desktop Reduced Preview Notice** may appear only in **Desktop Experience**.
@@ -335,7 +341,7 @@
 - A **Preview Job** may use one **Preview Target Override**.
 - A **Preview Cycle** begins with one **Settings Transition** and may produce **Processing Preview**, **Reduced Preview**, and **Preview Refinement** states.
 - **Preview Display Measurement** may start a new **Preview Cycle** only when the **Resize Threshold** is met.
-- **Processing Preview** should preserve **Responsive Editing** for the **Control Panel** and **Slide Compare**.
+- **Processing Preview** should preserve **Responsive Editing** for the **Inspector** and **Slide Compare**.
 - **Worker Source Cache** may hold one or more accepted **Source Images** to reduce repeated **Pixel Buffer** transfer.
 - An **Export Job** should ignore preview-size shortcuts and produce **Full Output** at **Output Size**.
 - A **Trace Capture** can reveal a **Main Thread Freeze** even when the **Processing Job** itself runs in a worker.
@@ -416,7 +422,7 @@
 - "Download" and "export" overlapped after adding multiple formats. Use **Export Action** for the user command and **Export File** for the downloaded artifact.
 - "Export format" and "metadata format" overlap. Use **Export Format** for the selected preference and **Export Metadata Format** for the value recorded after a completed export.
 - "Fallback" is misleading for unsupported encoders. Use **Encoder Failure**; the app must not silently create a different **Export Format**.
-- "Centered buttons" should be named **Centered Export Actions** when the rule is about keeping Upload and Export centered relative to **Preview**.
+- "Centered buttons" is stale for the current layout. Use **Preview Action Row** when the rule is left-aligned Upload/Export plus right-aligned undo/redo.
 - "Golden" can imply a binary image snapshot. Use **Core Pixel Golden** for compact core pixel fixtures and **Export Contract Fixture** for export behavior tests.
 - "Benchmark" can imply a gate. Use **Performance Baseline** for the current non-gating report and **Performance Threshold** only for a future calibrated pass/fail limit.
 - "Visual drift" should not imply screenshot diffs in Phase 0. Use **Visual Contract** for deterministic unit and component coverage unless screenshot-diff infrastructure is explicitly added later.

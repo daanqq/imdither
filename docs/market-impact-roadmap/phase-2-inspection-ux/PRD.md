@@ -65,7 +65,7 @@ The preview viewport is app UI state, not public processing settings. It can be 
 - The preview viewport contains mode, zoom, center coordinates, and pixel-inspector enabled state.
 - Viewport mode supports Fit and Manual.
 - Zoom uses a numeric scale where 1 means 100%, or one image pixel equals one CSS pixel.
-- Wheel zoom applies multiplicative steps and rounds the resulting zoom percentage to 50% increments.
+- Wheel zoom applies reciprocal quarter-octave steps so users can return to 100% from the minimum and maximum zoom bounds.
 - Center coordinates are stored as image-pixel coordinates rather than CSS pixels or normalized coordinates.
 - Center coordinates are named as center coordinates rather than pan offsets.
 - Fit mode auto-fits the current preview frame to the available preview area.

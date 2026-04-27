@@ -4,13 +4,7 @@ import {
   PRESET_PALETTES,
   type AutoTuneRecommendation,
 } from "@workspace/core"
-import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
+import { Spinner } from "@workspace/ui/components/spinner"
 import { SparklesIcon } from "lucide-react"
 
 export type AutoTunePanelProps = {
@@ -20,7 +14,6 @@ export type AutoTunePanelProps = {
   recommendations: AutoTuneRecommendation[]
   sourceAvailable: boolean
   onApplyRecommendation: (recommendation: AutoTuneRecommendation) => void
-  onRunAutoTune: () => void
 }
 
 export const AutoTunePanel = React.memo(function AutoTunePanel({
@@ -30,31 +23,20 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
   recommendations,
   sourceAvailable,
   onApplyRecommendation,
-  onRunAutoTune,
 }: AutoTunePanelProps) {
   return (
-    <Card className="min-h-0 gap-0 overflow-hidden border-primary/25 bg-[var(--surface-inspector)] py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <CardHeader className="gap-1 border-b border-border pb-2!">
-        <div className="flex min-w-0 items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col">
-            <CardTitle>Auto-Tune</CardTitle>
-            <p className="min-w-0 truncate font-mono text-[10px] leading-none text-muted-foreground uppercase">
-              image-aware starting looks
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="default"
-            className="h-8 shrink-0 px-3"
-            disabled={!sourceAvailable || isLoading}
-            onClick={onRunAutoTune}
-          >
-            <SparklesIcon data-icon="inline-start" />
-            {isLoading ? "Scanning" : "Auto"}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2 px-2 pt-2">
+    <div className="min-h-0 overflow-hidden">
+      <div className="flex min-w-0 items-center justify-center gap-2 px-1 py-1.5 text-center">
+        {isLoading ? (
+          <Spinner className="size-3.5 shrink-0 text-primary" />
+        ) : (
+          <SparklesIcon className="size-3.5 shrink-0 text-primary" />
+        )}
+        <h2 className="truncate font-mono text-xs leading-none font-semibold tracking-normal text-foreground uppercase">
+          Generated Auto-Tune Looks
+        </h2>
+      </div>
+      <div className="space-y-2 pt-2">
         {!sourceAvailable && (
           <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
             Load a Source Image to generate looks.
@@ -69,7 +51,9 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
 
         {sourceAvailable && recommendations.length === 0 && !error && (
           <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-            Run Auto to rank clean, mono, ink, color, and texture looks.
+            {isLoading
+              ? "Generating clean, mono, ink, color, and texture looks."
+              : "Generated looks will appear after upload."}
           </p>
         )}
 
@@ -85,8 +69,8 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 })
 
@@ -118,49 +102,69 @@ function RecommendationButton({
           : "Mono"
 
   return (
-    <button
-      type="button"
-      className="group w-full rounded-md border border-border bg-background/35 p-2 text-left transition-[background-color,border-color,transform] duration-200 ease-out hover:border-primary/35 hover:bg-background/65 active:translate-y-px data-[applied=true]:border-primary/55 data-[applied=true]:bg-primary/10"
+    <div
+      className="group rounded-sm border border-border bg-background/35 transition-[background-color,border-color,transform] duration-150 ease-out hover:border-primary/35 hover:bg-background/65 data-[applied=true]:border-primary/55 data-[applied=true]:bg-primary/10"
       data-applied={applied}
-      onClick={() => onApplyRecommendation(recommendation)}
     >
-      <span className="flex min-w-0 items-start justify-between gap-2">
-        <span className="min-w-0">
-          <span className="block truncate text-sm leading-tight font-medium">
-            {recommendation.label}
+      <button
+        type="button"
+        className="flex w-full flex-col gap-2 p-2 text-left active:translate-y-px"
+        onClick={() => onApplyRecommendation(recommendation)}
+      >
+        <span className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <span className="flex min-w-0 flex-col gap-2">
+            <span className="block truncate text-sm leading-tight font-medium">
+              {recommendation.label}
+            </span>
+            <span className="flex min-w-0 flex-wrap gap-1">
+              {[
+                algorithmLabel,
+                paletteLabel,
+                settings.preprocess.colorMode,
+                tonalLabel,
+              ].map((chip) => (
+                <span
+                  key={chip}
+                  className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[10px] leading-none text-muted-foreground"
+                >
+                  {chip}
+                </span>
+              ))}
+            </span>
           </span>
-          <span className="mt-1 block text-xs leading-snug text-muted-foreground">
-            {recommendation.intent}
+          <span className="grid h-[2rem] w-[5.75rem] shrink-0 grid-rows-2 justify-items-end gap-1 overflow-hidden">
+            {recommendation.recommended && (
+              <span className="rounded-sm border border-primary/40 px-1 py-0.5 font-mono text-[8px] leading-none text-primary uppercase">
+                Recommended
+              </span>
+            )}
+            {!recommendation.recommended && applied && (
+              <span className="rounded-sm border border-border px-1 py-0.5 font-mono text-[8px] leading-none text-muted-foreground uppercase">
+                Applied
+              </span>
+            )}
+            {!recommendation.recommended && !applied && (
+              <span aria-hidden="true" className="invisible">
+                Applied
+              </span>
+            )}
+
+            {recommendation.recommended && applied && (
+              <span className="rounded-sm border border-border px-1 py-0.5 font-mono text-[8px] leading-none text-muted-foreground uppercase">
+                Applied
+              </span>
+            )}
+            {(!recommendation.recommended || !applied) && (
+              <span aria-hidden="true" className="invisible">
+                Applied
+              </span>
+            )}
           </span>
         </span>
-        <span className="flex shrink-0 flex-col items-end gap-1">
-          {recommendation.recommended && (
-            <span className="rounded-sm border border-primary/40 px-1.5 py-0.5 font-mono text-[9px] leading-none text-primary uppercase">
-              Recommended
-            </span>
-          )}
-          {applied && (
-            <span className="rounded-sm border border-border px-1.5 py-0.5 font-mono text-[9px] leading-none text-muted-foreground uppercase">
-              Applied
-            </span>
-          )}
+        <span className="block min-w-0 text-xs leading-snug text-muted-foreground">
+          {recommendation.intent}
         </span>
-      </span>
-      <span className="mt-2 flex flex-wrap gap-1">
-        {[
-          algorithmLabel,
-          paletteLabel,
-          settings.preprocess.colorMode,
-          tonalLabel,
-        ].map((chip) => (
-          <span
-            key={chip}
-            className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground"
-          >
-            {chip}
-          </span>
-        ))}
-      </span>
-    </button>
+      </button>
+    </div>
   )
 }

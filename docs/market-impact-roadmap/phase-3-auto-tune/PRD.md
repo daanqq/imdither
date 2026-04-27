@@ -198,17 +198,17 @@ result through normal controls.
   `ImageData`, `File`, `HTMLImageElement`, or canvas references stay in the web
   source-intake and orchestration layers.
 - The web app runs Auto-Tune v1 on the main thread against a sampled or
-  downscaled pixel buffer after an explicit user action. Worker protocol changes
-  are out of scope unless implementation evidence shows the analysis blocks the
-  UI enough to require a follow-up performance slice.
-- Auto-Tune v1 analysis uses a sampled image with a maximum long edge of 512 px.
+  downscaled pixel buffer when a Source Image is loaded or replaced. Worker
+  protocol changes are out of scope unless implementation evidence shows the
+  analysis blocks the UI enough to require a follow-up performance slice.
+- Auto-Tune v1 analysis uses a sampled image with a maximum long edge of 256 px.
   This sample is used for classification and ranking only; recommendation
   application still produces normal full-output Editor Settings.
 - Browser recommendation display, user notifications, and apply actions belong
   in the web app.
-- The web app presents Auto-Tune as a separate panel above the Control Panel.
-  Auto-Tune is the simplest first path through the app; the Control Panel remains
-  the detailed manual editing surface for users who want deeper control.
+- The web app presents Auto-Tune as the generated looks section in the `Looks`
+  tab. Auto-Tune is the simplest first path through the app; the inspector
+  remains the detailed manual editing surface for users who want deeper control.
 - Auto-Tune is deterministic and local-first; it does not use a backend service
   or ML model.
 
@@ -250,34 +250,31 @@ result through normal controls.
 
 ## UI Component Decisions
 
-- Add a dedicated Auto-Tune panel component instead of embedding Auto-Tune inside
-  the Control Panel.
-- Place the Auto-Tune panel above the Control Panel in the editor sidebar.
+- Add a dedicated Auto-Tune panel component instead of embedding Auto-Tune
+  heuristics inside manual controls.
+- Place the Auto-Tune panel at the top of the `Looks` inspector tab.
 - The Auto-Tune panel should read as the primary quick-start work surface: more
   prominent than manual controls, but still quiet, utilitarian, and consistent
   with the editor. It should not use marketing copy, assistant-like theatrics, or
   decorative motion.
-- The Auto-Tune panel owns the primary Auto action, loading state, empty state,
-  inline error state, and ranked recommendation list.
+- The Auto-Tune panel owns the generated looks header, loading state, empty
+  state, inline error state, and ranked recommendation list.
 - Even though the app normally starts with the bundled demo source, no-source
   Auto-Tune availability is represented as an inline disabled/empty panel state
   rather than a global app error.
 - Runtime Auto-Tune analysis failures are shown inline in the Auto-Tune panel.
   Global app errors remain reserved for broader import, processing, and export
   failures.
-- Auto-Tune runs only when the user invokes the Auto action. It does not
-  recalculate recommendations automatically while users adjust manual controls.
+- Auto-Tune runs automatically when a Source Image is loaded or replaced. It
+  does not recalculate recommendations while users adjust manual controls.
 - Loading a different Source Image clears the previous recommendation list so
   stale image-specific recommendations are not shown for the new source.
 - Because the app starts with a bundled demo source, the web app may seed the
   Auto-Tune panel with precomputed recommendations for `source.id === "demo"` so
   the initial experience does not need to run analysis on every page load.
-- For the bundled demo source, precomputed recommendations appear in the
-  Auto-Tune panel immediately after demo load without requiring the user to press
-  Auto. User-loaded sources still require an explicit Auto action.
-- If the user invokes Auto while the bundled demo source is active, the web app
-  runs the normal runtime Auto-Tune path rather than treating precomputed demo
-  recommendations as a permanent bypass.
+- For the bundled demo source, precomputed recommendations may appear in the
+  Auto-Tune panel immediately after demo load. User-loaded sources run the
+  normal runtime Auto-Tune path after upload.
 - The precomputed demo seed shows the same top 5 shortlist that runtime
   analysis currently returns for the bundled `demo.png`: Fine Ordered Mono,
   Screenprint Color, Texture/Noise Look, Newsprint Mono, and Clean Reduction.
@@ -304,14 +301,14 @@ result through normal controls.
 - After a recommendation is applied, the Auto-Tune panel remains visible and
   keeps the recommendation list open. The applied recommendation is marked, and
   the user can still apply another recommendation or continue manual editing in
-  the Control Panel.
+  the inspector.
 - The applied marker is local to the current recommendation list and records the
   recommendation the user clicked. It is not derived from recipe matching or a
   hidden recommendation identity in Editor Settings.
 - Manual settings changes clear the applied marker so the UI does not imply the
   current edited look still exactly matches the clicked recommendation.
-- The Control Panel does not own Auto-Tune heuristics or recommendation state.
-  It remains the manual editing surface after a recommendation has been applied.
+- The inspector does not own Auto-Tune heuristics or recommendation state. It
+  remains the manual editing surface after a recommendation has been applied.
 - Auto-Tune recommendation state, loading state, error state, and applied marker
   are runtime UI state owned by the app shell or a local hook. They are not
   persisted in the Zustand editor store.

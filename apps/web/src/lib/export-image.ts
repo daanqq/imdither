@@ -13,7 +13,7 @@ export type ExportFormatOption = {
 }
 
 export const DEFAULT_EXPORT_FORMAT: ExportFormat = "png"
-export const DEFAULT_EXPORT_QUALITY = 0.92
+export const DEFAULT_EXPORT_QUALITY = 0.9
 export const MIN_EXPORT_QUALITY = 0.1
 export const MAX_EXPORT_QUALITY = 1
 export const EXPORT_QUALITY_STEP = 0.05

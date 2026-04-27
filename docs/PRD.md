@@ -180,6 +180,8 @@ Rules:
 - Auto-Tune analyzes the current Source Image from a DOM-free Pixel Buffer.
 - Auto-Tune ranks ten deterministic candidate looks in core.
 - The visible Auto-Tune panel shows only the strongest 3 to 5 recommendations.
+- Auto-Tune regenerates recommendations when a Source Image is loaded or
+  replaced.
 - One recommendation is marked `Recommended`; none are applied automatically.
 - Applying a recommendation applies the recommendation's normal Look Snapshot
   settings through the same Settings Transition path used by pasted looks.
@@ -190,10 +192,9 @@ Rules:
 - Manual settings changes clear the applied marker.
 - Runtime failures are shown inside the Auto-Tune panel, not as global app
   errors.
-- User-loaded sources require pressing `Auto`; the bundled demo source may seed
-  the panel with a precomputed shortlist that matches the runtime
-  recommendation contract.
-- Pressing `Auto` on the bundled demo runs the normal runtime path.
+- The bundled demo source may seed the panel with a precomputed shortlist that
+  matches the runtime recommendation contract while normal source loads use the
+  runtime path.
 
 Current Auto-Tune candidate looks:
 
@@ -252,7 +253,7 @@ Custom palette workflow:
 
 - the Palette control shows `Custom` when `customPalette` is active
 - users can convert the current preset palette into a custom palette
-- users can add, edit, and delete custom palette colors in the Control Panel
+- users can add, edit, and delete custom palette colors in the inspector
 - manual editing is capped at 32 colors; valid imported Settings JSON can preserve 33 to 256 colors
 - custom palette colors normalize to lowercase 6-digit hex with a leading `#`
 - duplicate colors are removed and palettes must contain 2 to 256 unique colors
@@ -330,7 +331,8 @@ View scale:
 Inspection controls:
 
 - pointer-drag pan in Manual mode
-- wheel zoom rounded to 50% percentage steps
+- wheel zoom uses reciprocal quarter-octave steps (`2^(1/4)` in and `2^(-1/4)`
+  out) so users can return to 100% from both 25% and 1600%
 - optional pixel inspector with image coordinates and visible original/processed hex values
 
 Slide comparison:
@@ -375,7 +377,7 @@ Rules:
 
 - PNG is the default export format.
 - WebP and JPEG share one lossy quality preference.
-- default lossy quality: `0.92`
+- default lossy quality: `0.9`
 - quality range: `0.1` through `1.0`, step `0.05`
 - export format and quality are persisted editor preferences, not Editor Settings.
 - Settings JSON copy/paste excludes export format and quality.
@@ -430,15 +432,16 @@ IMDITHER is a single-screen workstation, not a wizard.
 High-level layout:
 
 - primary: preview stage
-- secondary: control panel
+- secondary: inspector
 - tertiary: metadata, utility, and status information
 
 The preview stage owns upload/drop affordances, preview surfaces, processing
-overlays, compare presentation, view-scale controls, and export controls. The
-editor sidebar places the Auto-Tune panel above the control panel. Auto-Tune
-owns image-aware recommendations and the primary `Auto` action; the control
-panel owns recipe, palette, algorithm, output, color, and preprocessing
-controls.
+overlays, compare presentation, floating view controls, and the export entry
+point. Export format, quality, and final download live in a responsive Export
+Drawer. The inspector places generated Auto-Tune looks in the `Looks` tab
+above manual controls. Auto-Tune owns image-aware recommendations; the
+inspector owns recipe, palette, algorithm, output size, color, resize, and
+preprocessing controls across `Looks`, `Adjust`, and `Palette`.
 
 ### 9.2 Visual Direction
 

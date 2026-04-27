@@ -23,11 +23,10 @@ export const DEFAULT_PREVIEW_VIEWPORT: PreviewViewport = {
   loupeEnabled: false,
 }
 
+export const WHEEL_ZOOM_IN_FACTOR = 2 ** 0.25
+export const WHEEL_ZOOM_OUT_FACTOR = 1 / WHEEL_ZOOM_IN_FACTOR
 export const MIN_PREVIEW_ZOOM = 0.25
 export const MAX_PREVIEW_ZOOM = 16
-export const WHEEL_ZOOM_IN_FACTOR = 1.25
-export const WHEEL_ZOOM_OUT_FACTOR = 0.8
-export const WHEEL_ZOOM_PERCENT_STEP = 50
 
 type ImageDimensions = {
   imageHeight: number
@@ -87,16 +86,9 @@ export function clampZoom(zoom: number): number {
 }
 
 export function getWheelZoom(currentZoom: number, deltaY: number): number {
-  const direction = deltaY < 0 ? 1 : -1
-  const factor = direction > 0 ? WHEEL_ZOOM_IN_FACTOR : WHEEL_ZOOM_OUT_FACTOR
-  const scaledZoom = roundZoomPercentToStep(clampZoom(currentZoom) * factor)
-  const minimumStepZoom = stepZoomPercent(currentZoom, direction)
+  const factor = deltaY < 0 ? WHEEL_ZOOM_IN_FACTOR : WHEEL_ZOOM_OUT_FACTOR
 
-  return clampZoom(
-    direction > 0
-      ? Math.max(scaledZoom, minimumStepZoom)
-      : Math.min(scaledZoom, minimumStepZoom)
-  )
+  return clampZoom(clampZoom(currentZoom) * factor)
 }
 
 export function clampViewportCenter(
@@ -540,26 +532,4 @@ function clampManualCenterAxis(
   const max = safeImageSize - halfVisibleImageSize
 
   return Math.min(max, Math.max(min, center))
-}
-
-function stepZoomPercent(zoom: number, direction: 1 | -1) {
-  const percent = clampZoom(zoom) * 100
-  const step = WHEEL_ZOOM_PERCENT_STEP
-  const steppedPercent =
-    direction > 0
-      ? Math.floor(percent / step) * step + step
-      : Math.ceil(percent / step) * step - step
-
-  return steppedPercent / 100
-}
-
-function roundZoomPercentToStep(zoom: number) {
-  const percent = zoom * 100
-
-  return (
-    Math.max(
-      WHEEL_ZOOM_PERCENT_STEP,
-      Math.round(percent / WHEEL_ZOOM_PERCENT_STEP) * WHEEL_ZOOM_PERCENT_STEP
-    ) / 100
-  )
 }

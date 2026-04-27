@@ -11,6 +11,7 @@ import {
   getViewportPointImageCoordinates,
   getViewportDisplaySize,
   getWheelZoom,
+  MIN_PREVIEW_ZOOM,
   migrateViewScaleToViewport,
 } from "./preview-viewport"
 
@@ -246,16 +247,48 @@ describe("preview viewport geometry", () => {
     })
   })
 
-  it("steps wheel zoom in both directions and clamps the result", () => {
-    expect(getWheelZoom(1, -100)).toBe(1.5)
-    expect(getWheelZoom(1, 100)).toBe(0.5)
-    expect(getWheelZoom(1.5, -100)).toBe(2)
-    expect(getWheelZoom(1.5, 100)).toBe(1)
-    expect(getWheelZoom(8, -100)).toBe(10)
-    expect(getWheelZoom(8, 100)).toBe(6.5)
+  it("scales wheel zoom by fixed factors and clamps the result", () => {
+    expect(getWheelZoom(1, -100)).toBeCloseTo(2 ** 0.25)
+    expect(getWheelZoom(1, 100)).toBeCloseTo(2 ** -0.25)
+    expect(getWheelZoom(1.5, -100)).toBeCloseTo(1.5 * 2 ** 0.25)
+    expect(getWheelZoom(1.5, 100)).toBeCloseTo(1.5 * 2 ** -0.25)
+    expect(getWheelZoom(8, -100)).toBeCloseTo(8 * 2 ** 0.25)
+    expect(getWheelZoom(8, 100)).toBeCloseTo(8 * 2 ** -0.25)
     expect(getWheelZoom(16, -100)).toBe(16)
-    expect(getWheelZoom(0.5, -100)).toBe(1)
-    expect(getWheelZoom(0.25, 100)).toBe(0.25)
+    expect(getWheelZoom(0.5, -100)).toBeCloseTo(0.5 * 2 ** 0.25)
+    expect(getWheelZoom(MIN_PREVIEW_ZOOM, 100)).toBe(MIN_PREVIEW_ZOOM)
+  })
+
+  it("returns from maximum wheel zoom-out to 100 percent", () => {
+    let zoom = 1
+
+    for (let index = 0; index < 20; index += 1) {
+      zoom = getWheelZoom(zoom, 100)
+    }
+
+    expect(zoom).toBeCloseTo(MIN_PREVIEW_ZOOM)
+
+    for (let index = 0; index < 8; index += 1) {
+      zoom = getWheelZoom(zoom, -100)
+    }
+
+    expect(zoom).toBeCloseTo(1)
+  })
+
+  it("returns from maximum wheel zoom-in to 100 percent", () => {
+    let zoom = 1
+
+    for (let index = 0; index < 20; index += 1) {
+      zoom = getWheelZoom(zoom, -100)
+    }
+
+    expect(zoom).toBeCloseTo(16)
+
+    for (let index = 0; index < 16; index += 1) {
+      zoom = getWheelZoom(zoom, 100)
+    }
+
+    expect(zoom).toBeCloseTo(1)
   })
 })
 

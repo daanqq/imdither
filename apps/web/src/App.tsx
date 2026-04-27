@@ -15,8 +15,7 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { MoonIcon, SunIcon } from "lucide-react"
 
-import { AutoTunePanel } from "@/components/auto-tune-panel"
-import { ControlPanel } from "@/components/control-panel"
+import { InspectorPanel } from "@/components/inspector-panel"
 import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
 import { applyAutoTuneLookSettings } from "@/lib/auto-tune-application"
@@ -101,9 +100,13 @@ export function App() {
         displayWidth: previewDisplaySize?.width,
         outputHeight: settings.resize.height,
         outputWidth: settings.resize.width,
-        viewScale: previewViewport.mode === "fit" ? "fit" : "actual",
+        viewScale:
+          !isDesktopViewScale || previewViewport.mode === "fit"
+            ? "fit"
+            : "actual",
       }),
     [
+      isDesktopViewScale,
       previewDisplaySize?.height,
       previewDisplaySize?.width,
       settings.resize.height,
@@ -119,7 +122,6 @@ export function App() {
     isLoading: isAutoTuneLoading,
     markApplied: markAutoTuneApplied,
     recommendations: autoTuneRecommendations,
-    runAutoTune,
   } = autoTune
 
   const applySourceIntake = React.useCallback(
@@ -695,7 +697,7 @@ export function App() {
           <ThemeToggle />
         </header>
 
-        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,2fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
+        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
           <PreviewStage
             algorithm={settings.algorithm}
             compareMode={compareMode}
@@ -715,6 +717,7 @@ export function App() {
             canRedoSettingsChange={canRedoSettingsChange}
             canUndoSettingsChange={canUndoSettingsChange}
             onExport={handleExport}
+            onCompareModeChange={setCompareMode}
             onExportFormatChange={setExportFormat}
             onExportQualityChange={setExportQuality}
             onFileSelected={handleFile}
@@ -725,28 +728,26 @@ export function App() {
             onUndoSettingsChange={undoSettingsChange}
           />
 
-          <aside className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-2 md:gap-3">
-            <AutoTunePanel
-              appliedRecommendationId={appliedRecommendationId}
-              error={autoTuneError}
-              isLoading={isAutoTuneLoading}
-              recommendations={autoTuneRecommendations}
-              sourceAvailable={Boolean(source)}
-              onApplyRecommendation={handleApplyAutoTuneRecommendation}
-              onRunAutoTune={runAutoTune}
-            />
-
-            <ControlPanel
+          <aside className="min-h-0 min-w-0 overflow-hidden">
+            <InspectorPanel
               advancedOpen={advancedOpen}
-              compareMode={compareMode}
+              appliedRecommendationId={appliedRecommendationId}
+              autoTuneError={autoTuneError}
+              autoTuneLoading={isAutoTuneLoading}
+              autoTuneRecommendations={autoTuneRecommendations}
+              exportFormat={exportFormat}
+              exportQuality={exportQuality}
               settings={settings}
+              sourceAvailable={Boolean(source)}
               onAdvancedOpenChange={setAdvancedOpen}
-              onCompareModeChange={setCompareMode}
+              onApplyAutoTuneRecommendation={handleApplyAutoTuneRecommendation}
               onCopyLook={handleCopyLook}
               onCopySettings={handleCopySettings}
               onCopyPaletteJson={handleCopyPaletteJson}
+              onExportFormatChange={setExportFormat}
               onExportPaletteGpl={handleExportPaletteGpl}
               onExportPaletteJson={handleExportPaletteJson}
+              onExportQualityChange={setExportQuality}
               onExtractPalette={handleExtractPalette}
               onImportPaletteFile={handleImportPaletteFile}
               onImportPaletteFromClipboard={handleImportPaletteFromClipboard}

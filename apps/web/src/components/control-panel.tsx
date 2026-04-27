@@ -15,6 +15,7 @@ import {
   type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
+  type AutoTuneRecommendation,
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -67,6 +68,7 @@ import {
 
 import { CommittedSliderField } from "@/components/committed-slider-field"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
+import type { ExportFormat } from "@/lib/export-image"
 import { getNextPaletteColor } from "@/lib/palette-add-color"
 import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
 import { getRandomDifferentValue } from "@/lib/random-options"
@@ -74,15 +76,27 @@ import type { CompareMode } from "@/store/editor-store"
 
 export type ControlPanelProps = {
   advancedOpen: boolean
-  compareMode: CompareMode
+  appliedRecommendationId?: string | null
+  autoTuneError?: string | null
+  autoTuneLoading?: boolean
+  autoTuneRecommendations?: AutoTuneRecommendation[]
+  compareMode?: CompareMode
+  exportFormat?: ExportFormat
+  exportQuality?: number
   settings: EditorSettings
+  sourceAvailable?: boolean
   onAdvancedOpenChange: (open: boolean) => void
-  onCompareModeChange: (mode: CompareMode) => void
+  onApplyAutoTuneRecommendation?: (
+    recommendation: AutoTuneRecommendation
+  ) => void
+  onCompareModeChange?: (mode: CompareMode) => void
   onCopyLook: () => void
   onCopyPaletteJson: () => void
   onCopySettings: () => void
   onExportPaletteGpl: () => void
   onExportPaletteJson: () => void
+  onExportFormatChange?: (format: ExportFormat) => void
+  onExportQualityChange?: (quality: number) => void
   onExtractPalette: (size: 2 | 4 | 8 | 16 | 32) => void
   onImportPaletteFile: (file: File) => void
   onImportPaletteFromClipboard: () => void
@@ -416,7 +430,7 @@ export const ControlPanel = React.memo(function ControlPanel({
                     variant="outline"
                     className="flex-1"
                     onValueChange={(value) => {
-                      if (value) {
+                      if (value && onCompareModeChange) {
                         onCompareModeChange(value as CompareMode)
                       }
                     }}
@@ -431,7 +445,7 @@ export const ControlPanel = React.memo(function ControlPanel({
                     variant="outline"
                     className="flex-[2]"
                     onValueChange={(value) => {
-                      if (value) {
+                      if (value && onCompareModeChange) {
                         onCompareModeChange(value as CompareMode)
                       }
                     }}

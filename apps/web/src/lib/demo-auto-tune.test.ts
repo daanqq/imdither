@@ -11,6 +11,15 @@ describe("demo Auto-Tune recommendations", () => {
         (recommendation) => recommendation.recommended
       )
     ).toHaveLength(1)
+    expect(
+      DEMO_AUTO_TUNE_RECOMMENDATIONS.map((recommendation) => recommendation.id)
+    ).toEqual([
+      "fine-ordered-mono",
+      "screenprint-color",
+      "texture-noise-look",
+      "clean-reduction",
+      "soft-poster",
+    ])
 
     for (const [
       index,

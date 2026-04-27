@@ -36,17 +36,7 @@ export const DEMO_AUTO_TUNE_RECOMMENDATIONS: AutoTuneRecommendation[] = [
       colorMode: "color-preserve",
     },
   }),
-  recommendation(4, false, "newsprint-mono", "Newsprint Mono", {
-    algorithm: "halftone-dot",
-    paletteId: "black-white",
-    preprocess: {
-      ...DEFAULT_SETTINGS.preprocess,
-      contrast: 22,
-      gamma: 0.95,
-      colorMode: "grayscale-first",
-    },
-  }),
-  recommendation(5, false, "clean-reduction", "Clean Reduction", {
+  recommendation(4, false, "clean-reduction", "Clean Reduction", {
     algorithm: "none",
     paletteId: "custom",
     customPalette: [
@@ -71,6 +61,17 @@ export const DEMO_AUTO_TUNE_RECOMMENDATIONS: AutoTuneRecommendation[] = [
     matchingMode: "perceptual",
     preprocess: {
       ...DEFAULT_SETTINGS.preprocess,
+      colorMode: "color-preserve",
+    },
+  }),
+  recommendation(5, false, "soft-poster", "Soft Poster", {
+    algorithm: "none",
+    paletteId: "soft-8",
+    matchingMode: "perceptual",
+    preprocess: {
+      ...DEFAULT_SETTINGS.preprocess,
+      contrast: -2,
+      gamma: 1.08,
       colorMode: "color-preserve",
     },
   }),
@@ -124,8 +125,6 @@ function getIntent(id: AutoTuneRecommendation["id"]): string {
       return "Visible screen texture for smooth fields and atmospheric images."
     case "soft-poster":
       return "Reduced poster color with a quieter tonal curve."
-    case "newsprint-mono":
-      return "Halftone newspaper texture with a hard monochrome palette."
     case "low-noise-photo":
       return "Gentler diffusion for scans and noisy photographic sources."
     case "arcade-color":

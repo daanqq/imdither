@@ -137,4 +137,33 @@ describe("SlideComparePreview", () => {
       })
     ).toBe(false)
   })
+
+  it("uses the initial viewport box for non-default real-pixels slide frames", () => {
+    const html = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={37}
+        displayHeight={3000}
+        displayWidth={4000}
+        initialViewportBox={{ height: 600, width: 800 }}
+        original={makePixelBuffer(4000, 3000)}
+        processed={makePixelBuffer(4000, 3000)}
+        status="ready"
+        viewScale="actual"
+        previewViewport={{
+          mode: "manual",
+          zoom: 3,
+          center: { x: 1200, y: 900 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(html).toContain("height:1764px")
+    expect(html).toContain("width:2352px")
+    expect(html).toContain("margin-left:-706px")
+    expect(html).toContain("margin-top:-529px")
+    expect(html).not.toContain("visibility:hidden")
+  })
 })

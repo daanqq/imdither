@@ -80,7 +80,7 @@ describe("Auto-Tune public recommendation contract", () => {
     expect(gradient.uniqueColorApprox).toBeGreaterThan(flat.uniqueColorApprox)
   })
 
-  it("ranks ten candidate looks while keeping the public recommendation shortlist at 3 to 5", () => {
+  it("ranks nine candidate looks while keeping the public recommendation shortlist at 3 to 5", () => {
     const source = createRepresentativeSource()
     const context = {
       settings: DEFAULT_SETTINGS,
@@ -89,7 +89,7 @@ describe("Auto-Tune public recommendation contract", () => {
     const candidates = rankAutoTuneLookCandidates(source, context)
     const recommendations = recommendAutoTuneLooks(source, context)
 
-    expect(candidates).toHaveLength(10)
+    expect(candidates).toHaveLength(9)
     expect(recommendations.length).toBeGreaterThanOrEqual(3)
     expect(recommendations.length).toBeLessThanOrEqual(5)
     expect(candidates.map((recommendation) => recommendation.id)).toEqual(
@@ -100,7 +100,6 @@ describe("Auto-Tune public recommendation contract", () => {
         "screenprint-color",
         "texture-noise-look",
         "soft-poster",
-        "newsprint-mono",
         "low-noise-photo",
         "arcade-color",
         "ink-wash",

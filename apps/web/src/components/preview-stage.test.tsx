@@ -3,7 +3,7 @@ import * as React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { PixelBuffer } from "@workspace/core"
 
-import type { ExportFormat } from "@/lib/export-image"
+import { MIN_PREVIEW_ZOOM } from "@/lib/preview-viewport"
 
 import { areCanvasPanelPropsEqual } from "./preview-render-boundaries"
 import { PreviewStage } from "./preview-stage"
@@ -69,7 +69,10 @@ vi.mock("@workspace/ui/components/toggle-group", () => ({
       {React.Children.map(children, (child) =>
         React.isValidElement<{ onClick?: () => void; value?: string }>(child)
           ? React.cloneElement(child, {
-              onClick: () => onValueChange?.(child.props.value ?? ""),
+              onClick: () => {
+                child.props.onClick?.()
+                onValueChange?.(child.props.value ?? "")
+              },
             })
           : child
       )}
@@ -100,6 +103,11 @@ vi.mock("@workspace/ui/components/select", () => ({
     value?: string
   }) => (
     <select
+      aria-label={
+        value === "png" || value === "webp" || value === "jpeg"
+          ? "Export format"
+          : undefined
+      }
       value={value}
       onChange={(event) => onValueChange?.(event.currentTarget.value)}
     >
@@ -122,6 +130,42 @@ vi.mock("@workspace/ui/components/select", () => ({
   SelectValue: () => null,
 }))
 
+vi.mock("@workspace/ui/components/drawer", () => ({
+  Drawer: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-slot="drawer-content">{children}</div>
+  ),
+  DrawerDescription: ({ children }: { children: React.ReactNode }) => (
+    <p>{children}</p>
+  ),
+  DrawerFooter: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2>{children}</h2>
+  ),
+  DrawerTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}))
+
+vi.mock("@workspace/ui/components/popover", () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-slot="popover-content">{children}</div>
+  ),
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}))
+
 const buffer: PixelBuffer = {
   data: new Uint8ClampedArray([0, 0, 0, 255]),
   height: 1,
@@ -137,7 +181,7 @@ describe("PreviewStage", () => {
   })
 
   it("keeps upload and export side effects behind callbacks", () => {
-    const onExportPng = vi.fn()
+    const onExport = vi.fn()
     const onFileSelected = vi.fn()
 
     renderToStaticMarkup(
@@ -161,7 +205,7 @@ describe("PreviewStage", () => {
         }}
         exportFormat="png"
         exportQuality={0.92}
-        onExport={onExportPng}
+        onExport={onExport}
         onExportFormatChange={vi.fn()}
         onExportQualityChange={vi.fn()}
         onFileSelected={onFileSelected}
@@ -181,13 +225,16 @@ describe("PreviewStage", () => {
       target: { files: [file], value: "source.png" },
     } as unknown as React.ChangeEvent<HTMLInputElement>)
     exportButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+    buttonRenders
+      .find((button) => button.onClick === onExport)
+      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
     expect(onFileSelected).toHaveBeenCalledTimes(1)
     expect(onFileSelected).toHaveBeenCalledWith(file)
-    expect(onExportPng).toHaveBeenCalledTimes(1)
+    expect(onExport).toHaveBeenCalledTimes(1)
   })
 
-  it("centers manual zoom from full output dimensions while fit preview is reduced", () => {
+  it("centers manual zoom from the rendered preview frame while fit preview is reduced", () => {
     const onPreviewViewportChange = vi.fn()
 
     renderToStaticMarkup(
@@ -224,7 +271,7 @@ describe("PreviewStage", () => {
     toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
 
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
+      center: { x: 300, y: 225 },
       mode: "manual",
       zoom: 1,
     })
@@ -283,7 +330,53 @@ describe("PreviewStage", () => {
     expect(onRedoSettingsChange).toHaveBeenCalledTimes(1)
   })
 
-  it("shows quality only for formats that support it", () => {
+  it("cycles compare mode from the floating preview control", () => {
+    const onCompareModeChange = vi.fn()
+
+    const markup = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="floyd-steinberg"
+        compareMode="processed"
+        isDesktopViewScale
+        original={buffer}
+        preview={buffer}
+        previewTargetHeight={1}
+        previewTargetWidth={1}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onCompareModeChange={onCompareModeChange}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    buttonRenders
+      .find(
+        (button) => button["aria-label"] === "Switch compare mode to Original"
+      )
+      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(markup).toContain("Processed")
+    expect(toggleGroupItemRenders.map((item) => item.value)).not.toEqual(
+      expect.arrayContaining(["slide", "processed", "original"])
+    )
+    expect(onCompareModeChange).toHaveBeenCalledWith("original")
+  })
+
+  it("moves export preferences into the export drawer", () => {
     const onExportFormatChange = vi.fn()
     const onExportQualityChange = vi.fn()
     const baseProps = {
@@ -312,24 +405,25 @@ describe("PreviewStage", () => {
       onPreviewViewportChange: vi.fn(),
     } as const
 
-    const render = (exportFormat: ExportFormat) =>
-      renderToStaticMarkup(
-        <PreviewStage {...baseProps} exportFormat={exportFormat} />
-      )
+    renderToStaticMarkup(<PreviewStage {...baseProps} exportFormat="webp" />)
 
-    expect(render("png")).not.toContain("Quality")
-    expect(render("webp")).toContain("Quality")
-    expect(render("webp")).toContain("75%")
-    expect(render("jpeg")).toContain("Quality")
+    const markup = renderToStaticMarkup(
+      <PreviewStage {...baseProps} exportFormat="jpeg" />
+    )
+    renderToStaticMarkup(<PreviewStage {...baseProps} exportFormat="png" />)
+
+    expect(markup).toContain("Export Format")
+    expect(markup).toContain("Export Quality")
+    expect(markup).toContain("Download JPEG")
+    expect(markup).not.toContain("Palette JSON")
+    expect(markup).not.toContain("Palette GPL")
     expect(inputRenders.some((input) => input.type === "range")).toBe(false)
-    expect(sliderRenders.find((slider) => slider.max === 1)).toMatchObject({
-      max: 1,
-      min: 0.1,
-      step: 0.05,
-      value: [0.75],
+    expect(sliderRenders.find((slider) => slider.max === 1)).toBeDefined()
+    expect(sliderRenders.at(-1)).toMatchObject({
+      disabled: true,
+      value: [1],
     })
-    sliderRenders.find((slider) => slider.max === 1)?.onValueChange?.([0.8])
-    expect(onExportQualityChange).toHaveBeenLastCalledWith(0.8)
+    expect(onExportQualityChange).not.toHaveBeenCalled()
   })
 
   it("keeps ready canvas presentation stable across status-only updates", () => {
@@ -453,7 +547,11 @@ describe("PreviewStage", () => {
       .find((button) => button["aria-label"] === "Set output pixels to 1:1")
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
-    expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
+    expect(zoomSlider).toMatchObject({
+      min: MIN_PREVIEW_ZOOM,
+      max: 16,
+      step: 0.25,
+    })
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
       mode: "manual",
       zoom: 5,
@@ -504,7 +602,11 @@ describe("PreviewStage", () => {
       .find((button) => button["aria-label"] === "Set output pixels to 1:1")
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
-    expect(zoomSlider).toMatchObject({ min: 0.25, max: 16, step: 0.25 })
+    expect(zoomSlider).toMatchObject({
+      min: MIN_PREVIEW_ZOOM,
+      max: 16,
+      step: 0.25,
+    })
     expect(
       buttonRenders.some(
         (button) => button["aria-label"] === "Set output pixels to 1:1"
@@ -566,6 +668,92 @@ describe("PreviewStage", () => {
       center: { x: 4, y: 3 },
       loupeEnabled: true,
       mode: "manual",
+    })
+  })
+
+  it("centers real pixels from fit mode at the full output size, not the reduced preview target", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="slide"
+        isDesktopViewScale
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(600, 450)}
+        previewTargetHeight={450}
+        previewTargetWidth={600}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 2000, y: 1500 },
+      mode: "manual",
+      zoom: 1,
+    })
+  })
+
+  it("resets zoom when switching from real pixels back to fit", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(4000, 3000)}
+        previewTargetHeight={3000}
+        previewTargetWidth={4000}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 3,
+          center: { x: 1200, y: 900 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    toggleGroupItemRenders.find((item) => item.value === "fit")?.onClick?.()
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 2000, y: 1500 },
+      mode: "fit",
+      zoom: 1,
     })
   })
 
@@ -673,6 +861,88 @@ describe("PreviewStage", () => {
     expect(html).toContain("top:50%")
     expect(html).toContain("margin-left:-2px")
     expect(html).toContain("margin-top:-1px")
+  })
+
+  it("does not hide non-default real-pixels frames during compare mode changes", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(4000, 3000)}
+        previewTargetHeight={3000}
+        previewTargetWidth={4000}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 3,
+          center: { x: 1200, y: 900 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).not.toContain("visibility:hidden")
+  })
+
+  it("uses the same real-pixels frame size for slide, processed, and original", () => {
+    const commonProps = {
+      algorithm: "bayer" as const,
+      isDesktopViewScale: true,
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 3000,
+      previewTargetWidth: 4000,
+      status: "ready" as const,
+      previewViewport: {
+        mode: "manual" as const,
+        zoom: 3,
+        center: { x: 1200, y: 900 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+      exportFormat: "png" as const,
+      exportQuality: 0.92,
+      onExport: vi.fn(),
+      onExportFormatChange: vi.fn(),
+      onExportQualityChange: vi.fn(),
+      onFileSelected: vi.fn(),
+      onInvalidDrop: vi.fn(),
+      onPreviewDisplaySizeChange: vi.fn(),
+      onPreviewViewportChange: vi.fn(),
+    }
+
+    const slide = renderToStaticMarkup(
+      <PreviewStage {...commonProps} compareMode="slide" />
+    )
+    const processed = renderToStaticMarkup(
+      <PreviewStage {...commonProps} compareMode="processed" />
+    )
+    const original = renderToStaticMarkup(
+      <PreviewStage {...commonProps} compareMode="original" />
+    )
+
+    for (const html of [slide, processed, original]) {
+      expect(html).toContain("height:8964px")
+      expect(html).toContain("width:11952px")
+      expect(html).toContain("margin-left:-3586px")
+      expect(html).toContain("margin-top:-2689px")
+    }
   })
 })
 
