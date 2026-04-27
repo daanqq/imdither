@@ -9,6 +9,14 @@ type ColorPoint = {
   count: number
 }
 
+type ColorChannel = "red" | "green" | "blue"
+
+type ColorBucket = {
+  channel: ColorChannel
+  colors: ColorPoint[]
+  score: number
+}
+
 const SUPPORTED_EXTRACTION_SIZES = new Set<number>([2, 4, 8, 16, 32])
 
 export function extractPaletteFromSource(
@@ -35,7 +43,7 @@ export function extractPaletteFromSource(
 }
 
 function getUniqueOpaqueColors(source: PixelBuffer): ColorPoint[] {
-  const counts = new Map<string, ColorPoint>()
+  const counts = new Map<number, ColorPoint>()
 
   for (let index = 0; index < source.data.length; index += 4) {
     const alpha = source.data[index + 3]
@@ -47,7 +55,7 @@ function getUniqueOpaqueColors(source: PixelBuffer): ColorPoint[] {
     const red = source.data[index]
     const green = source.data[index + 1]
     const blue = source.data[index + 2]
-    const key = `${red},${green},${blue}`
+    const key = (red << 16) | (green << 8) | blue
     const existing = counts.get(key)
 
     if (existing) {
@@ -64,7 +72,7 @@ function medianCut(
   colors: ColorPoint[],
   requestedSize: number
 ): ColorPoint[][] {
-  let buckets: ColorPoint[][] = [[...colors]]
+  let buckets: ColorBucket[] = [createBucket([...colors])]
 
   while (buckets.length < requestedSize) {
     const nextBucketIndex = getNextBucketIndex(buckets)
@@ -84,71 +92,71 @@ function medianCut(
     ]
   }
 
-  return buckets
+  return buckets.map((bucket) => bucket.colors)
 }
 
-function getNextBucketIndex(buckets: ColorPoint[][]): number {
+function getNextBucketIndex(buckets: ColorBucket[]): number {
   let nextBucketIndex = -1
   let nextBucketScore = -1
 
   buckets.forEach((bucket, index) => {
-    if (bucket.length <= 1) {
+    if (bucket.colors.length <= 1) {
       return
     }
 
-    const channel = widestChannel(bucket)
-    const score = getRange(bucket, channel)
-
-    if (score > nextBucketScore) {
+    if (bucket.score > nextBucketScore) {
       nextBucketIndex = index
-      nextBucketScore = score
+      nextBucketScore = bucket.score
     }
   })
 
   return nextBucketIndex
 }
 
-function splitBucket(bucket: ColorPoint[]): [ColorPoint[], ColorPoint[]] {
-  const channel = widestChannel(bucket)
-  const sorted = [...bucket].sort(
-    (left, right) => left[channel] - right[channel]
+function splitBucket(bucket: ColorBucket): [ColorBucket, ColorBucket] {
+  const sorted = [...bucket.colors].sort(
+    (left, right) => left[bucket.channel] - right[bucket.channel]
   )
   const midpoint = Math.ceil(sorted.length / 2)
 
-  return [sorted.slice(0, midpoint), sorted.slice(midpoint)]
+  return [
+    createBucket(sorted.slice(0, midpoint)),
+    createBucket(sorted.slice(midpoint)),
+  ]
 }
 
-function widestChannel(bucket: ColorPoint[]): "red" | "green" | "blue" {
+function createBucket(colors: ColorPoint[]): ColorBucket {
+  let redMin = 255
+  let redMax = 0
+  let greenMin = 255
+  let greenMax = 0
+  let blueMin = 255
+  let blueMax = 0
+
+  for (const color of colors) {
+    if (color.red < redMin) redMin = color.red
+    if (color.red > redMax) redMax = color.red
+    if (color.green < greenMin) greenMin = color.green
+    if (color.green > greenMax) greenMax = color.green
+    if (color.blue < blueMin) blueMin = color.blue
+    if (color.blue > blueMax) blueMax = color.blue
+  }
+
   const ranges = {
-    red: getRange(bucket, "red"),
-    green: getRange(bucket, "green"),
-    blue: getRange(bucket, "blue"),
+    red: redMax - redMin,
+    green: greenMax - greenMin,
+    blue: blueMax - blueMin,
   }
 
   if (ranges.red >= ranges.green && ranges.red >= ranges.blue) {
-    return "red"
+    return { channel: "red", colors, score: ranges.red }
   }
 
   if (ranges.green >= ranges.blue) {
-    return "green"
+    return { channel: "green", colors, score: ranges.green }
   }
 
-  return "blue"
-}
-
-function getRange(
-  bucket: ColorPoint[],
-  channel: "red" | "green" | "blue"
-): number {
-  let min = 255
-  let max = 0
-
-  for (const color of bucket) {
-    min = Math.min(min, color[channel])
-    max = Math.max(max, color[channel])
-  }
-
-  return max - min
+  return { channel: "blue", colors, score: ranges.blue }
 }
 
 function averageBucketColor(bucket: ColorPoint[]): Rgb {

@@ -57,6 +57,17 @@ describe("source palette extraction", () => {
       "#101010",
     ])
   })
+
+  it("keeps dense 32-color extraction within the interaction budget", () => {
+    const source = makeDenseBuffer(256, 256)
+
+    const startedAt = Date.now()
+    const palette = extractPaletteFromSource(source, 32)
+    const elapsedMs = Date.now() - startedAt
+
+    expect(palette).toHaveLength(32)
+    expect(elapsedMs).toBeLessThan(125)
+  })
 })
 
 function makeBuffer(colors: readonly Rgb[]): PixelBuffer {
@@ -72,6 +83,23 @@ function makeBuffer(colors: readonly Rgb[]): PixelBuffer {
   return {
     width: colors.length,
     height: 1,
+    data,
+  }
+}
+
+function makeDenseBuffer(width: number, height: number): PixelBuffer {
+  const data = new Uint8ClampedArray(width * height * 4)
+
+  for (let index = 0; index < width * height; index += 1) {
+    data[index * 4] = index & 255
+    data[index * 4 + 1] = (index >> 8) & 255
+    data[index * 4 + 2] = (index * 17) & 255
+    data[index * 4 + 3] = 255
+  }
+
+  return {
+    width,
+    height,
     data,
   }
 }
