@@ -234,6 +234,43 @@ describe("PreviewStage", () => {
     expect(onExport).toHaveBeenCalledTimes(1)
   })
 
+  it("shows source rejection errors in the preview stage", () => {
+    const markup = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="floyd-steinberg"
+        compareMode="processed"
+        isDesktopViewScale
+        original={null}
+        preview={null}
+        previewTargetHeight={640}
+        previewTargetWidth={960}
+        status="error"
+        error="Image is too large (3300x4900). Maximum source dimension is 4096px."
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(markup).toContain("SOURCE REJECTED")
+    expect(markup).toContain(
+      "Image is too large (3300x4900). Maximum source dimension is 4096px."
+    )
+  })
+
   it("centers manual zoom from the rendered preview frame while fit preview is reduced", () => {
     const onPreviewViewportChange = vi.fn()
 

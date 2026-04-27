@@ -52,6 +52,7 @@ export function App() {
   const exportQuality = useEditorStore((state) => state.exportQuality)
   const advancedOpen = useEditorStore((state) => state.advancedOpen)
   const status = useEditorStore((state) => state.status)
+  const error = useEditorStore((state) => state.error)
   const canRedoSettingsChange = useEditorStore(
     (state) => state.canRedoSettingsChange
   )
@@ -721,6 +722,7 @@ export function App() {
             }
             previewTargetWidth={previewTarget?.width ?? settings.resize.width}
             status={status}
+            error={error}
             previewViewport={previewViewport}
             exportFormat={exportFormat}
             exportQuality={exportQuality}

@@ -94,6 +94,7 @@ export type PreviewStageProps = {
   outputWidth?: number
   preview: PixelBuffer | null
   status: JobStatus
+  error?: string | null
   previewTargetHeight: number
   previewTargetWidth: number
   previewViewport: PreviewViewport
@@ -124,6 +125,7 @@ export const PreviewStage = React.memo(function PreviewStage({
   previewTargetHeight,
   previewTargetWidth,
   status,
+  error,
   previewViewport,
   exportFormat,
   exportQuality,
@@ -217,6 +219,7 @@ export const PreviewStage = React.memo(function PreviewStage({
           previewReduced={isDesktopViewScale && previewReduced}
           status={status}
         />
+        <SourceErrorOverlay error={error} status={status} />
         <CardContent className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden px-0">
           <div
             ref={previewDisplayRef}
@@ -510,6 +513,34 @@ function ProcessingOverlay({
               style={{ animationDelay: `${index * 70}ms` }}
             />
           ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SourceErrorOverlay({
+  error,
+  status,
+}: {
+  error?: string | null
+  status: JobStatus
+}) {
+  if (status !== "error" || !error) {
+    return null
+  }
+
+  return (
+    <div
+      role="alert"
+      className="pointer-events-none absolute inset-x-2 top-2 z-30 border border-destructive bg-background/95 p-2 shadow-none"
+    >
+      <div className="min-w-0">
+        <div className="font-display text-xl leading-none tracking-[-0.03em] text-destructive">
+          SOURCE REJECTED
+        </div>
+        <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+          {error}
         </div>
       </div>
     </div>
