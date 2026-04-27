@@ -65,6 +65,7 @@ import {
   type ExportFormat,
 } from "@/lib/export-image"
 import { getPreviewFrameStyle } from "@/lib/preview-frame"
+import { getPinchGestureViewport } from "@/lib/preview-gestures"
 import {
   clampZoom,
   clampManualViewportCenter,
@@ -660,6 +661,9 @@ function PreviewViewControls({
             value={[viewport.zoom]}
             onValueChange={(value) =>
               onViewportChange({
+                ...(viewport.mode === "fit"
+                  ? { center: centeredViewport.center }
+                  : null),
                 mode: "manual",
                 zoom: clampZoom(value[0] ?? viewport.zoom),
               })
@@ -831,6 +835,17 @@ const CanvasPanel = React.memo(function CanvasPanel({
     center: { x: number; y: number }
     pointerX: number
     pointerY: number
+  } | null>(null)
+  const activePointersRef = React.useRef(
+    new Map<number, { x: number; y: number }>()
+  )
+  const pinchStateRef = React.useRef<{
+    latestViewport: PreviewViewport | null
+    startPointers: {
+      first: { x: number; y: number }
+      second: { x: number; y: number }
+    }
+    startViewport: PreviewViewport
   } | null>(null)
   const panAnimationFrameRef = React.useRef<number | null>(null)
   const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
@@ -1052,16 +1067,28 @@ const CanvasPanel = React.memo(function CanvasPanel({
   }
 
   function panPointer(event: React.PointerEvent<HTMLDivElement>) {
-    if (!previewViewport || previewViewport.mode !== "manual") {
+    const currentViewport = viewportRef.current ?? previewViewport
+
+    event.currentTarget.setPointerCapture(event.pointerId)
+    activePointersRef.current.set(
+      event.pointerId,
+      getPointerViewportPoint(event.currentTarget, event)
+    )
+
+    if (activePointersRef.current.size >= 2) {
+      startPinchGesture()
+      return
+    }
+
+    if (!currentViewport || currentViewport.mode !== "manual") {
       return
     }
 
     panStateRef.current = {
-      center: previewViewport.center,
+      center: currentViewport.center,
       pointerX: event.clientX,
       pointerY: event.clientY,
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
@@ -1115,6 +1142,72 @@ const CanvasPanel = React.memo(function CanvasPanel({
     })
   }
 
+  function startPinchGesture() {
+    const currentViewport = viewportRef.current ?? previewViewport
+    const pointerPair = getActivePointerPair(activePointersRef.current)
+
+    if (!currentViewport || !pointerPair) {
+      return
+    }
+
+    pinchStateRef.current = {
+      latestViewport: null,
+      startPointers: pointerPair,
+      startViewport: currentViewport,
+    }
+    panStateRef.current = null
+  }
+
+  function updatePinchGesture(element: HTMLElement) {
+    if (activePointersRef.current.size < 2) {
+      return
+    }
+
+    if (!pinchStateRef.current) {
+      startPinchGesture()
+    }
+
+    const pointerPair = getActivePointerPair(activePointersRef.current)
+    const pinchState = pinchStateRef.current
+
+    if (!pointerPair || !pinchState) {
+      return
+    }
+
+    const rect = element.getBoundingClientRect()
+    const nextViewport = getPinchGestureViewport({
+      currentPointers: pointerPair,
+      imageHeight: expectedHeight,
+      imageWidth: expectedWidth,
+      startPointers: pinchState.startPointers,
+      startViewport: pinchState.startViewport,
+      viewportHeight: rect.height,
+      viewportWidth: rect.width,
+    })
+
+    if (!nextViewport) {
+      return
+    }
+
+    viewportRef.current = nextViewport
+    pinchState.latestViewport = nextViewport
+    applyManualFrameViewport(nextViewport)
+  }
+
+  function commitGestureViewport() {
+    const latestViewport = pinchStateRef.current?.latestViewport
+
+    if (latestViewport) {
+      onViewportChange({
+        mode: "manual",
+        zoom: latestViewport.zoom,
+        center: latestViewport.center,
+      })
+    }
+
+    pinchStateRef.current = null
+  }
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
       <div
@@ -1126,21 +1219,27 @@ const CanvasPanel = React.memo(function CanvasPanel({
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        style={
-          previewViewport?.mode === "manual"
-            ? {
-                ...(viewScale === "fit" || centeredManualViewport
-                  ? { containerType: "size" as const }
-                  : null),
-                touchAction: "none",
-              }
-            : viewScale === "fit" || centeredManualViewport
-              ? { containerType: "size" }
-              : undefined
-        }
+        style={{
+          ...(viewScale === "fit" || centeredManualViewport
+            ? { containerType: "size" as const }
+            : null),
+          touchAction: "none",
+        }}
         onWheel={handleWheel}
         onPointerDown={panPointer}
         onPointerMove={(event) => {
+          if (activePointersRef.current.has(event.pointerId)) {
+            activePointersRef.current.set(
+              event.pointerId,
+              getPointerViewportPoint(event.currentTarget, event)
+            )
+            updatePinchGesture(event.currentTarget)
+          }
+
+          if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
+            return
+          }
+
           inspectPointer(event)
 
           if (
@@ -1189,6 +1288,12 @@ const CanvasPanel = React.memo(function CanvasPanel({
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
 
+          activePointersRef.current.delete(event.pointerId)
+          if (pinchStateRef.current) {
+            commitGestureViewport()
+            return
+          }
+
           if (panStateRef.current) {
             onViewportChange({ center: panStateRef.current.center })
             panStateRef.current = null
@@ -1199,6 +1304,8 @@ const CanvasPanel = React.memo(function CanvasPanel({
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
 
+          activePointersRef.current.delete(event.pointerId)
+          pinchStateRef.current = null
           panStateRef.current = null
         }}
       >
@@ -1243,6 +1350,28 @@ function getFrameViewportRect(frame: HTMLElement) {
     height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
     width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
   }
+}
+
+function getPointerViewportPoint(
+  element: HTMLElement,
+  event: Pick<React.PointerEvent, "clientX" | "clientY">
+) {
+  const rect = element.getBoundingClientRect()
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  }
+}
+
+function getActivePointerPair(pointers: Map<number, { x: number; y: number }>) {
+  const [first, second] = [...pointers.values()]
+
+  if (!first || !second) {
+    return null
+  }
+
+  return { first, second }
 }
 
 function PixelInspector({ sample }: { sample: PixelInspectorSample }) {

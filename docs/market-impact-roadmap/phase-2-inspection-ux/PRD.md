@@ -1,7 +1,7 @@
 # Phase 2.2 PRD: Inspection UX
 
 Status: done
-Last updated: 2026-04-26
+Last updated: 2026-04-27
 
 ## Problem Statement
 
@@ -9,7 +9,7 @@ Users can compare original and processed output, and they can switch between Fit
 
 ## Solution
 
-Replace the two-state preview scale model with a dedicated app-level preview viewport. The viewport supports Fit mode and Manual mode, continuous zoom, image-space center coordinates, controlled pointer-drag panning, and a cursor pixel inspector. Original and processed views share the same viewport transform during slide compare so that zoomed comparisons remain locked.
+Replace the two-state preview scale model with a dedicated app-level preview viewport. The viewport supports Fit mode and Manual mode, continuous zoom, image-space center coordinates, controlled pointer-drag panning, touch pinch/pan gestures, and a cursor pixel inspector. Original and processed views share the same viewport transform during slide compare so that zoomed comparisons remain locked.
 
 The preview viewport is app UI state, not public processing settings. It can be persisted locally for user convenience, but it is not included in copied Settings JSON and does not affect deterministic processing output.
 
@@ -44,20 +44,24 @@ The preview viewport is app UI state, not public processing settings. It can be 
 27. As an image editor user, I want the pixel inspector to inspect displayed buffers, so that values match what I currently see in preview.
 28. As an image editor user, I want the pixel-inspector toggle to persist locally, so that my preferred inspection workflow remains available across sessions.
 29. As a mobile or small-screen user, I want Fit mode to remain safe and usable, so that the preview does not become awkward on constrained displays.
-30. As a keyboard or button user, I want toolbar controls for Fit and 100%, so that I am not forced to use pointer gestures only.
-31. As a user sharing settings JSON, I want zoom, pan, and pixel-inspector state omitted, so that copied settings remain focused on processing output.
-32. As a user importing settings JSON, I want inspection state to remain independent, so that imported processing settings do not unexpectedly move my viewport.
-33. As a maintainer, I want viewport state separated from processing settings, so that the core processing contract remains deterministic and DOM-free.
-34. As a maintainer, I want a small viewport transform module, so that fit/manual geometry, coordinate conversion, and clamping can be tested without React.
-35. As a maintainer, I want preview rendering components to consume a simple viewport interface, so that original, processed, and slide compare modes stay consistent.
-36. As a maintainer, I want pointer pan math to be isolated from component markup where practical, so that interaction behavior can be tested and maintained.
-37. As a maintainer, I want old Fit/1:1 app state to migrate to the new viewport state, so that persisted users do not lose sensible preview behavior.
-38. As a maintainer, I want old Fit to migrate to Fit mode, so that existing users retain whole-image preview behavior.
-39. As a maintainer, I want old 1:1 to migrate to Manual mode at 100% zoom, so that existing users retain actual-size semantics.
-40. As a maintainer, I want continuous zoom and screen-sized preview jobs to remain compatible, so that preview processing remains responsive.
-41. As a maintainer, I want preview target sizing to remain clearly separate from visual zoom, so that zooming does not necessarily trigger unnecessary reprocessing.
-42. As a maintainer, I want slide compare rendering to avoid unnecessary redraws while panning or moving the divider, so that inspection feels responsive.
-43. As a product owner, I want inspection controls to support Phase 2's success signal, so that users can trust pixel-level output.
+30. As a mobile user, I want to pinch to zoom from Fit mode, so that I can inspect a visible region directly.
+31. As a mobile user, I want two-finger movement to pan the zoomed preview, so that I can move through the image without changing controls.
+32. As a mobile user, I want one-finger drag to pan in Manual mode, so that zoomed inspection feels direct.
+33. As a mobile user, I want slide compare's divider handle to keep priority over pan, so that before/after comparison remains usable.
+34. As a keyboard or button user, I want toolbar controls for Fit and 100%, so that I am not forced to use pointer gestures only.
+35. As a user sharing settings JSON, I want zoom, pan, and pixel-inspector state omitted, so that copied settings remain focused on processing output.
+36. As a user importing settings JSON, I want inspection state to remain independent, so that imported processing settings do not unexpectedly move my viewport.
+37. As a maintainer, I want viewport state separated from processing settings, so that the core processing contract remains deterministic and DOM-free.
+38. As a maintainer, I want a small viewport transform module, so that fit/manual geometry, coordinate conversion, and clamping can be tested without React.
+39. As a maintainer, I want preview rendering components to consume a simple viewport interface, so that original, processed, and slide compare modes stay consistent.
+40. As a maintainer, I want pointer pan and pinch math to be isolated from component markup where practical, so that interaction behavior can be tested and maintained.
+41. As a maintainer, I want old Fit/1:1 app state to migrate to the new viewport state, so that persisted users do not lose sensible preview behavior.
+42. As a maintainer, I want old Fit to migrate to Fit mode, so that existing users retain whole-image preview behavior.
+43. As a maintainer, I want old 1:1 to migrate to Manual mode at 100% zoom, so that existing users retain actual-size semantics.
+44. As a maintainer, I want continuous zoom and screen-sized preview jobs to remain compatible, so that preview processing remains responsive.
+45. As a maintainer, I want preview target sizing to remain clearly separate from visual zoom, so that zooming does not necessarily trigger unnecessary reprocessing.
+46. As a maintainer, I want slide compare rendering to avoid unnecessary redraws while panning or moving the divider, so that inspection feels responsive.
+47. As a product owner, I want inspection controls to support Phase 2's success signal, so that users can trust pixel-level output.
 
 ## Implementation Decisions
 
@@ -72,6 +76,8 @@ The preview viewport is app UI state, not public processing settings. It can be 
 - Manual mode uses the numeric zoom and image-space center coordinates to position the rendered frame.
 - Pointer-drag panning is controlled through viewport state rather than native scrollbars.
 - Manual-mode panning updates center coordinates in image pixels.
+- Touch pinch zoom uses the gesture midpoint as the image anchor and commits the viewport at the end of the gesture.
+- Touch panning in Manual mode uses the same bounded viewport contract as mouse panning.
 - The viewport center is clamped into image bounds when dimensions or viewport state changes.
 - The preview toolbar contains inspection controls: Fit, 100%, zoom control, and Pixel Inspector toggle.
 - Processing controls remain in the Inspector; inspection controls live near the preview.
@@ -88,6 +94,7 @@ The preview viewport is app UI state, not public processing settings. It can be 
 - Existing persisted Fit/1:1 state migrates to the new viewport state.
 - The core processing package remains unaware of viewport, loupe, or pan state.
 - A deep viewport geometry module should encapsulate fit sizing, manual transforms, coordinate conversion, zoom anchoring, and clamping behind stable functions.
+- A gesture module should encapsulate pinch distance, midpoint anchoring, and touch zoom/pan viewport calculation behind stable functions.
 - A small pixel sampling module should encapsulate coordinate-to-buffer index conversion and hex formatting for original/processed inspector values.
 
 ## Testing Decisions
@@ -104,6 +111,7 @@ The preview viewport is app UI state, not public processing settings. It can be 
 - Slide compare tests should cover locked transform behavior at the component contract level where practical.
 - Slide compare tests should preserve existing divider behavior while adding pan behavior.
 - Store tests should verify that viewport state is independent from processing settings and copied settings payloads.
+- Gesture tests should cover pinch distance thresholds, midpoint anchoring, zoom bounds, and pan clamping.
 - Existing slide compare tests are prior art for pointer interaction and before/after preview behavior.
 - Existing screen-sized preview tests are prior art for separating preview target sizing from processing output.
 - Existing preview render boundary tests are prior art for avoiding unnecessary redraws and keeping rendering contracts stable.
@@ -117,7 +125,7 @@ The preview viewport is app UI state, not public processing settings. It can be 
 - Optical magnifying sub-canvas loupe is out of scope for the MVP.
 - Palette nearest-color details inside the loupe are out of scope for the MVP.
 - Full keyboard panning and advanced accessibility shortcuts are out of scope for the first implementation slice, though toolbar buttons should remain accessible.
-- Wheel-to-zoom and trackpad pinch zoom are optional follow-ups unless explicitly included in implementation planning.
+- Trackpad pinch zoom beyond normal wheel events is out of scope.
 - Exporting the loupe overlay is out of scope.
 - Sharing viewport state in URLs or shareable looks is out of scope for Phase 2.2.
 - Undo/history integration is out of scope.

@@ -331,6 +331,9 @@ View scale:
 Inspection controls:
 
 - pointer-drag pan in Manual mode
+- two-finger pinch/pan on touch surfaces switches into Manual mode and anchors
+  zoom around the gesture midpoint
+- one-finger touch pan works in Manual mode
 - wheel zoom uses reciprocal quarter-octave steps (`2^(1/4)` in and `2^(-1/4)`
   out) so users can return to 100% from both 25% and 1600%
 - optional pixel inspector with image coordinates and visible original/processed hex values
@@ -696,7 +699,8 @@ Included:
 - commit-on-release slider behavior
 - original, processed, and slide compare modes
 - Fit and Manual preview viewport
-- zoom, pan, and pixel inspector UI state
+- mouse, wheel, and touch zoom/pan UI state
+- pixel inspector UI state
 - screen-sized Fit preview
 - PNG, WebP, and JPEG export
 - settings JSON copy/paste for processing settings
@@ -730,6 +734,7 @@ The current product contract is informed by the implemented feature PRDs in this
 - Slide Before/After Preview
 - Slide Compare Preview Module
 - Screen-Sized Preview
+- Mobile Preview Gestures
 - Processing Presets
 - Export Layer
 - Market Impact Roadmap Phase 1 Palette Platform MVP

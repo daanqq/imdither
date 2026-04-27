@@ -14,6 +14,7 @@ import {
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
 import { getPreviewFrameStyle } from "@/lib/preview-frame"
+import { getPinchGestureViewport } from "@/lib/preview-gestures"
 import {
   clampManualViewportCenter,
   getAnchoredZoomViewport,
@@ -57,6 +58,17 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     center: { x: number; y: number }
     pointerX: number
     pointerY: number
+  } | null>(null)
+  const activePointersRef = React.useRef(
+    new Map<number, { x: number; y: number }>()
+  )
+  const pinchStateRef = React.useRef<{
+    latestViewport: NonNullable<typeof previewViewport> | null
+    startPointers: {
+      first: { x: number; y: number }
+      second: { x: number; y: number }
+    }
+    startViewport: NonNullable<typeof previewViewport>
   } | null>(null)
   const panAnimationFrameRef = React.useRef<number | null>(null)
   const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
@@ -402,6 +414,74 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     })
   }
 
+  function startPinchGesture() {
+    const currentViewport = viewportRef.current ?? previewViewport
+    const pointerPair = getActivePointerPair(activePointersRef.current)
+
+    if (!currentViewport || !pointerPair) {
+      return
+    }
+
+    pinchStateRef.current = {
+      latestViewport: null,
+      startPointers: pointerPair,
+      startViewport: currentViewport,
+    }
+    panStateRef.current = null
+  }
+
+  function updatePinchGesture(element: HTMLElement) {
+    if (activePointersRef.current.size < 2) {
+      return
+    }
+
+    if (!pinchStateRef.current) {
+      startPinchGesture()
+    }
+
+    const pointerPair = getActivePointerPair(activePointersRef.current)
+    const pinchState = pinchStateRef.current
+
+    if (!pointerPair || !pinchState) {
+      return
+    }
+
+    const viewportRect =
+      element.parentElement?.getBoundingClientRect() ??
+      element.getBoundingClientRect()
+    const nextViewport = getPinchGestureViewport({
+      currentPointers: pointerPair,
+      imageHeight: frameHeight,
+      imageWidth: frameWidth,
+      startPointers: pinchState.startPointers,
+      startViewport: pinchState.startViewport,
+      viewportHeight: viewportRect.height,
+      viewportWidth: viewportRect.width,
+    })
+
+    if (!nextViewport) {
+      return
+    }
+
+    viewportRef.current = nextViewport
+    pinchState.latestViewport = nextViewport
+    applyManualFrameViewport(nextViewport)
+  }
+
+  function commitGestureViewport() {
+    const latestViewport = pinchStateRef.current?.latestViewport
+
+    if (latestViewport) {
+      onViewportChange?.({
+        mode: "manual",
+        zoom: latestViewport.zoom,
+        center: latestViewport.center,
+      })
+    }
+
+    pinchStateRef.current = null
+  }
+
   function inspectPointer(event: React.PointerEvent<HTMLDivElement>) {
     if (
       !pixelInspectorEnabled ||
@@ -485,9 +565,21 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             }
 
             event.currentTarget.setPointerCapture(event.pointerId)
-            if (previewViewport?.mode === "manual") {
+            activePointersRef.current.set(
+              event.pointerId,
+              getPointerViewportPoint(event.currentTarget, event)
+            )
+
+            if (activePointersRef.current.size >= 2) {
+              startPinchGesture()
+              return
+            }
+
+            const currentViewport = viewportRef.current ?? previewViewport
+
+            if (currentViewport?.mode === "manual") {
               panStateRef.current = {
-                center: previewViewport.center,
+                center: currentViewport.center,
                 pointerX: event.clientX,
                 pointerY: event.clientY,
               }
@@ -497,6 +589,18 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             updateDividerFromPointer(event.clientX)
           }}
           onPointerMove={(event) => {
+            if (activePointersRef.current.has(event.pointerId)) {
+              activePointersRef.current.set(
+                event.pointerId,
+                getPointerViewportPoint(event.currentTarget, event)
+              )
+              updatePinchGesture(event.currentTarget)
+            }
+
+            if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
+              return
+            }
+
             inspectPointer(event)
 
             if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -548,6 +652,12 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               event.currentTarget.releasePointerCapture(event.pointerId)
             }
 
+            activePointersRef.current.delete(event.pointerId)
+            if (pinchStateRef.current) {
+              commitGestureViewport()
+              return
+            }
+
             if (previewViewport?.mode !== "manual") {
               commitDividerFromPointer(event.clientX)
             }
@@ -562,6 +672,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               event.currentTarget.releasePointerCapture(event.pointerId)
             }
 
+            activePointersRef.current.delete(event.pointerId)
+            pinchStateRef.current = null
             panStateRef.current = null
           }}
           onPointerLeave={() => setInspector(null)}
@@ -648,6 +760,30 @@ function getFrameViewportRect(frame: HTMLElement) {
     height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
     width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
   }
+}
+
+function getPointerViewportPoint(
+  element: HTMLElement,
+  event: Pick<React.PointerEvent, "clientX" | "clientY">
+) {
+  const rect =
+    element.parentElement?.getBoundingClientRect() ??
+    element.getBoundingClientRect()
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  }
+}
+
+function getActivePointerPair(pointers: Map<number, { x: number; y: number }>) {
+  const [first, second] = [...pointers.values()]
+
+  if (!first || !second) {
+    return null
+  }
+
+  return { first, second }
 }
 
 function PixelInspector({ sample }: { sample: PixelInspectorSample }) {

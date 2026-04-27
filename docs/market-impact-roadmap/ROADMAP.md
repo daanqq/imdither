@@ -39,7 +39,8 @@ Main competitive gaps:
 - no palette extraction workflow
 - explicit color-depth control shipped; future work can improve active-swatch visualization
 - Oklab perceptual matching shipped; future work can evaluate additional perceptual spaces only if needed
-- no true zoom and pan inspection workflow
+- mouse, wheel, and touch zoom/pan inspection shipped; future work can deepen
+  keyboard panning if needed
 - no undo/history stack
 - no shareable look payloads
 - no composable effect stack
@@ -115,10 +116,11 @@ Success signal: shipped. Users can create, reuse, and exchange palettes without 
 - [x] Add recipe variants that demonstrate perceptual matching versus RGB matching.
 - [x] Add continuous zoom.
 - [x] Add pan.
+- [x] Add mobile pinch zoom and touch pan.
 - [x] Add a cursor pixel inspector.
 - [x] Keep original and processed transforms locked during zoomed compare.
 
-Success signal: shipped. Users can intentionally control palette size, compare RGB versus Oklab matching, and inspect pixel-level output with zoom, pan, and cursor pixel values.
+Success signal: shipped. Users can intentionally control palette size, compare RGB versus Oklab matching, and inspect pixel-level output with mouse, wheel, and touch zoom/pan plus cursor pixel values.
 
 ### Phase 3: Look-Building Workflow
 

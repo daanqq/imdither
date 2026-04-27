@@ -618,6 +618,7 @@ describe("PreviewStage", () => {
       )
     ).toBe(true)
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 1, y: 1 },
       mode: "manual",
       zoom: 5,
     })
@@ -625,6 +626,49 @@ describe("PreviewStage", () => {
       mode: "manual",
       zoom: 1,
       center: { x: 1, y: 1 },
+    })
+  })
+
+  it("centers output pixels when the zoom slider enters manual mode from fit", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(600, 450)}
+        previewTargetHeight={450}
+        previewTargetWidth={600}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 2000, y: 1500 },
+      mode: "manual",
+      zoom: 2,
     })
   })
 
@@ -810,6 +854,39 @@ describe("PreviewStage", () => {
           zoom: 4,
           center: { x: 1, y: 1 },
           gridEnabled: true,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("touch-action:none")
+  })
+
+  it("reserves mobile touch gestures while fit preview can pinch into manual mode", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale={false}
+        original={makeBuffer(2, 2)}
+        preview={makeBuffer(2, 2)}
+        previewTargetHeight={2}
+        previewTargetWidth={2}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
           loupeEnabled: false,
         }}
         exportFormat="png"

@@ -167,6 +167,9 @@
 | **Manual View**                    | A **Preview Viewport** mode that uses numeric zoom and image-space center coordinates instead of fitting the whole image. | 1:1 view, actual mode              |
 | **1:1 Zoom**                       | The zoom command that sets **Manual View** to 100%, where one image pixel maps to one CSS pixel.                          | 100%, actual size button           |
 | **Wheel Zoom Step**                | The reciprocal quarter-octave wheel zoom rule that can return to 100% from the 25% and 1600% bounds.                      | Zoom tick, mouse step              |
+| **Touch Pinch Zoom**               | The two-finger gesture that switches the **Preview Viewport** into **Manual View** and changes zoom around a midpoint.    | Mobile zoom, browser pinch         |
+| **Touch Pan**                      | The touch gesture that moves the **Preview Viewport** center while preserving the existing zoom.                          | Drag scroll, mobile pan            |
+| **Gesture Anchor**                 | The screen point kept tied to the same image region while a zoom gesture changes the **Preview Viewport**.                | Pinch center, focal point          |
 | **Preview Surface Controls**       | The floating compare and view controls rendered over the loaded **Preview Surface**.                                      | Preview toolbar, overlay controls  |
 | **Pixel Inspector**                | A preview-local readout of image coordinates and visible original or processed hex values under the cursor.               | Loupe, eyedropper                  |
 | **Display Frame**                  | The actual on-screen rectangle used to display a **Preview Surface**.                                                     | Preview pane, container, frame     |
@@ -226,8 +229,8 @@
 | Term                    | Definition                                                                                                                 | Aliases to avoid                   |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | **Desktop Experience**  | The layout that exposes **View Scale** controls and desktop reduced-preview messaging.                                     | Desktop mode, wide layout          |
-| **Mobile Experience**   | The layout that keeps **Fit View** and hides reduced-preview messaging.                                                    | Mobile mode, phone layout          |
-| **Mobile Fit Preview**  | The mobile-only preview behavior that maximizes visible image area without offering 1:1 view.                              | Mobile 1:1, phone zoom             |
+| **Mobile Experience**   | The layout that keeps compact preview controls, hides reduced-preview messaging, and supports touch preview gestures.      | Mobile mode, phone layout          |
+| **Mobile Fit Preview**  | The mobile preview behavior that maximizes visible image area while still allowing gesture entry into **Manual View**.     | Mobile 1:1, phone zoom             |
 | **Main Thread Freeze**  | A user-visible pause caused by expensive browser work on the thread that handles editor input and rendering.               | UI lock, app stuck, frozen UI      |
 | **Worker Source Cache** | The worker-side retained **Source Image** data used to avoid resending a large **Pixel Buffer** for every **Preview Job**. | Worker cache, source cache         |
 | **Trace Capture**       | A browser performance recording used to identify where **Responsive Editing** is lost.                                     | Performance trace, profiler trace  |
@@ -319,7 +322,7 @@
 - **RGB Matching** is the default **Matching Mode**.
 - **Perceptual Matching** uses Oklab distance through the **Palette Matcher**.
 - **Matt Parker Dithering** is tonal and does not use **Matching Mode**.
-- **Mobile Experience** always uses **Mobile Fit Preview**.
+- **Mobile Experience** starts from **Mobile Fit Preview** and may enter **Manual View** through **Touch Pinch Zoom**, **Touch Pan**, or explicit controls.
 - **Desktop Experience** may use **Screen Fit** or **Real Pixels**.
 - **Screen Fit** maps to **Fit View**.
 - **Real Pixels** maps to **Manual View**.
@@ -329,6 +332,9 @@
 - **Preview Viewport** is **View-local State**, not **Editor Settings**.
 - **Preview Viewport** must not be serialized into **Settings JSON**.
 - **Wheel Zoom Step** applies to mouse-wheel zoom, not to the toolbar zoom slider.
+- **Touch Pinch Zoom** uses a **Gesture Anchor** and must not invoke browser page zoom or page scroll over the preview surface.
+- **Touch Pan** updates **Preview Viewport** center and must stay clamped to image bounds.
+- **Gesture Anchor** is gesture-local state and must not be serialized into **Settings JSON** or **Look Payloads**.
 - **Preview Surface Controls** must not affect **Editor Settings** or **Export
   Preferences**.
 - **Pixel Inspector** must not affect **Processed Image**, **Full Output**, or **Export File**.
@@ -379,6 +385,10 @@
 > **Dev:** "What happens when they use **1:1 Zoom** from **Screen Fit**?"
 >
 > **Domain expert:** "That switches the **Preview Viewport** into **Real Pixels** at 100% zoom. It does not change the **Processed Image**."
+>
+> **Dev:** "Does **Touch Pinch Zoom** create a new processing setting?"
+>
+> **Domain expert:** "No. It updates the **Preview Viewport** using a **Gesture Anchor**. The exported pixels and shared settings stay unchanged."
 >
 > **Dev:** "Should the hidden **Quality Control** be undoable?"
 >
@@ -438,6 +448,8 @@
 - "Fit" was used for both preview zoom and resize fitting. Use **Fit View** for preview sizing and **Resize Fit** for contain / cover / stretch.
 - "Fit" and "Pixels" are short mobile labels. Use **Screen Fit** and **Real Pixels** for desktop-facing product language.
 - "1:1" was replaced by **Manual View** language for the current viewport model; use **Manual View** for zoom/pan inspection and **1:1 Zoom** for the command that sets zoom to 100%.
+- "Pinch" should mean **Touch Pinch Zoom** over the preview surface, not browser page zoom or trackpad zoom.
+- "Touch drag" should be called **Touch Pan** when it moves the **Preview Viewport**, not scroll.
 - "History" is too broad by itself. Use **Settings History** when undo and redo apply only to **Editor Settings**, not source images, **Preview Viewport**, or **Export Preferences**.
 - "Loupe" was implemented as **Pixel Inspector** for coordinate and color readout, not as an optical magnifying sub-canvas.
 - "Full preview" suggested the screen should always catch up to full resolution. Use **Full Output** for selected output dimensions and keep it tied to export semantics.

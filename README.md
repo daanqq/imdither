@@ -14,8 +14,8 @@ in the browser; the app does not upload source images to a server.
   selected output.
 - Compare original and processed output with a slide before/after preview,
   processed-only view, or original-only view.
-- Use Fit or Real Pixels preview with zoom and pan; desktop also exposes pixel
-  inspection.
+- Use Fit or Real Pixels preview with mouse, wheel, and touch zoom/pan; desktop
+  also exposes pixel inspection.
 - Review generated Auto-Tune looks after each source load and apply one as a
   normal editable look.
 - Export the current result as PNG, WebP, or JPEG.
