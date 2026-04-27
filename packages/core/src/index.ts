@@ -1,8 +1,15 @@
 export {
   analyzeAutoTuneImage,
+  expandAutoTuneLookCandidates,
+  getAutoTuneCandidateDefinitions,
+  getPerceptualColorDistance,
   rankAutoTuneLookCandidates,
   recommendAutoTuneLooks,
+  scorePaletteFit,
+  scoreRenderedAutoTuneCandidate,
+  selectDiverseAutoTuneRecommendations,
   type AutoTuneAnalysis,
+  type AutoTuneCandidate,
   type AutoTuneContext,
   type AutoTuneRecommendation,
 } from "./auto-tune"

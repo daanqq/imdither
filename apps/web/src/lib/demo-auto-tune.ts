@@ -125,6 +125,8 @@ function getIntent(id: AutoTuneRecommendation["id"]): string {
       return "Visible screen texture for smooth fields and atmospheric images."
     case "soft-poster":
       return "Reduced poster color with a quieter tonal curve."
+    case "newsprint-mono":
+      return "Coarse black and white halftone for print-like source texture."
     case "low-noise-photo":
       return "Gentler diffusion for scans and noisy photographic sources."
     case "arcade-color":

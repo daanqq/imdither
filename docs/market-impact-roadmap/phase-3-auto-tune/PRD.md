@@ -130,12 +130,13 @@ result through normal controls.
   Mono, Low Noise Photo, Arcade Color, and Ink Wash.
 - These archetype labels are canonical for v1 and should be used in the UI
   rather than introducing a second shorter naming set.
-- Auto-Tune v1 generates ten candidates in core, ranks them from the image
-  analysis signals, and returns the strongest 3 to 5 user-facing
-  recommendations.
-- Auto-Tune v1 ranking is rule-based over deterministic analysis metrics. It
-  does not render candidate outputs to score perceptual error, noise, or
-  banding in this slice.
+- Auto-Tune now keeps ten visible candidate archetypes in core, expands them
+  into a bounded hidden candidate pool, and returns the strongest 3 to 5
+  user-facing recommendations.
+- Auto-Tune ranking now combines deterministic source analysis with rendered
+  candidate scoring. Hidden candidates are processed against a bounded sample
+  and scored for rendered output fit, perceptual color distance, palette fit,
+  structure, edge, texture, banding, and noise signals.
 - Auto-Tune v1 marks the top-ranked returned archetype as the recommended
   starting point. `Recommended` is a marker on one normal archetype, not a sixth
   synthetic recommendation.
@@ -157,8 +158,9 @@ result through normal controls.
   saturation signals.
 - `AutoTuneRecommendation` contains `id`, `label`, `intent`, `snapshot`, `rank`,
   and `recommended`. The `snapshot` field is a normal `LookSnapshot`.
-- Clean Reduction favors direct palette mapping with perceptual matching and an
-  extracted custom palette of 8 or 16 colors for low edge density images.
+- Clean Reduction favors direct palette mapping with perceptual matching and
+  extracted custom palette variants of 8, 16, or 32 colors for low edge density
+  images.
 - Fine Ordered Mono favors Bayer 8x8 with grayscale palettes for photos and soft
   gradients.
 - High Contrast Ink favors black and white with Atkinson or Floyd-Steinberg and
@@ -180,13 +182,13 @@ result through normal controls.
 - Ink Wash favors Blue Noise or Burkes with Warm Mono or Blue Ink and softer
   monochrome tone.
 - Auto-Tune may use extracted palettes as normal custom palettes only for Clean
-  Reduction and Screenprint Color recommendations.
+  Reduction and Screenprint Color hidden candidate variants.
 - Fine Ordered Mono, High Contrast Ink, and Texture/Noise Look keep their
   stylistic intent through preset palettes rather than image-extracted custom
   palette variants.
-- Auto-Tune v1 may create a 32-color custom palette, but it does not add a
+- Auto-Tune may create a 32-color custom palette, but it does not add a
   `colorDepth.limit` value of 32 or require an Editor Settings schema change.
-- Auto-Tune v1 preprocessing recommendations are limited to existing Editor
+- Auto-Tune preprocessing recommendations are limited to existing Editor
   Settings fields: brightness, contrast, gamma, invert, and color mode. It does
   not describe or require future blur, sharpen, or denoise fields.
 - Auto-Tune does not persist palette source, palette analysis data, or internal
@@ -229,9 +231,9 @@ result through normal controls.
   Look Snapshots with valid Editor Settings.
 - Auto-Tune recommendation tests should verify that recommendation count stays
   within the 3 to 5 item contract.
-- Auto-Tune recommendation tests should verify that core ranks all ten v1
-  candidates while the public recommendation shortlist stays within the 3 to 5
-  item contract.
+- Auto-Tune recommendation tests should verify that core ranks one winner per
+  visible candidate archetype while the public recommendation shortlist stays
+  within the 3 to 5 item contract.
 - Auto-Tune recommendation tests should verify that extracted custom palettes,
   when used, are normal custom palettes in Editor Settings.
 - Auto-Tune tests should verify that bundled/precomputed demo recommendations

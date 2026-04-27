@@ -1,7 +1,17 @@
 import { createLookSnapshot, type LookSnapshot } from "./look-snapshot"
+import { getAutoTuneCandidateDefinition } from "./auto-tune-candidate-definitions"
+import { expandAutoTuneCandidateVariants } from "./auto-tune-candidate-expansion"
+import { scoreRenderedAutoTuneCandidate } from "./auto-tune-rendered-scoring"
+import { selectDiverseAutoTuneRecommendations } from "./auto-tune-shortlist"
 import { extractPaletteFromSource } from "./palette-extraction"
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings"
 import type { EditorSettings, PixelBuffer } from "./types"
+
+export { getPerceptualColorDistance } from "./auto-tune-perceptual-color"
+export { getAutoTuneCandidateDefinitions } from "./auto-tune-candidate-definitions"
+export { scorePaletteFit } from "./auto-tune-palette-fit"
+export { scoreRenderedAutoTuneCandidate } from "./auto-tune-rendered-scoring"
+export { selectDiverseAutoTuneRecommendations } from "./auto-tune-shortlist"
 
 export type AutoTuneArchetypeId =
   | "clean-reduction"
@@ -10,6 +20,7 @@ export type AutoTuneArchetypeId =
   | "screenprint-color"
   | "texture-noise-look"
   | "soft-poster"
+  | "newsprint-mono"
   | "low-noise-photo"
   | "arcade-color"
   | "ink-wash"
@@ -48,7 +59,21 @@ export type AutoTuneRecommendation = {
   recommended: boolean
 }
 
-type AutoTuneCandidate = Omit<AutoTuneRecommendation, "rank" | "recommended">
+export type AutoTuneCandidate = Omit<
+  AutoTuneRecommendation,
+  "rank" | "recommended"
+>
+
+export type AutoTuneRenderedScore = {
+  totalScore: number
+  structureRetention: number
+  edgeRetention: number
+  perceptualColorFit: number
+  paletteFit: number
+  textureLevel: number
+  bandingRisk: number
+  noiseAmplification: number
+}
 
 const AUTO_TUNE_CREATED_AT = "2026-04-26T00:00:00.000Z"
 
@@ -160,11 +185,10 @@ export function recommendAutoTuneLooks(
   const sample = sampleSource(source)
   const analysis = analyzeAutoTuneImage(sample, context)
 
-  return rankAutoTuneLookCandidatesFromAnalysis(
-    sample,
-    context,
-    analysis
-  ).slice(0, getRecommendationCount(analysis))
+  return selectDiverseAutoTuneRecommendations(
+    rankAutoTuneLookCandidatesFromAnalysis(sample, context, analysis),
+    getRecommendationCount(analysis)
+  )
 }
 
 export function rankAutoTuneLookCandidates(
@@ -177,24 +201,55 @@ export function rankAutoTuneLookCandidates(
   return rankAutoTuneLookCandidatesFromAnalysis(sample, context, analysis)
 }
 
+export function expandAutoTuneLookCandidates(
+  source: PixelBuffer,
+  context: AutoTuneContext,
+  analysis: AutoTuneAnalysis
+): AutoTuneCandidate[] {
+  return expandAutoTuneCandidateVariants(
+    createCandidates(source, context, analysis),
+    source
+  )
+}
+
 function rankAutoTuneLookCandidatesFromAnalysis(
   source: PixelBuffer,
   context: AutoTuneContext,
   analysis: AutoTuneAnalysis
 ): AutoTuneRecommendation[] {
-  const candidates = createCandidates(source, context, analysis)
+  const rankedCandidates = expandAutoTuneLookCandidates(
+    source,
+    context,
+    analysis
+  )
+    .map((candidate, index) => {
+      const score =
+        scoreRenderedAutoTuneCandidate(source, candidate, analysis).totalScore +
+        scoreCandidate(candidate.id, analysis) * 0.25
 
-  return candidates
-    .map((candidate) => ({
-      candidate,
-      score: scoreCandidate(candidate.id, analysis),
-    }))
-    .sort((left, right) => right.score - left.score)
-    .map(({ candidate }, index) => ({
-      ...candidate,
-      rank: index + 1,
-      recommended: index === 0,
-    }))
+      return {
+        candidate: {
+          ...candidate,
+          score,
+        },
+        index,
+        score,
+      }
+    })
+    .sort(compareScoredCandidates)
+  const winnersByArchetype = new Map<AutoTuneArchetypeId, AutoTuneCandidate>()
+
+  for (const { candidate } of rankedCandidates) {
+    if (!winnersByArchetype.has(candidate.id)) {
+      winnersByArchetype.set(candidate.id, candidate)
+    }
+  }
+
+  return [...winnersByArchetype.values()].map((candidate, index) => ({
+    ...candidate,
+    rank: index + 1,
+    recommended: index === 0,
+  }))
 }
 
 function createCandidates(
@@ -215,9 +270,7 @@ function createCandidates(
 
   return [
     {
-      id: "clean-reduction",
-      label: "Clean Reduction",
-      intent: "Plain mapped color with minimal texture for logos and flat art.",
+      ...candidateText("clean-reduction"),
       snapshot: snapshot("Clean Reduction", {
         ...base,
         algorithm: "none",
@@ -237,10 +290,7 @@ function createCandidates(
       }),
     },
     {
-      id: "fine-ordered-mono",
-      label: "Fine Ordered Mono",
-      intent:
-        "Controlled monochrome Bayer texture for photos and soft gradients.",
+      ...candidateText("fine-ordered-mono"),
       snapshot: snapshot("Fine Ordered Mono", {
         ...base,
         algorithm: "bayer",
@@ -258,9 +308,7 @@ function createCandidates(
       }),
     },
     {
-      id: "high-contrast-ink",
-      label: "High Contrast Ink",
-      intent: "Graphic black and white output with firm edge emphasis.",
+      ...candidateText("high-contrast-ink"),
       snapshot: snapshot("High Contrast Ink", {
         ...base,
         algorithm: analysis.edgeDensity > 0.22 ? "atkinson" : "floyd-steinberg",
@@ -277,9 +325,7 @@ function createCandidates(
       }),
     },
     {
-      id: "screenprint-color",
-      label: "Screenprint Color",
-      intent: "Color-preserving print palette with perceptual matching.",
+      ...candidateText("screenprint-color"),
       snapshot: snapshot("Screenprint Color", {
         ...base,
         algorithm: "none",
@@ -302,10 +348,7 @@ function createCandidates(
       }),
     },
     {
-      id: "texture-noise-look",
-      label: "Texture/Noise Look",
-      intent:
-        "Visible screen texture for smooth fields and atmospheric images.",
+      ...candidateText("texture-noise-look"),
       snapshot: snapshot("Texture/Noise Look", {
         ...base,
         algorithm:
@@ -326,9 +369,7 @@ function createCandidates(
       }),
     },
     {
-      id: "soft-poster",
-      label: "Soft Poster",
-      intent: "Reduced poster color with a quieter tonal curve.",
+      ...candidateText("soft-poster"),
       snapshot: snapshot("Soft Poster", {
         ...base,
         algorithm: analysis.noiseEstimate > 0.22 ? "stucki" : "none",
@@ -348,9 +389,24 @@ function createCandidates(
       }),
     },
     {
-      id: "low-noise-photo",
-      label: "Low Noise Photo",
-      intent: "Gentler diffusion for scans and noisy photographic sources.",
+      ...candidateText("newsprint-mono"),
+      snapshot: snapshot("Newsprint Mono", {
+        ...base,
+        algorithm: "halftone-dot",
+        paletteId: "black-white",
+        customPalette: undefined,
+        colorDepth: { mode: "full" },
+        matchingMode: "rgb",
+        preprocess: {
+          ...base.preprocess,
+          contrast: analysis.histogramSpread < 0.42 ? 24 : 16,
+          gamma: 0.92,
+          colorMode: "grayscale-first",
+        },
+      }),
+    },
+    {
+      ...candidateText("low-noise-photo"),
       snapshot: snapshot("Low Noise Photo", {
         ...base,
         algorithm: analysis.noiseEstimate > 0.18 ? "sierra-lite" : "atkinson",
@@ -370,9 +426,7 @@ function createCandidates(
       }),
     },
     {
-      id: "arcade-color",
-      label: "Arcade Color",
-      intent: "Game-like ordered color using a compact retro palette.",
+      ...candidateText("arcade-color"),
       snapshot: snapshot("Arcade Color", {
         ...base,
         algorithm: analysis.edgeDensity > 0.14 ? "bayer" : "sierra-lite",
@@ -394,9 +448,7 @@ function createCandidates(
       }),
     },
     {
-      id: "ink-wash",
-      label: "Ink Wash",
-      intent: "Soft monochrome wash with visible grain and less edge bite.",
+      ...candidateText("ink-wash"),
       snapshot: snapshot("Ink Wash", {
         ...base,
         algorithm: analysis.gradientAreaRatio > 0.22 ? "blue-noise" : "burkes",
@@ -413,6 +465,18 @@ function createCandidates(
       }),
     },
   ]
+}
+
+function candidateText(
+  id: AutoTuneArchetypeId
+): Pick<AutoTuneCandidate, "id" | "label" | "intent"> {
+  const definition = getAutoTuneCandidateDefinition(id)
+
+  return {
+    id: definition.id,
+    label: definition.label,
+    intent: definition.intent,
+  }
 }
 
 function scoreCandidate(
@@ -455,6 +519,13 @@ function scoreCandidate(
         (1 - analysis.edgeDensity) * 0.5 -
         analysis.noiseEstimate * 0.4
       )
+    case "newsprint-mono":
+      return (
+        analysis.histogramSpread * 0.9 +
+        analysis.gradientAreaRatio * 0.5 +
+        (1 - analysis.meanSaturation) * 0.5 +
+        analysis.outputSize * 0.3
+      )
     case "low-noise-photo":
       return (
         analysis.noiseEstimate * 1.8 +
@@ -475,6 +546,44 @@ function scoreCandidate(
         analysis.flatAreaRatio * 0.3
       )
   }
+}
+
+function compareScoredCandidates(
+  left: { candidate: AutoTuneCandidate; index: number; score: number },
+  right: { candidate: AutoTuneCandidate; index: number; score: number }
+): number {
+  const scoreDifference = right.score - left.score
+
+  if (Math.abs(scoreDifference) > 0.000001) {
+    return scoreDifference
+  }
+
+  const archetypeDifference =
+    getArchetypePriority(left.candidate.id) -
+    getArchetypePriority(right.candidate.id)
+
+  if (archetypeDifference !== 0) {
+    return archetypeDifference
+  }
+
+  return left.index - right.index
+}
+
+function getArchetypePriority(id: AutoTuneArchetypeId): number {
+  const order: AutoTuneArchetypeId[] = [
+    "clean-reduction",
+    "fine-ordered-mono",
+    "high-contrast-ink",
+    "screenprint-color",
+    "texture-noise-look",
+    "soft-poster",
+    "newsprint-mono",
+    "low-noise-photo",
+    "arcade-color",
+    "ink-wash",
+  ]
+
+  return order.indexOf(id)
 }
 
 function snapshot(name: string, settings: EditorSettings): LookSnapshot {

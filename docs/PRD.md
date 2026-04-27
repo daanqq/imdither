@@ -178,7 +178,14 @@ Auto-Tune is an image-aware starting-point workflow, not a persisted mode.
 Rules:
 
 - Auto-Tune analyzes the current Source Image from a DOM-free Pixel Buffer.
-- Auto-Tune ranks ten deterministic candidate looks in core.
+- Auto-Tune keeps ten visible candidate archetypes in core.
+- Auto-Tune expands those archetypes into a bounded hidden candidate pool of
+  roughly 70 to 80 normal Look Snapshot variants.
+- Auto-Tune renders hidden candidates against a bounded sample and scores them
+  with source analysis, rendered output fit, perceptual color distance, palette
+  fit, structure, edge, texture, banding, and noise signals.
+- Auto-Tune ranks one winner per visible candidate archetype, then applies
+  score-aware diversity selection for the visible shortlist.
 - The visible Auto-Tune panel shows only the strongest 3 to 5 recommendations.
 - Auto-Tune regenerates recommendations when a Source Image is loaded or
   replaced.
@@ -196,7 +203,7 @@ Rules:
   matches the runtime recommendation contract while normal source loads use the
   runtime path.
 
-Current Auto-Tune candidate looks:
+Current Auto-Tune visible candidate archetypes:
 
 - Clean Reduction
 - Fine Ordered Mono
@@ -209,9 +216,11 @@ Current Auto-Tune candidate looks:
 - Arcade Color
 - Ink Wash
 
-Auto-Tune may create extracted custom palettes for Clean Reduction and
-Screenprint Color. A 32-color extracted custom palette is allowed, but Color
-Depth remains limited to `2`, `4`, `8`, or `16` when using limited depth.
+Auto-Tune may create extracted custom-palette variants for Clean Reduction and
+Screenprint Color. Clean Reduction may explore extracted palettes of `8`, `16`,
+or `32` colors. Screenprint Color may explore extracted palettes of `16` or
+`32` colors. A 32-color extracted custom palette is allowed, but Color Depth
+remains limited to `2`, `4`, `8`, or `16` when using limited depth.
 
 ### 8.7 Algorithms
 
@@ -511,7 +520,8 @@ Core owns:
 - output limit helpers
 - palette definitions and palette resolution
 - processing preset registry and matching
-- Auto-Tune analysis and recommendation ranking
+- Auto-Tune analysis, candidate definitions, candidate expansion, rendered
+  scoring, palette fit, perceptual color distance, and shortlist selection
 - dither algorithm registry
 - low-level pixel stages
 - high-level `processImage(input, settings)`

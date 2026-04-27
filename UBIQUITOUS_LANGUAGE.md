@@ -140,13 +140,18 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
 | **Auto-Tune**                     | The image-aware workflow that recommends normal **Look Snapshots** from the current **Source Image**.        | Magic preset, AI preset, auto mode    |
 | **Auto-Tune Panel**               | The editor panel that shows generated Auto-Tune looks, inline Auto-Tune states, and the recommendation list. | Assistant panel, smart controls       |
-| **Auto-Tune Candidate**           | One deterministic candidate look generated and ranked by core before shortlist selection.                    | Hidden recommendation, generated item |
+| **Auto-Tune Candidate Archetype** | One of the ten visible Auto-Tune look families that can produce hidden candidate variants.                   | Candidate type, generated category    |
+| **Hidden Candidate Variant**      | A normal **Look Snapshot** variant generated from an **Auto-Tune Candidate Archetype** before ranking.       | Hidden recommendation, generated item |
+| **Candidate Definition**          | The core-owned declaration of an **Auto-Tune Candidate Archetype** and its allowed hidden variant rules.     | Variant config, archetype config      |
+| **Candidate Expansion**           | The deterministic step that turns candidate archetypes into a bounded hidden candidate pool.                 | Variant generation, candidate growth  |
+| **Rendered Candidate Scoring**    | The core scoring step that processes a hidden candidate on a bounded sample and measures output fit.         | Quality scoring, render scoring       |
+| **Palette Fit**                   | The score for how well a candidate palette represents sampled source colors.                                 | Palette match score, palette quality  |
 | **Auto-Tune Recommendation**      | A ranked candidate look shown to the user as a normal applicable **Look Snapshot**.                          | Auto preset, suggested preset         |
 | **Auto-Tune Shortlist**           | The visible 3 to 5 **Auto-Tune Recommendations** selected from the ranked candidate pool.                    | Results, recommendation pool          |
 | **Recommended Marker**            | The visual marker on the top-ranked **Auto-Tune Recommendation**.                                            | Best badge, confidence score          |
 | **Applied Recommendation Marker** | The runtime marker showing which visible **Auto-Tune Recommendation** was last applied.                      | Active auto preset, selected look     |
 | **Demo Auto-Tune Seed**           | The bundled demo recommendation fixture shown immediately for the **Demo Image** before runtime analysis.    | Demo preset list, cached results      |
-| **Auto-Tune Analysis**            | The deterministic source-image metrics used to rank **Auto-Tune Candidates**.                                | Reasoning, ML inference, score data   |
+| **Auto-Tune Analysis**            | The deterministic source-image metrics used with rendered scoring to rank Auto-Tune candidates.              | Reasoning, ML inference, score data   |
 
 ## Preview And Comparison
 
@@ -298,8 +303,13 @@
 - A **Look Payload** must not contain **Source Image** data, source file names, **Compare Mode**, **Preview Viewport**, **Export Preferences**, runtime state, **Processing Metadata**, **Source Notice**, or **Processing Preset Id**.
 - **Clipboard Look** and **URL Look Import** apply through **Settings Transition** so **Settings History** can undo them.
 - **URL Look Import** is one-shot import, not general URL state sync.
-- **Auto-Tune** analyzes one current **Source Image** and ranks ten **Auto-Tune
-  Candidates**.
+- **Auto-Tune** analyzes one current **Source Image**, keeps ten **Auto-Tune
+  Candidate Archetypes**, and expands them into a bounded hidden pool of
+  **Hidden Candidate Variants**.
+- **Candidate Expansion** must produce normal **Look Snapshots** and must not
+  create new **Editor Settings** fields.
+- **Rendered Candidate Scoring** uses bounded samples; full-resolution export
+  rendering is not part of ranking.
 - **Auto-Tune** regenerates the **Auto-Tune Shortlist** when a **Source Image**
   is loaded or replaced.
 - **Auto-Tune Shortlist** contains 3 to 5 **Auto-Tune Recommendations**.
@@ -314,6 +324,8 @@
   **Auto-Tune**.
 - **Auto-Tune Analysis** must not be stored in **Editor Settings**,
   **Settings JSON**, or **Look Snapshot**.
+- **Palette Fit**, rendered scores, candidate ids, and hidden variant ids must
+  not be stored in **Editor Settings**, **Settings JSON**, or **Look Snapshot**.
 - **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
 - **Color Depth** determines the **Effective Palette** without mutating the active **Palette**.
 - **Full Palette Depth** preserves the active **Palette** size in the **Effective Palette**.
@@ -477,6 +489,11 @@
   Settings** for the actual applied state.
 - "Demo recommendations" should be called **Demo Auto-Tune Seed** when referring
   to the bundled shortcut; it must not be treated as the core source of truth.
+- "Candidate" is overloaded in Auto-Tune. Use **Auto-Tune Candidate Archetype**
+  for one of the ten visible look families and **Hidden Candidate Variant** for
+  the generated Look Snapshot variants that users do not see directly.
+- "Palette match" can mean manual **Matching Mode** or Auto-Tune **Palette Fit**.
+  Use **Palette Fit** only for the Auto-Tune source-to-palette score.
 - Oversized **Source Image** handling is a **Source Intake** rejection. **Output Size** may still be auto-sized to stay within the **Output Cap**.
 - "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for the worker-backed image run, **Worker Source Cache** for retained source data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
 - "Trace" should mean **Trace Capture**, not a product log or analytics event.
