@@ -751,6 +751,7 @@ export function App() {
               exportQuality={exportQuality}
               settings={settings}
               sourceAvailable={Boolean(source)}
+              sourceWidth={source?.buffer.width}
               onAdvancedOpenChange={setAdvancedOpen}
               onApplyAutoTuneRecommendation={handleApplyAutoTuneRecommendation}
               onCopyLook={handleCopyLook}

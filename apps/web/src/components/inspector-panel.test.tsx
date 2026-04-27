@@ -32,6 +32,13 @@ describe("InspectorPanel", () => {
     expect(markup).not.toContain("Export JSON")
     expect(markup).not.toContain("Export GPL")
   })
+
+  it("shows a compact source-size reset next to the width input", () => {
+    const markup = renderInspector({ sourceWidth: 1200 })
+
+    expect(markup).toContain("Reset width to source size")
+    expect(markup).toContain("1x")
+  })
 })
 
 function renderInspector(

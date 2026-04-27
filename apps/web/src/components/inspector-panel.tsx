@@ -91,6 +91,7 @@ export type InspectorPanelProps = {
   exportQuality: number
   settings: EditorSettings
   sourceAvailable: boolean
+  sourceWidth?: number
   onAdvancedOpenChange: (open: boolean) => void
   onApplyAutoTuneRecommendation: (
     recommendation: AutoTuneRecommendation
@@ -121,6 +122,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   autoTuneRecommendations,
   settings,
   sourceAvailable,
+  sourceWidth,
   onAdvancedOpenChange,
   onApplyAutoTuneRecommendation,
   onCopyLook,
@@ -180,6 +182,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
                 processingPresetId={processingPresetId}
                 selectedAlgorithmOption={selectedAlgorithmOption}
                 settings={settings}
+                sourceWidth={sourceWidth}
                 resolutionAspectLabel={resolutionAspectLabel}
                 onAdvancedOpenChange={onAdvancedOpenChange}
                 onCopyLook={onCopyLook}
@@ -239,6 +242,7 @@ function AdjustControls({
   resolutionAspectLabel,
   selectedAlgorithmOption,
   settings,
+  sourceWidth,
   onAdvancedOpenChange,
   onCopyLook,
   onCopySettings,
@@ -254,6 +258,7 @@ function AdjustControls({
   resolutionAspectLabel: string
   selectedAlgorithmOption: ReturnType<typeof getDitherAlgorithmOption>
   settings: EditorSettings
+  sourceWidth?: number
   onAdvancedOpenChange: (open: boolean) => void
   onCopyLook: () => void
   onCopySettings: () => void
@@ -465,6 +470,22 @@ function AdjustControls({
         label="Width"
         value={settings.resize.width}
         description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
+        action={
+          sourceWidth ? (
+            <Button
+              aria-label="Reset width to source size"
+              title="Reset width to source size"
+              type="button"
+              variant="outline"
+              className="h-8 px-2 font-mono text-xs"
+              disabled={settings.resize.width === sourceWidth}
+              onClick={() => onResolutionWidthChange(sourceWidth)}
+            >
+              <RotateCcwIcon data-icon="inline-start" />
+              1x
+            </Button>
+          ) : null
+        }
         onChange={onResolutionWidthChange}
       />
       <FieldSet>
@@ -1048,11 +1069,13 @@ function PaletteHexInput({
 }
 
 function NumberField({
+  action,
   description,
   label,
   onChange,
   value,
 }: {
+  action?: React.ReactNode
   description?: React.ReactNode
   label: string
   value: number
@@ -1079,22 +1102,27 @@ function NumberField({
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        key={value}
-        id={id}
-        defaultValue={value}
-        inputMode="numeric"
-        max={4096}
-        min={1}
-        type="number"
-        onBlur={(event) => commitDraft(event.currentTarget)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault()
-            event.currentTarget.blur()
-          }
-        }}
-      />
+      <div
+        className={action ? "grid grid-cols-[minmax(0,1fr)_auto] gap-2" : ""}
+      >
+        <Input
+          key={value}
+          id={id}
+          defaultValue={value}
+          inputMode="numeric"
+          max={4096}
+          min={1}
+          type="number"
+          onBlur={(event) => commitDraft(event.currentTarget)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              event.currentTarget.blur()
+            }
+          }}
+        />
+        {action}
+      </div>
       {description ? <FieldDescription>{description}</FieldDescription> : null}
     </Field>
   )
