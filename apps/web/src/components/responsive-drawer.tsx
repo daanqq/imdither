@@ -1,14 +1,86 @@
 import * as React from "react"
 import { Drawer } from "@workspace/ui/components/drawer"
 
+import {
+  createDrawerHistoryState,
+  isDrawerHistoryState,
+} from "@/lib/drawer-history"
+
 const DESKTOP_DRAWER_QUERY = "(min-width: 768px)"
 
 type DrawerDirection = React.ComponentProps<typeof Drawer>["direction"]
 
 export function ResponsiveDrawer({ children }: { children: React.ReactNode }) {
   const direction = useResponsiveDrawerDirection()
+  const drawerId = React.useId()
+  const [open, setOpen] = React.useState(false)
+  const openRef = React.useRef(open)
+  const pushedHistoryRef = React.useRef(false)
+  const closingFromHistoryRef = React.useRef(false)
 
-  return <Drawer direction={direction}>{children}</Drawer>
+  React.useEffect(() => {
+    openRef.current = open
+  }, [open])
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      if (!pushedHistoryRef.current || !openRef.current) {
+        return
+      }
+
+      pushedHistoryRef.current = false
+      closingFromHistoryRef.current = true
+      setOpen(false)
+    }
+
+    window.addEventListener("popstate", handlePopState)
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [])
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        setOpen(true)
+
+        if (!pushedHistoryRef.current) {
+          window.history.pushState(
+            createDrawerHistoryState(window.history.state, drawerId),
+            ""
+          )
+          pushedHistoryRef.current = true
+        }
+
+        return
+      }
+
+      setOpen(false)
+
+      if (closingFromHistoryRef.current) {
+        closingFromHistoryRef.current = false
+        return
+      }
+
+      if (
+        pushedHistoryRef.current &&
+        isDrawerHistoryState(window.history.state, drawerId)
+      ) {
+        pushedHistoryRef.current = false
+        window.history.back()
+      } else {
+        pushedHistoryRef.current = false
+      }
+    },
+    [drawerId]
+  )
+
+  return (
+    <Drawer direction={direction} open={open} onOpenChange={handleOpenChange}>
+      {children}
+    </Drawer>
+  )
 }
 
 function useResponsiveDrawerDirection(): DrawerDirection {
