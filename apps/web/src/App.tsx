@@ -37,7 +37,10 @@ import {
   type SourceIntakeResult,
 } from "@/lib/source-intake"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import type { PreviewViewport } from "@/lib/preview-viewport"
+import {
+  DEFAULT_PREVIEW_VIEWPORT,
+  type PreviewViewport,
+} from "@/lib/preview-viewport"
 import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
@@ -134,6 +137,7 @@ export function App() {
 
       setSource(result.source)
       setPreview(null)
+      setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT)
       setError(null)
       setSourceNotice(formatSourceNotices(result.notices))
       transitionSettings(
@@ -147,7 +151,13 @@ export function App() {
       )
       return true
     },
-    [setError, setSourceNotice, setStatus, transitionSettings]
+    [
+      setError,
+      setPreviewViewport,
+      setSourceNotice,
+      setStatus,
+      transitionSettings,
+    ]
   )
 
   React.useEffect(() => {
