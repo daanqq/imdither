@@ -124,6 +124,104 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
           width: `${manualDisplayMetrics?.displayWidth ?? Math.max(1, Math.round(frameWidth * manualScale))}px`,
         }
       : frameStyle
+  const effectiveDividerPercent = getEffectiveDividerPercent({
+    dividerPercent: clampedDivider,
+    frameHeight,
+    frameWidth,
+    previewViewport,
+    viewportBox,
+  })
+  const dividerViewportPercent = getDividerViewportPercent({
+    dividerPercent: effectiveDividerPercent,
+    frameHeight,
+    frameWidth,
+    previewViewport,
+    viewportBox,
+  })
+  const dividerControls = processedReady ? (
+    <>
+      <div
+        ref={dividerLineRef}
+        className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
+        style={{ left: `${dividerViewportPercent}%` }}
+      />
+      <button
+        ref={dividerHandleRef}
+        type="button"
+        aria-label="Slide comparison divider"
+        aria-valuemax={SLIDE_COMPARE_MAX}
+        aria-valuemin={SLIDE_COMPARE_MIN}
+        aria-valuenow={Math.round(clampedDivider)}
+        className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        role="slider"
+        style={{ left: `${dividerViewportPercent}%`, touchAction: "none" }}
+        onKeyDown={handleKeyDown}
+        onPointerDown={(event) => {
+          event.stopPropagation()
+          event.currentTarget.setPointerCapture(event.pointerId)
+          updateDividerFromPointer(event.clientX)
+        }}
+        onPointerMove={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            updateDividerFromPointer(event.clientX)
+          }
+        }}
+        onPointerUp={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+
+          commitDividerFromPointer(event.clientX)
+        }}
+        onPointerCancel={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+        }}
+      >
+        ||
+      </button>
+    </>
+  ) : null
+  const rendersDividerInViewport =
+    previewViewport?.mode === "manual" && !centeredManualViewport
+
+  const applyDividerVisual = React.useCallback(
+    (percent: number) => {
+      const nextPercent = clampSlideDivider(percent)
+      const nextEffectivePercent = getEffectiveDividerPercent({
+        dividerPercent: nextPercent,
+        frameHeight,
+        frameWidth,
+        previewViewport: viewportRef.current ?? previewViewport,
+        viewportBox,
+      })
+      const nextViewportPercent = getDividerViewportPercent({
+        dividerPercent: nextEffectivePercent,
+        frameHeight,
+        frameWidth,
+        previewViewport: viewportRef.current ?? previewViewport,
+        viewportBox,
+      })
+
+      if (processedCanvasRef.current) {
+        processedCanvasRef.current.style.clipPath = `inset(0 0 0 ${nextEffectivePercent}%)`
+      }
+
+      if (dividerLineRef.current) {
+        dividerLineRef.current.style.left = `${nextViewportPercent}%`
+      }
+
+      if (dividerHandleRef.current) {
+        dividerHandleRef.current.style.left = `${nextViewportPercent}%`
+        dividerHandleRef.current.setAttribute(
+          "aria-valuenow",
+          String(Math.round(nextPercent))
+        )
+      }
+    },
+    [frameHeight, frameWidth, previewViewport, viewportBox]
+  )
 
   React.useEffect(() => {
     if (!originalCanvasRef.current) {
@@ -148,13 +246,13 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 
     drawPixelBuffer(processedCanvasRef.current, processed)
     applyDividerVisual(dividerPercentRef.current)
-  }, [processed])
+  }, [applyDividerVisual, processed])
 
   React.useEffect(() => {
     dividerPercentRef.current = clampedDivider
     pendingDividerPercentRef.current = clampedDivider
     applyDividerVisual(clampedDivider)
-  }, [clampedDivider])
+  }, [applyDividerVisual, clampedDivider])
 
   React.useEffect(() => {
     return () => {
@@ -189,8 +287,9 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 
       frameRef.current.style.marginLeft = `${-Math.round(center.x * metrics.pixelScaleX)}px`
       frameRef.current.style.marginTop = `${-Math.round(center.y * metrics.pixelScaleY)}px`
+      applyDividerVisual(dividerPercentRef.current)
     },
-    [frameHeight, frameWidth, previewViewport]
+    [applyDividerVisual, frameHeight, frameWidth, previewViewport]
   )
 
   const applyManualFrameViewport = React.useCallback(
@@ -212,8 +311,9 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
       frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
       frameRef.current.style.width = `${metrics.displayWidth}px`
+      applyDividerVisual(dividerPercentRef.current)
     },
-    [frameHeight, frameWidth]
+    [applyDividerVisual, frameHeight, frameWidth]
   )
 
   React.useLayoutEffect(() => {
@@ -272,26 +372,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       panAnimationFrameRef.current = null
       applyManualFramePosition(center)
     })
-  }
-
-  function applyDividerVisual(percent: number) {
-    const nextPercent = clampSlideDivider(percent)
-
-    if (processedCanvasRef.current) {
-      processedCanvasRef.current.style.clipPath = `inset(0 0 0 ${nextPercent}%)`
-    }
-
-    if (dividerLineRef.current) {
-      dividerLineRef.current.style.left = `${nextPercent}%`
-    }
-
-    if (dividerHandleRef.current) {
-      dividerHandleRef.current.style.left = `${nextPercent}%`
-      dividerHandleRef.current.setAttribute(
-        "aria-valuenow",
-        String(Math.round(nextPercent))
-      )
-    }
   }
 
   function scheduleDividerVisual(percent: number) {
@@ -620,6 +700,10 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                 pointerX: event.clientX,
                 pointerY: event.clientY,
               }
+              viewportRef.current = {
+                ...previewViewport,
+                center: nextCenter,
+              }
               scheduleManualFramePosition(nextCenter)
               return
             }
@@ -681,7 +765,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               ref={processedCanvasRef}
               className="absolute inset-0 block size-full bg-background"
               style={{
-                clipPath: `inset(0 0 0 ${clampedDivider}%)`,
+                clipPath: `inset(0 0 0 ${effectiveDividerPercent}%)`,
               }}
             />
           ) : null}
@@ -690,55 +774,16 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
             <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
           </div>
           {processedReady ? (
-            <>
-              <div
-                ref={dividerLineRef}
-                className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
-                style={{ left: `${clampedDivider}%` }}
-              />
-              <button
-                ref={dividerHandleRef}
-                type="button"
-                aria-label="Slide comparison divider"
-                aria-valuemax={SLIDE_COMPARE_MAX}
-                aria-valuemin={SLIDE_COMPARE_MIN}
-                aria-valuenow={Math.round(clampedDivider)}
-                className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                role="slider"
-                style={{ left: `${clampedDivider}%`, touchAction: "none" }}
-                onKeyDown={handleKeyDown}
-                onPointerDown={(event) => {
-                  event.stopPropagation()
-                  event.currentTarget.setPointerCapture(event.pointerId)
-                  updateDividerFromPointer(event.clientX)
-                }}
-                onPointerMove={(event) => {
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                    updateDividerFromPointer(event.clientX)
-                  }
-                }}
-                onPointerUp={(event) => {
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                    event.currentTarget.releasePointerCapture(event.pointerId)
-                  }
-
-                  commitDividerFromPointer(event.clientX)
-                }}
-                onPointerCancel={(event) => {
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                    event.currentTarget.releasePointerCapture(event.pointerId)
-                  }
-                }}
-              >
-                ||
-              </button>
-            </>
+            rendersDividerInViewport ? null : (
+              dividerControls
+            )
           ) : (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
               [{status ?? "processing"}]
             </div>
           )}
         </div>
+        {rendersDividerInViewport ? dividerControls : null}
         {pixelInspectorEnabled && inspector ? (
           <PixelInspector sample={inspector} />
         ) : null}
@@ -754,6 +799,77 @@ function getFrameViewportRect(frame: HTMLElement) {
     height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
     width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
   }
+}
+
+function getDividerViewportPercent({
+  dividerPercent,
+  frameHeight,
+  frameWidth,
+  previewViewport,
+  viewportBox,
+}: {
+  dividerPercent: number
+  frameHeight: number
+  frameWidth: number
+  previewViewport: SlideComparePreviewProps["previewViewport"]
+  viewportBox: { height: number; width: number } | null
+}) {
+  if (previewViewport?.mode !== "manual" || !viewportBox) {
+    return clampSlideDivider(dividerPercent)
+  }
+
+  const imageSplitX = Math.max(1, frameWidth) * (dividerPercent / 100)
+  const scale = getManualViewportScale({
+    imageHeight: Math.max(1, frameHeight),
+    imageWidth: Math.max(1, frameWidth),
+    viewportHeight: Math.max(1, viewportBox.height),
+    viewportWidth: Math.max(1, viewportBox.width),
+    zoom: previewViewport.zoom,
+  })
+  const viewportX =
+    viewportBox.width / 2 + (imageSplitX - previewViewport.center.x) * scale
+
+  return clampSlideDivider((viewportX / Math.max(1, viewportBox.width)) * 100)
+}
+
+function getEffectiveDividerPercent({
+  dividerPercent,
+  frameHeight,
+  frameWidth,
+  previewViewport,
+  viewportBox,
+}: {
+  dividerPercent: number
+  frameHeight: number
+  frameWidth: number
+  previewViewport: SlideComparePreviewProps["previewViewport"]
+  viewportBox: { height: number; width: number } | null
+}) {
+  if (previewViewport?.mode !== "manual" || !viewportBox) {
+    return clampSlideDivider(dividerPercent)
+  }
+
+  const safeFrameWidth = Math.max(1, frameWidth)
+  const safeViewportWidth = Math.max(1, viewportBox.width)
+  const scale = getManualViewportScale({
+    imageHeight: Math.max(1, frameHeight),
+    imageWidth: safeFrameWidth,
+    viewportHeight: Math.max(1, viewportBox.height),
+    viewportWidth: safeViewportWidth,
+    zoom: previewViewport.zoom,
+  })
+  const rawViewportX =
+    safeViewportWidth / 2 +
+    (safeFrameWidth * (dividerPercent / 100) - previewViewport.center.x) * scale
+  const clampedViewportX = Math.min(
+    safeViewportWidth * (SLIDE_COMPARE_MAX / 100),
+    Math.max(safeViewportWidth * (SLIDE_COMPARE_MIN / 100), rawViewportX)
+  )
+  const imageSplitX =
+    previewViewport.center.x +
+    (clampedViewportX - safeViewportWidth / 2) / scale
+
+  return clampSlideDivider((imageSplitX / safeFrameWidth) * 100)
 }
 
 function getPointerViewportPoint(

@@ -166,4 +166,31 @@ describe("SlideComparePreview", () => {
     expect(html).toContain("margin-top:-529px")
     expect(html).not.toContain("visibility:hidden")
   })
+
+  it("keeps manual slide controls and split clipped inside the visible viewport", () => {
+    const html = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={50}
+        displayHeight={3000}
+        displayWidth={4000}
+        initialViewportBox={{ height: 600, width: 800 }}
+        original={makePixelBuffer(4000, 3000)}
+        processed={makePixelBuffer(4000, 3000)}
+        status="ready"
+        viewScale="actual"
+        previewViewport={{
+          mode: "manual",
+          zoom: 3,
+          center: { x: 3990, y: 1500 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(html).toContain("clip-path:inset(0 0 0 83.4234693877551%)")
+    expect(html).toContain("left:2%")
+    expect(html).toContain('aria-valuenow="50"')
+  })
 })
