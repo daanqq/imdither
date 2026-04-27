@@ -370,9 +370,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 
     event.preventDefault()
 
-    const viewportRect =
-      event.currentTarget.parentElement?.getBoundingClientRect() ??
-      event.currentTarget.getBoundingClientRect()
+    const viewportRect = event.currentTarget.getBoundingClientRect()
     const anchorViewportPoint = {
       x: event.clientX - viewportRect.left,
       y: event.clientY - viewportRect.top,
@@ -446,9 +444,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       return
     }
 
-    const viewportRect =
-      element.parentElement?.getBoundingClientRect() ??
-      element.getBoundingClientRect()
+    const viewportRect = element.getBoundingClientRect()
     const nextViewport = getPinchGestureViewport({
       currentPointers: pointerPair,
       imageHeight: frameHeight,
@@ -541,9 +537,126 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         )}
         style={
           viewScale === "fit" || centeredManualViewport
-            ? { containerType: "size" }
-            : undefined
+            ? { containerType: "size", touchAction: "none" }
+            : { touchAction: "none" }
         }
+        onWheel={handleWheel}
+        onPointerDown={(event) => {
+          if (!processedReady) {
+            return
+          }
+
+          event.currentTarget.setPointerCapture(event.pointerId)
+          activePointersRef.current.set(
+            event.pointerId,
+            getPointerViewportPoint(event.currentTarget, event)
+          )
+
+          if (activePointersRef.current.size >= 2) {
+            startPinchGesture()
+            return
+          }
+
+          const currentViewport = viewportRef.current ?? previewViewport
+
+          if (currentViewport?.mode === "manual") {
+            panStateRef.current = {
+              center: currentViewport.center,
+              pointerX: event.clientX,
+              pointerY: event.clientY,
+            }
+            return
+          }
+
+          updateDividerFromPointer(event.clientX)
+        }}
+        onPointerMove={(event) => {
+          if (activePointersRef.current.has(event.pointerId)) {
+            activePointersRef.current.set(
+              event.pointerId,
+              getPointerViewportPoint(event.currentTarget, event)
+            )
+            updatePinchGesture(event.currentTarget)
+          }
+
+          if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
+            return
+          }
+
+          inspectPointer(event)
+
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            if (previewViewport?.mode === "manual") {
+              if (!panStateRef.current) {
+                return
+              }
+
+              const viewportRect = event.currentTarget.getBoundingClientRect()
+              const scale = getManualViewportScale({
+                imageHeight: frameHeight,
+                imageWidth: frameWidth,
+                viewportHeight: viewportRect.height,
+                viewportWidth: viewportRect.width,
+                zoom: previewViewport.zoom,
+              })
+              const nextCenter = clampManualViewportCenter({
+                center: {
+                  x:
+                    panStateRef.current.center.x -
+                    (event.clientX - panStateRef.current.pointerX) / scale,
+                  y:
+                    panStateRef.current.center.y -
+                    (event.clientY - panStateRef.current.pointerY) / scale,
+                },
+                imageHeight: frameHeight,
+                imageWidth: frameWidth,
+                viewportHeight: viewportRect.height,
+                viewportWidth: viewportRect.width,
+                zoom: previewViewport.zoom,
+              })
+
+              panStateRef.current = {
+                center: nextCenter,
+                pointerX: event.clientX,
+                pointerY: event.clientY,
+              }
+              scheduleManualFramePosition(nextCenter)
+              return
+            }
+
+            updateDividerFromPointer(event.clientX)
+          }
+        }}
+        onPointerUp={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+
+          activePointersRef.current.delete(event.pointerId)
+          if (pinchStateRef.current) {
+            commitGestureViewport()
+            return
+          }
+
+          if (previewViewport?.mode !== "manual") {
+            commitDividerFromPointer(event.clientX)
+          }
+
+          if (panStateRef.current) {
+            onViewportChange?.({ center: panStateRef.current.center })
+            panStateRef.current = null
+          }
+        }}
+        onPointerCancel={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+
+          activePointersRef.current.delete(event.pointerId)
+          pinchStateRef.current = null
+          panStateRef.current = null
+        }}
+        onPointerLeave={() => setInspector(null)}
       >
         <div
           ref={frameRef}
@@ -557,126 +670,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                   : "cursor-ew-resize"),
             viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none shrink-0"
           )}
-          style={{ ...effectiveFrameStyle, touchAction: "none" }}
-          onWheel={handleWheel}
-          onPointerDown={(event) => {
-            if (!processedReady) {
-              return
-            }
-
-            event.currentTarget.setPointerCapture(event.pointerId)
-            activePointersRef.current.set(
-              event.pointerId,
-              getPointerViewportPoint(event.currentTarget, event)
-            )
-
-            if (activePointersRef.current.size >= 2) {
-              startPinchGesture()
-              return
-            }
-
-            const currentViewport = viewportRef.current ?? previewViewport
-
-            if (currentViewport?.mode === "manual") {
-              panStateRef.current = {
-                center: currentViewport.center,
-                pointerX: event.clientX,
-                pointerY: event.clientY,
-              }
-              return
-            }
-
-            updateDividerFromPointer(event.clientX)
-          }}
-          onPointerMove={(event) => {
-            if (activePointersRef.current.has(event.pointerId)) {
-              activePointersRef.current.set(
-                event.pointerId,
-                getPointerViewportPoint(event.currentTarget, event)
-              )
-              updatePinchGesture(event.currentTarget)
-            }
-
-            if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
-              return
-            }
-
-            inspectPointer(event)
-
-            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-              if (previewViewport?.mode === "manual") {
-                if (!panStateRef.current) {
-                  return
-                }
-
-                const viewportRect =
-                  event.currentTarget.parentElement?.getBoundingClientRect() ??
-                  event.currentTarget.getBoundingClientRect()
-                const scale = getManualViewportScale({
-                  imageHeight: frameHeight,
-                  imageWidth: frameWidth,
-                  viewportHeight: viewportRect.height,
-                  viewportWidth: viewportRect.width,
-                  zoom: previewViewport.zoom,
-                })
-                const nextCenter = clampManualViewportCenter({
-                  center: {
-                    x:
-                      panStateRef.current.center.x -
-                      (event.clientX - panStateRef.current.pointerX) / scale,
-                    y:
-                      panStateRef.current.center.y -
-                      (event.clientY - panStateRef.current.pointerY) / scale,
-                  },
-                  imageHeight: frameHeight,
-                  imageWidth: frameWidth,
-                  viewportHeight: viewportRect.height,
-                  viewportWidth: viewportRect.width,
-                  zoom: previewViewport.zoom,
-                })
-
-                panStateRef.current = {
-                  center: nextCenter,
-                  pointerX: event.clientX,
-                  pointerY: event.clientY,
-                }
-                scheduleManualFramePosition(nextCenter)
-                return
-              }
-
-              updateDividerFromPointer(event.clientX)
-            }
-          }}
-          onPointerUp={(event) => {
-            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.releasePointerCapture(event.pointerId)
-            }
-
-            activePointersRef.current.delete(event.pointerId)
-            if (pinchStateRef.current) {
-              commitGestureViewport()
-              return
-            }
-
-            if (previewViewport?.mode !== "manual") {
-              commitDividerFromPointer(event.clientX)
-            }
-
-            if (panStateRef.current) {
-              onViewportChange?.({ center: panStateRef.current.center })
-              panStateRef.current = null
-            }
-          }}
-          onPointerCancel={(event) => {
-            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.releasePointerCapture(event.pointerId)
-            }
-
-            activePointersRef.current.delete(event.pointerId)
-            pinchStateRef.current = null
-            panStateRef.current = null
-          }}
-          onPointerLeave={() => setInspector(null)}
+          style={effectiveFrameStyle}
         >
           <canvas
             ref={originalCanvasRef}
