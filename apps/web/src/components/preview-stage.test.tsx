@@ -414,6 +414,37 @@ describe("PreviewStage", () => {
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
     expect(markup).toContain("Processed")
+    expect(
+      renderToStaticMarkup(
+        <PreviewStage
+          algorithm="floyd-steinberg"
+          compareMode="slide"
+          isDesktopViewScale
+          original={buffer}
+          preview={buffer}
+          previewTargetHeight={1}
+          previewTargetWidth={1}
+          status="ready"
+          previewViewport={{
+            mode: "fit",
+            zoom: 1,
+            center: { x: 0, y: 0 },
+            gridEnabled: false,
+            loupeEnabled: false,
+          }}
+          exportFormat="png"
+          exportQuality={0.92}
+          onCompareModeChange={onCompareModeChange}
+          onExport={vi.fn()}
+          onExportFormatChange={vi.fn()}
+          onExportQualityChange={vi.fn()}
+          onFileSelected={vi.fn()}
+          onInvalidDrop={vi.fn()}
+          onPreviewDisplaySizeChange={vi.fn()}
+          onPreviewViewportChange={vi.fn()}
+        />
+      )
+    ).toContain("Comparison")
     expect(toggleGroupItemRenders.map((item) => item.value)).not.toEqual(
       expect.arrayContaining(["slide", "processed", "original"])
     )
@@ -471,12 +502,14 @@ describe("PreviewStage", () => {
   })
 
   it("keeps ready canvas presentation stable across status-only updates", () => {
+    const onViewportChange = vi.fn()
     const baseProps = {
       buffer,
       expectedHeight: 1,
       expectedWidth: 1,
       label: "Processed",
       missing: false,
+      onViewportChange,
       status: "ready",
       viewScale: "fit",
     } as const
@@ -497,6 +530,13 @@ describe("PreviewStage", () => {
         },
       })
     ).toBe(false)
+
+    expect(
+      areCanvasPanelPropsEqual(baseProps, {
+        ...baseProps,
+        onViewportChange: vi.fn(),
+      })
+    ).toBe(false)
   })
 
   it("keeps placeholder status updates visible while processed output is missing", () => {
@@ -506,6 +546,7 @@ describe("PreviewStage", () => {
       expectedWidth: 1,
       label: "Processed",
       missing: true,
+      onViewportChange: vi.fn(),
       status: "queued",
       viewScale: "fit",
     } as const
@@ -714,6 +755,87 @@ describe("PreviewStage", () => {
       mode: "manual",
       zoom: 2,
     })
+  })
+
+  it("centers slide real pixels when output size is larger than the original", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="slide"
+        isDesktopViewScale
+        original={makeBuffer(768, 768)}
+        outputHeight={2048}
+        outputWidth={2048}
+        preview={makeBuffer(768, 768)}
+        previewTargetHeight={768}
+        previewTargetWidth={768}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 1024, y: 1024 },
+      mode: "manual",
+      zoom: 2,
+    })
+  })
+
+  it("uses full output dimensions for manual slide zoom when fit preview is screen-sized", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="slide"
+        isDesktopViewScale
+        original={makeBuffer(768, 768)}
+        outputHeight={2048}
+        outputWidth={2048}
+        preview={makeBuffer(768, 768)}
+        previewTargetHeight={768}
+        previewTargetWidth={768}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 2,
+          center: { x: 1024, y: 1024 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("height:4072px")
+    expect(html).toContain("width:4072px")
+    expect(html).toContain("margin-left:-2036px")
+    expect(html).toContain("margin-top:-2036px")
   })
 
   it("centers real pixels view when enabling the pixel inspector from fit mode", () => {

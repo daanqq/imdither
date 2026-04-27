@@ -14,7 +14,7 @@ function makePixelBuffer(width: number, height: number): PixelBuffer {
 }
 
 describe("SlideComparePreview", () => {
-  it("keeps the original visible and disables the divider while processed output is missing", () => {
+  it("keeps the placeholder visible and disables the divider while processed output is missing", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={50}
@@ -26,8 +26,6 @@ describe("SlideComparePreview", () => {
       />
     )
 
-    expect(html).toContain("Original")
-    expect(html).toContain("Processed")
     expect(html).toContain("[processing]")
     expect(html).not.toContain('role="slider"')
   })
@@ -167,7 +165,7 @@ describe("SlideComparePreview", () => {
     expect(html).not.toContain("visibility:hidden")
   })
 
-  it("keeps manual slide controls and split clipped inside the visible viewport", () => {
+  it("keeps manual slide controls aligned with the clipped split", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={50}
@@ -190,7 +188,34 @@ describe("SlideComparePreview", () => {
     )
 
     expect(html).toContain("clip-path:inset(0 0 0 83.4234693877551%)")
-    expect(html).toContain("left:2%")
+    expect(html).toContain("left:83.4234693877551%")
     expect(html).toContain('aria-valuenow="50"')
+  })
+
+  it("keeps fit slide handles aligned to the display frame, not the preview window", () => {
+    const html = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={2}
+        displayHeight={300}
+        displayWidth={400}
+        initialViewportBox={{ height: 600, width: 1000 }}
+        original={makePixelBuffer(400, 300)}
+        processed={makePixelBuffer(400, 300)}
+        status="ready"
+        viewScale="fit"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 200, y: 150 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(html).toContain("clip-path:inset(0 0 0 2%)")
+    expect(html).toContain("left:12.368000000000002%")
+    expect(html).toContain('aria-valuenow="2"')
   })
 })

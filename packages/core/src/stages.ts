@@ -99,18 +99,26 @@ export function resizeImage(
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      const sourceX = (x - geometry.offsetX + 0.5) / geometry.scale - 0.5
-      const sourceY = (y - geometry.offsetY + 0.5) / geometry.scale - 0.5
+      const targetCenterX = x + 0.5
+      const targetCenterY = y + 0.5
 
       if (
-        sourceX < 0 ||
-        sourceY < 0 ||
-        sourceX > input.width - 1 ||
-        sourceY > input.height - 1
+        targetCenterX < geometry.offsetX ||
+        targetCenterY < geometry.offsetY ||
+        targetCenterX >= geometry.offsetX + geometry.scaledWidth ||
+        targetCenterY >= geometry.offsetY + geometry.scaledHeight
       ) {
         continue
       }
 
+      const sourceX = clampSampleCoordinate(
+        (targetCenterX - geometry.offsetX) / geometry.scaleX - 0.5,
+        input.width
+      )
+      const sourceY = clampSampleCoordinate(
+        (targetCenterY - geometry.offsetY) / geometry.scaleY - 0.5,
+        input.height
+      )
       const sampled =
         resize.mode === "nearest"
           ? sampleNearest(input, sourceX, sourceY)
@@ -517,12 +525,22 @@ function getResizeGeometry(
   width: number,
   height: number,
   fit: ResizeFit
-): { scale: number; offsetX: number; offsetY: number } {
+): {
+  offsetX: number
+  offsetY: number
+  scaledHeight: number
+  scaledWidth: number
+  scaleX: number
+  scaleY: number
+} {
   if (fit === "stretch") {
     return {
-      scale: width / input.width,
       offsetX: 0,
       offsetY: 0,
+      scaledHeight: height,
+      scaledWidth: width,
+      scaleX: width / input.width,
+      scaleY: height / input.height,
     }
   }
 
@@ -532,10 +550,17 @@ function getResizeGeometry(
       : Math.min(width / input.width, height / input.height)
 
   return {
-    scale,
     offsetX: (width - input.width * scale) / 2,
     offsetY: (height - input.height * scale) / 2,
+    scaledHeight: input.height * scale,
+    scaledWidth: input.width * scale,
+    scaleX: scale,
+    scaleY: scale,
   }
+}
+
+function clampSampleCoordinate(coordinate: number, size: number): number {
+  return Math.max(0, Math.min(Math.max(0, size - 1), coordinate))
 }
 
 function sampleNearest(input: PixelBuffer, x: number, y: number): Rgb {

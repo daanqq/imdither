@@ -46,16 +46,13 @@ import {
 } from "lucide-react"
 
 import { SlideComparePreview } from "@/components/slide-compare-preview"
+import { PreviewPresentationSurface } from "@/components/preview-presentation"
 import {
   areCanvasPanelPropsEqual,
   type CanvasPanelProps,
 } from "@/components/preview-render-boundaries"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
 import { drawPixelBuffer } from "@/lib/image"
-import {
-  getPixelInspectorSample,
-  type PixelInspectorSample,
-} from "@/lib/pixel-inspector"
 import {
   EXPORT_FORMAT_OPTIONS,
   EXPORT_QUALITY_STEP,
@@ -64,18 +61,8 @@ import {
   getExportFormatOption,
   type ExportFormat,
 } from "@/lib/export-image"
-import { getPreviewFrameStyle } from "@/lib/preview-frame"
-import { getPinchGestureViewport } from "@/lib/preview-gestures"
 import {
   clampZoom,
-  clampManualViewportCenter,
-  getAnchoredZoomViewport,
-  getDisplayPointImageCoordinates,
-  getFramePointImageCoordinates,
-  getManualViewportDisplayMetrics,
-  getManualViewportScale,
-  getViewportPointImageCoordinates,
-  getWheelZoom,
   MIN_PREVIEW_ZOOM,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
@@ -258,8 +245,18 @@ export const PreviewStage = React.memo(function PreviewStage({
                     original={original}
                     pixelInspectorEnabled={isDesktopViewScale}
                     processed={preview}
-                    displayHeight={previewTargetHeight}
-                    displayWidth={previewTargetWidth}
+                    displayHeight={
+                      viewScale === "actual"
+                        ? previewFrameHeight
+                        : previewTargetHeight
+                    }
+                    displayWidth={
+                      viewScale === "actual"
+                        ? previewFrameWidth
+                        : previewTargetWidth
+                    }
+                    manualDisplayHeight={previewFrameHeight}
+                    manualDisplayWidth={previewFrameWidth}
                     initialViewportBox={surfaceViewportBox}
                     status={status}
                     previewViewport={previewViewport}
@@ -850,7 +847,7 @@ function getNextCompareMode(compareMode: CompareMode): CompareMode {
 
 function getCompareModeLabel(compareMode: CompareMode) {
   return compareMode === "slide"
-    ? "Slide"
+    ? "Comparison"
     : compareMode === "processed"
       ? "Processed"
       : "Original"
@@ -873,76 +870,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
-  const frameRef = React.useRef<HTMLDivElement>(null)
-  const viewportRef = React.useRef<PreviewViewport | null>(
-    previewViewport ?? null
-  )
-  const panStateRef = React.useRef<{
-    center: { x: number; y: number }
-    pointerX: number
-    pointerY: number
-  } | null>(null)
-  const activePointersRef = React.useRef(
-    new Map<number, { x: number; y: number }>()
-  )
-  const pinchStateRef = React.useRef<{
-    latestViewport: PreviewViewport | null
-    startPointers: {
-      first: { x: number; y: number }
-      second: { x: number; y: number }
-    }
-    startViewport: PreviewViewport
-  } | null>(null)
-  const panAnimationFrameRef = React.useRef<number | null>(null)
-  const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
-    null
-  )
-  const [viewportBox, setViewportBox] = React.useState<{
-    height: number
-    width: number
-  } | null>(initialViewportBox ?? null)
-  const centeredManualViewport =
-    previewViewport?.mode === "manual" &&
-    previewViewport.zoom === 1 &&
-    Math.round(previewViewport.center.x) === Math.round(expectedWidth / 2) &&
-    Math.round(previewViewport.center.y) === Math.round(expectedHeight / 2)
-  const manualScale =
-    previewViewport?.mode === "manual"
-      ? getManualViewportScale({
-          imageHeight: expectedHeight,
-          imageWidth: expectedWidth,
-          viewportHeight: viewportBox?.height ?? expectedHeight,
-          viewportWidth: viewportBox?.width ?? expectedWidth,
-          zoom: previewViewport.zoom,
-        })
-      : 1
-  const manualDisplayMetrics =
-    previewViewport?.mode === "manual"
-      ? getManualViewportDisplayMetrics({
-          imageHeight: expectedHeight,
-          imageWidth: expectedWidth,
-          viewportHeight: viewportBox?.height ?? expectedHeight,
-          viewportWidth: viewportBox?.width ?? expectedWidth,
-          zoom: previewViewport.zoom,
-        })
-      : null
-  const frameStyle = getPreviewFrameStyle({
-    sourceHeight: expectedHeight,
-    sourceWidth: expectedWidth,
-    viewScale: centeredManualViewport ? "fit" : viewScale,
-  })
-  const manualFrameStyle =
-    previewViewport?.mode === "manual" && !centeredManualViewport
-      ? {
-          height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(expectedHeight * manualScale))}px`,
-          left: "50%",
-          marginLeft: `${-Math.round(previewViewport.center.x * (manualDisplayMetrics?.pixelScaleX ?? manualScale))}px`,
-          marginTop: `${-Math.round(previewViewport.center.y * (manualDisplayMetrics?.pixelScaleY ?? manualScale))}px`,
-          position: "absolute" as const,
-          top: "50%",
-          width: `${manualDisplayMetrics?.displayWidth ?? Math.max(1, Math.round(expectedWidth * manualScale))}px`,
-        }
-      : frameStyle
 
   React.useEffect(() => {
     if (!buffer || !canvasRef.current) {
@@ -952,486 +879,57 @@ const CanvasPanel = React.memo(function CanvasPanel({
     drawPixelBuffer(canvasRef.current, buffer)
   }, [buffer])
 
-  const applyManualFramePosition = React.useCallback(
-    (center: { x: number; y: number }) => {
-      if (
-        !previewViewport ||
-        previewViewport.mode !== "manual" ||
-        !frameRef.current
-      ) {
-        return
-      }
-
-      const viewportRect = getFrameViewportRect(frameRef.current)
-      const metrics = getManualViewportDisplayMetrics({
-        imageHeight: expectedHeight,
-        imageWidth: expectedWidth,
-        viewportHeight: viewportRect.height,
-        viewportWidth: viewportRect.width,
-        zoom: previewViewport.zoom,
-      })
-
-      frameRef.current.style.marginLeft = `${-Math.round(center.x * metrics.pixelScaleX)}px`
-      frameRef.current.style.marginTop = `${-Math.round(center.y * metrics.pixelScaleY)}px`
-    },
-    [expectedHeight, expectedWidth, previewViewport]
-  )
-
-  const applyManualFrameViewport = React.useCallback(
-    (viewport: PreviewViewport) => {
-      if (viewport.mode !== "manual" || !frameRef.current) {
-        return
-      }
-
-      const viewportRect = getFrameViewportRect(frameRef.current)
-      const metrics = getManualViewportDisplayMetrics({
-        imageHeight: expectedHeight,
-        imageWidth: expectedWidth,
-        viewportHeight: viewportRect.height,
-        viewportWidth: viewportRect.width,
-        zoom: viewport.zoom,
-      })
-
-      frameRef.current.style.height = `${metrics.displayHeight}px`
-      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
-      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
-      frameRef.current.style.width = `${metrics.displayWidth}px`
-    },
-    [expectedHeight, expectedWidth]
-  )
-
-  React.useLayoutEffect(() => {
-    const viewportElement = frameRef.current?.parentElement
-
-    if (!viewportElement) {
-      return
-    }
-
-    const updateViewportBox = () => {
-      const rect = viewportElement.getBoundingClientRect()
-      const nextViewportBox = {
-        height: Math.max(1, Math.round(rect.height)),
-        width: Math.max(1, Math.round(rect.width)),
-      }
-
-      setViewportBox(nextViewportBox)
-      onViewportBoxChange?.(nextViewportBox)
-    }
-
-    updateViewportBox()
-
-    const observer = new ResizeObserver(updateViewportBox)
-    observer.observe(viewportElement)
-
-    return () => observer.disconnect()
-  }, [onViewportBoxChange])
-
-  React.useLayoutEffect(() => {
-    viewportRef.current = previewViewport ?? null
-  }, [previewViewport])
-
-  React.useLayoutEffect(() => {
-    if (
-      previewViewport?.mode !== "manual" ||
-      centeredManualViewport ||
-      !viewportBox
-    ) {
-      return
-    }
-
-    applyManualFrameViewport(previewViewport)
-  }, [
-    applyManualFrameViewport,
-    centeredManualViewport,
-    previewViewport,
-    viewportBox,
-  ])
-
-  React.useEffect(() => {
-    return () => {
-      if (panAnimationFrameRef.current !== null) {
-        cancelAnimationFrame(panAnimationFrameRef.current)
-      }
-    }
-  }, [])
-
-  function scheduleManualFramePosition(center: { x: number; y: number }) {
-    if (panAnimationFrameRef.current !== null) {
-      cancelAnimationFrame(panAnimationFrameRef.current)
-    }
-
-    panAnimationFrameRef.current = requestAnimationFrame(() => {
-      panAnimationFrameRef.current = null
-      applyManualFramePosition(center)
-    })
-  }
-
-  function inspectPointer(event: React.PointerEvent<HTMLDivElement>) {
-    if (
-      !pixelInspectorEnabled ||
-      !previewViewport?.loupeEnabled ||
-      !frameRef.current
-    ) {
-      return
-    }
-
-    const rect = frameRef.current.getBoundingClientRect()
-    const coordinates =
-      previewViewport.mode === "manual"
-        ? getFramePointImageCoordinates({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            frameLeft: rect.left,
-            frameTop: rect.top,
-            imageHeight: expectedHeight,
-            imageWidth: expectedWidth,
-            viewportHeight: getFrameViewportRect(frameRef.current).height,
-            viewportWidth: getFrameViewportRect(frameRef.current).width,
-            zoom: previewViewport.zoom,
-          })
-        : getDisplayPointImageCoordinates({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            frameLeft: rect.left,
-            frameTop: rect.top,
-            imageHeight: expectedHeight,
-            imageWidth: expectedWidth,
-            viewport: previewViewport,
-            viewportHeight: rect.height,
-            viewportWidth: rect.width,
-          })
-
-    setInspector(
-      coordinates
-        ? getPixelInspectorSample({
-            coordinates,
-            original: label === "Original" ? buffer : null,
-            processed: label === "Processed" ? buffer : null,
-          })
-        : null
-    )
-  }
-
-  const startPinchGesture = React.useCallback(() => {
-    const currentViewport = viewportRef.current ?? previewViewport
-    const pointerPair = getActivePointerPair(activePointersRef.current)
-
-    if (!currentViewport || !pointerPair) {
-      return
-    }
-
-    pinchStateRef.current = {
-      latestViewport: null,
-      startPointers: pointerPair,
-      startViewport: currentViewport,
-    }
-    panStateRef.current = null
-  }, [previewViewport])
-
-  function panPointer(event: React.PointerEvent<HTMLDivElement>) {
-    const currentViewport = viewportRef.current ?? previewViewport
-
-    event.currentTarget.setPointerCapture(event.pointerId)
-    activePointersRef.current.set(
-      event.pointerId,
-      getPointerViewportPoint(event.currentTarget, event)
-    )
-
-    if (activePointersRef.current.size >= 2) {
-      startPinchGesture()
-      return
-    }
-
-    if (!currentViewport || currentViewport.mode !== "manual") {
-      return
-    }
-
-    panStateRef.current = {
-      center: currentViewport.center,
-      pointerX: event.clientX,
-      pointerY: event.clientY,
-    }
-  }
-
-  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
-    const currentViewport = viewportRef.current ?? previewViewport
-
-    if (!currentViewport || !frameRef.current) {
-      return
-    }
-
-    event.preventDefault()
-
-    const viewportRect = event.currentTarget.getBoundingClientRect()
-    const anchorViewportPoint = {
-      x: event.clientX - viewportRect.left,
-      y: event.clientY - viewportRect.top,
-    }
-    const coordinates = getViewportPointImageCoordinates({
-      imageHeight: expectedHeight,
-      imageWidth: expectedWidth,
-      viewport: currentViewport,
-      viewportHeight: viewportRect.height,
-      viewportPoint: anchorViewportPoint,
-      viewportWidth: viewportRect.width,
-    })
-
-    const nextZoom = getWheelZoom(currentViewport.zoom, event.deltaY)
-    const nextViewport = coordinates
-      ? getAnchoredZoomViewport({
-          anchorImagePoint: coordinates,
-          anchorViewportPoint,
-          imageHeight: expectedHeight,
-          imageWidth: expectedWidth,
-          nextZoom,
-          viewport: currentViewport,
-          viewportHeight: viewportRect.height,
-          viewportWidth: viewportRect.width,
-        })
-      : {
-          ...currentViewport,
-          mode: "manual" as const,
-          zoom: nextZoom,
-        }
-
-    viewportRef.current = nextViewport
-    applyManualFrameViewport(nextViewport)
-
-    onViewportChange({
-      mode: "manual",
-      zoom: nextViewport.zoom,
-      center: nextViewport.center,
-    })
-  }
-
-  function updatePinchGesture(element: HTMLElement) {
-    if (activePointersRef.current.size < 2) {
-      return
-    }
-
-    if (!pinchStateRef.current) {
-      startPinchGesture()
-    }
-
-    const pointerPair = getActivePointerPair(activePointersRef.current)
-    const pinchState = pinchStateRef.current
-
-    if (!pointerPair || !pinchState) {
-      return
-    }
-
-    const rect = element.getBoundingClientRect()
-    const nextViewport = getPinchGestureViewport({
-      currentPointers: pointerPair,
-      imageHeight: expectedHeight,
-      imageWidth: expectedWidth,
-      startPointers: pinchState.startPointers,
-      startViewport: pinchState.startViewport,
-      viewportHeight: rect.height,
-      viewportWidth: rect.width,
-    })
-
-    if (!nextViewport) {
-      return
-    }
-
-    viewportRef.current = nextViewport
-    pinchState.latestViewport = nextViewport
-    applyManualFrameViewport(nextViewport)
-  }
-
-  function commitGestureViewport() {
-    const latestViewport = pinchStateRef.current?.latestViewport
-
-    if (latestViewport) {
-      onViewportChange({
-        mode: "manual",
-        zoom: latestViewport.zoom,
-        center: latestViewport.center,
-      })
-    }
-
-    pinchStateRef.current = null
-  }
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
-      <div
+      <PreviewPresentationSurface
         className={cn(
-          "relative flex min-h-0 min-w-0 flex-1 items-center justify-center",
-          viewScale === "fit" ? "overflow-hidden" : "overflow-hidden",
           viewScale === "actual" &&
             (previewViewport?.loupeEnabled
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        style={{
-          ...(viewScale === "fit" || centeredManualViewport
-            ? { containerType: "size" as const }
-            : null),
-          touchAction: "none",
+        imageHeight={expectedHeight}
+        imageWidth={expectedWidth}
+        initialViewportBox={initialViewportBox}
+        inspectorBuffers={{
+          original: label === "Original" ? buffer : null,
+          processed: label === "Processed" ? buffer : null,
         }}
-        onWheel={handleWheel}
-        onPointerDown={panPointer}
-        onPointerMove={(event) => {
-          if (activePointersRef.current.has(event.pointerId)) {
-            activePointersRef.current.set(
-              event.pointerId,
-              getPointerViewportPoint(event.currentTarget, event)
-            )
-            updatePinchGesture(event.currentTarget)
-          }
-
-          if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
-            return
-          }
-
-          inspectPointer(event)
-
-          if (
-            !previewViewport ||
-            previewViewport.mode !== "manual" ||
-            !event.currentTarget.hasPointerCapture(event.pointerId) ||
-            !panStateRef.current
-          ) {
-            return
-          }
-
-          const rect = event.currentTarget.getBoundingClientRect()
-          const scale = getManualViewportScale({
-            imageHeight: expectedHeight,
-            imageWidth: expectedWidth,
-            viewportHeight: rect.height,
-            viewportWidth: rect.width,
-            zoom: previewViewport.zoom,
-          })
-          const nextCenter = clampManualViewportCenter({
-            center: {
-              x:
-                panStateRef.current.center.x -
-                (event.clientX - panStateRef.current.pointerX) / scale,
-              y:
-                panStateRef.current.center.y -
-                (event.clientY - panStateRef.current.pointerY) / scale,
-            },
-            imageHeight: expectedHeight,
-            imageWidth: expectedWidth,
-            viewportHeight: rect.height,
-            viewportWidth: rect.width,
-            zoom: previewViewport.zoom,
-          })
-
-          panStateRef.current = {
-            center: nextCenter,
-            pointerX: event.clientX,
-            pointerY: event.clientY,
-          }
-          scheduleManualFramePosition(nextCenter)
-        }}
-        onPointerLeave={() => setInspector(null)}
-        onPointerUp={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-
-          activePointersRef.current.delete(event.pointerId)
-          if (pinchStateRef.current) {
-            commitGestureViewport()
-            return
-          }
-
-          if (panStateRef.current) {
-            onViewportChange({ center: panStateRef.current.center })
-            panStateRef.current = null
-          }
-        }}
-        onPointerCancel={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-
-          activePointersRef.current.delete(event.pointerId)
-          pinchStateRef.current = null
-          panStateRef.current = null
-        }}
+        pixelInspectorEnabled={pixelInspectorEnabled}
+        previewViewport={previewViewport}
+        viewScale={viewScale}
+        onViewportBoxChange={onViewportBoxChange}
+        onViewportChange={onViewportChange}
       >
-        <div
-          ref={frameRef}
-          className={cn(
-            "relative shrink-0 overflow-hidden bg-background ring-1 ring-border",
-            missing && "border border-dashed border-border ring-0",
-            viewScale === "actual" && "h-fit w-fit max-w-none",
-            previewViewport?.mode === "manual" && "shrink-0"
-          )}
-          style={manualFrameStyle}
-        >
-          {missing ? (
-            <PreviewPlaceholder
-              height={expectedHeight}
-              status={status}
-              width={expectedWidth}
-            />
-          ) : (
-            <canvas
-              ref={canvasRef}
-              className="absolute inset-0 block size-full bg-background"
-            />
-          )}
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center font-mono text-[10px] text-foreground/80">
-            <span className="bg-background/80 px-1.5 py-0.5">{label}</span>
+        {({ frameRef, frameStyle }) => (
+          <div
+            ref={frameRef}
+            className={cn(
+              "relative shrink-0 overflow-hidden bg-background ring-1 ring-border",
+              missing && "border border-dashed border-border ring-0",
+              viewScale === "actual" && "h-fit w-fit max-w-none",
+              previewViewport?.mode === "manual" && "shrink-0"
+            )}
+            style={frameStyle}
+          >
+            {missing ? (
+              <PreviewPlaceholder
+                height={expectedHeight}
+                status={status}
+                width={expectedWidth}
+              />
+            ) : (
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 block size-full bg-background"
+              />
+            )}
           </div>
-        </div>
-        {pixelInspectorEnabled && inspector ? (
-          <PixelInspector sample={inspector} />
-        ) : null}
-      </div>
+        )}
+      </PreviewPresentationSurface>
     </div>
   )
 }, areCanvasPanelPropsEqual)
-
-function getFrameViewportRect(frame: HTMLElement) {
-  const rect = frame.parentElement?.getBoundingClientRect()
-
-  return {
-    height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
-    width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
-  }
-}
-
-function getPointerViewportPoint(
-  element: HTMLElement,
-  event: Pick<React.PointerEvent, "clientX" | "clientY">
-) {
-  const rect = element.getBoundingClientRect()
-
-  return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
-  }
-}
-
-function getActivePointerPair(pointers: Map<number, { x: number; y: number }>) {
-  const [first, second] = [...pointers.values()]
-
-  if (!first || !second) {
-    return null
-  }
-
-  return { first, second }
-}
-
-function PixelInspector({ sample }: { sample: PixelInspectorSample }) {
-  return (
-    <div className="pointer-events-none absolute right-2 bottom-2 border border-foreground/15 bg-background/95 px-2 py-1 font-mono text-[10px] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <div className="tabular-nums">
-        x{sample.x} y{sample.y}
-      </div>
-      <div className="text-muted-foreground">
-        O {sample.originalHex ?? "--"} P {sample.processedHex ?? "--"}
-      </div>
-    </div>
-  )
-}
 
 function PreviewPlaceholder({
   height,

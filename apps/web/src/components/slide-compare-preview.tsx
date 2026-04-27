@@ -1,11 +1,8 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
 
+import { PreviewPresentationSurface } from "@/components/preview-presentation"
 import { drawPixelBuffer, drawPixelBufferToCanvasSize } from "@/lib/image"
-import {
-  getPixelInspectorSample,
-  type PixelInspectorSample,
-} from "@/lib/pixel-inspector"
 import {
   SLIDE_COMPARE_MAX,
   SLIDE_COMPARE_MIN,
@@ -13,18 +10,10 @@ import {
   getSlideDividerFromClientX,
   getSlideDividerFromKey,
 } from "@/lib/slide-compare"
-import { getPreviewFrameStyle } from "@/lib/preview-frame"
-import { getPinchGestureViewport } from "@/lib/preview-gestures"
 import {
-  clampManualViewportCenter,
-  getAnchoredZoomViewport,
-  getDisplayPointImageCoordinates,
-  getFramePointImageCoordinates,
-  getManualViewportDisplayMetrics,
-  getManualViewportScale,
-  getViewportPointImageCoordinates,
-  getWheelZoom,
-} from "@/lib/preview-viewport"
+  getPreviewPresentationDividerPercent,
+  getPreviewPresentationViewportDividerPercent,
+} from "@/lib/preview-presentation"
 import {
   areSlideComparePreviewPropsEqual,
   type SlideComparePreviewProps,
@@ -34,6 +23,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
   displayHeight,
   displayWidth,
+  manualDisplayHeight,
+  manualDisplayWidth,
   initialViewportBox,
   original,
   pixelInspectorEnabled = true,
@@ -47,7 +38,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
 }: SlideComparePreviewProps) {
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
-  const viewportElementRef = React.useRef<HTMLDivElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
   const viewportRef = React.useRef(previewViewport ?? null)
   const dividerLineRef = React.useRef<HTMLDivElement>(null)
@@ -55,26 +45,6 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const dividerPercentRef = React.useRef(clampSlideDivider(dividerPercent))
   const pendingDividerPercentRef = React.useRef(dividerPercentRef.current)
   const dividerAnimationFrameRef = React.useRef<number | null>(null)
-  const panStateRef = React.useRef<{
-    center: { x: number; y: number }
-    pointerX: number
-    pointerY: number
-  } | null>(null)
-  const activePointersRef = React.useRef(
-    new Map<number, { x: number; y: number }>()
-  )
-  const pinchStateRef = React.useRef<{
-    latestViewport: NonNullable<typeof previewViewport> | null
-    startPointers: {
-      first: { x: number; y: number }
-      second: { x: number; y: number }
-    }
-    startViewport: NonNullable<typeof previewViewport>
-  } | null>(null)
-  const panAnimationFrameRef = React.useRef<number | null>(null)
-  const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
-    null
-  )
   const [viewportBox, setViewportBox] = React.useState<{
     height: number
     width: number
@@ -82,126 +52,83 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const processedReady = Boolean(processed)
   const frameWidth = displayWidth ?? processed?.width ?? original.width
   const frameHeight = displayHeight ?? processed?.height ?? original.height
+  const manualFrameWidth = manualDisplayWidth ?? frameWidth
+  const manualFrameHeight = manualDisplayHeight ?? frameHeight
   const clampedDivider = clampSlideDivider(dividerPercent)
-  const centeredManualViewport =
-    previewViewport?.mode === "manual" &&
-    previewViewport.zoom === 1 &&
-    Math.round(previewViewport.center.x) === Math.round(frameWidth / 2) &&
-    Math.round(previewViewport.center.y) === Math.round(frameHeight / 2)
-  const manualScale =
-    previewViewport?.mode === "manual"
-      ? getManualViewportScale({
-          imageHeight: frameHeight,
-          imageWidth: frameWidth,
-          viewportHeight: viewportBox?.height ?? frameHeight,
-          viewportWidth: viewportBox?.width ?? frameWidth,
-          zoom: previewViewport.zoom,
-        })
-      : 1
-  const manualDisplayMetrics =
-    previewViewport?.mode === "manual"
-      ? getManualViewportDisplayMetrics({
-          imageHeight: frameHeight,
-          imageWidth: frameWidth,
-          viewportHeight: viewportBox?.height ?? frameHeight,
-          viewportWidth: viewportBox?.width ?? frameWidth,
-          zoom: previewViewport.zoom,
-        })
-      : null
-  const frameStyle = getPreviewFrameStyle({
-    sourceHeight: frameHeight,
-    sourceWidth: frameWidth,
-    viewScale: centeredManualViewport ? "fit" : viewScale,
-  })
-  const effectiveFrameStyle =
-    previewViewport?.mode === "manual" && !centeredManualViewport
-      ? {
-          height: `${manualDisplayMetrics?.displayHeight ?? Math.max(1, Math.round(frameHeight * manualScale))}px`,
-          left: "50%",
-          marginLeft: `${-Math.round(previewViewport.center.x * (manualDisplayMetrics?.pixelScaleX ?? manualScale))}px`,
-          marginTop: `${-Math.round(previewViewport.center.y * (manualDisplayMetrics?.pixelScaleY ?? manualScale))}px`,
-          position: "absolute" as const,
-          top: "50%",
-          width: `${manualDisplayMetrics?.displayWidth ?? Math.max(1, Math.round(frameWidth * manualScale))}px`,
-        }
-      : frameStyle
-  const effectiveDividerPercent = getEffectiveDividerPercent({
+  const effectiveDividerPercent = getPreviewPresentationDividerPercent({
     dividerPercent: clampedDivider,
-    frameHeight,
-    frameWidth,
-    previewViewport,
+    imageHeight: frameHeight,
+    imageWidth: frameWidth,
+    viewport: previewViewport,
     viewportBox,
   })
-  const dividerViewportPercent = getDividerViewportPercent({
+  const dividerViewportPercent = getPreviewPresentationViewportDividerPercent({
     dividerPercent: effectiveDividerPercent,
-    frameHeight,
-    frameWidth,
-    previewViewport,
+    imageHeight: frameHeight,
+    imageWidth: frameWidth,
+    viewport: previewViewport,
     viewportBox,
   })
-  const dividerControls = processedReady ? (
-    <>
-      <div
-        ref={dividerLineRef}
-        className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
-        style={{ left: `${dividerViewportPercent}%` }}
-      />
-      <button
-        ref={dividerHandleRef}
-        type="button"
-        aria-label="Slide comparison divider"
-        aria-valuemax={SLIDE_COMPARE_MAX}
-        aria-valuemin={SLIDE_COMPARE_MIN}
-        aria-valuenow={Math.round(clampedDivider)}
-        className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        role="slider"
-        style={{ left: `${dividerViewportPercent}%`, touchAction: "none" }}
-        onKeyDown={handleKeyDown}
-        onPointerDown={(event) => {
-          event.stopPropagation()
-          event.currentTarget.setPointerCapture(event.pointerId)
-          updateDividerFromPointer(event.clientX)
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            updateDividerFromPointer(event.clientX)
-          }
-        }}
-        onPointerUp={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-
-          commitDividerFromPointer(event.clientX)
-        }}
-        onPointerCancel={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-        }}
-      >
-        ||
-      </button>
-    </>
+  const dividerLine = processedReady ? (
+    <div
+      ref={dividerLineRef}
+      className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
+      style={{ left: `${effectiveDividerPercent}%` }}
+    />
   ) : null
-  const rendersDividerInViewport =
-    previewViewport?.mode === "manual" && !centeredManualViewport
+  const dividerHandle = processedReady ? (
+    <button
+      ref={dividerHandleRef}
+      type="button"
+      aria-label="Slide comparison divider"
+      aria-valuemax={SLIDE_COMPARE_MAX}
+      aria-valuemin={SLIDE_COMPARE_MIN}
+      aria-valuenow={Math.round(clampedDivider)}
+      className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      role="slider"
+      style={{ left: `${dividerViewportPercent}%`, touchAction: "none" }}
+      onKeyDown={handleKeyDown}
+      onPointerDown={(event) => {
+        event.stopPropagation()
+        event.currentTarget.setPointerCapture(event.pointerId)
+        updateDividerFromPointer(event.clientX)
+      }}
+      onPointerMove={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          updateDividerFromPointer(event.clientX)
+        }
+      }}
+      onPointerUp={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
 
+        commitDividerFromPointer(event.clientX)
+      }}
+      onPointerCancel={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+      }}
+    >
+      ||
+    </button>
+  ) : null
   const applyDividerVisual = React.useCallback(
     (percent: number) => {
       const nextPercent = clampSlideDivider(percent)
-      const nextEffectivePercent = getEffectiveDividerPercent({
+      const nextEffectivePercent = getPreviewPresentationDividerPercent({
         dividerPercent: nextPercent,
-        frameHeight,
-        frameWidth,
-        previewViewport: viewportRef.current ?? previewViewport,
+        imageHeight: frameHeight,
+        imageWidth: frameWidth,
+        viewport: viewportRef.current ?? previewViewport,
         viewportBox,
       })
-      const nextViewportPercent = getDividerViewportPercent({
+      const nextViewportPercent = getPreviewPresentationViewportDividerPercent({
         dividerPercent: nextEffectivePercent,
-        frameHeight,
-        frameWidth,
-        previewViewport: viewportRef.current ?? previewViewport,
+        imageHeight: frameHeight,
+        imageWidth: frameWidth,
+        viewport: viewportRef.current ?? previewViewport,
         viewportBox,
       })
 
@@ -210,7 +137,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       }
 
       if (dividerLineRef.current) {
-        dividerLineRef.current.style.left = `${nextViewportPercent}%`
+        dividerLineRef.current.style.left = `${nextEffectivePercent}%`
       }
 
       if (dividerHandleRef.current) {
@@ -260,120 +187,12 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       if (dividerAnimationFrameRef.current !== null) {
         cancelAnimationFrame(dividerAnimationFrameRef.current)
       }
-
-      if (panAnimationFrameRef.current !== null) {
-        cancelAnimationFrame(panAnimationFrameRef.current)
-      }
     }
   }, [])
-
-  const applyManualFramePosition = React.useCallback(
-    (center: { x: number; y: number }) => {
-      if (
-        !previewViewport ||
-        previewViewport.mode !== "manual" ||
-        !frameRef.current
-      ) {
-        return
-      }
-
-      const viewportRect = getFrameViewportRect(frameRef.current)
-      const metrics = getManualViewportDisplayMetrics({
-        imageHeight: frameHeight,
-        imageWidth: frameWidth,
-        viewportHeight: viewportRect.height,
-        viewportWidth: viewportRect.width,
-        zoom: previewViewport.zoom,
-      })
-
-      frameRef.current.style.marginLeft = `${-Math.round(center.x * metrics.pixelScaleX)}px`
-      frameRef.current.style.marginTop = `${-Math.round(center.y * metrics.pixelScaleY)}px`
-      applyDividerVisual(dividerPercentRef.current)
-    },
-    [applyDividerVisual, frameHeight, frameWidth, previewViewport]
-  )
-
-  const applyManualFrameViewport = React.useCallback(
-    (viewport: NonNullable<typeof previewViewport>) => {
-      if (viewport.mode !== "manual" || !frameRef.current) {
-        return
-      }
-
-      const viewportRect = getFrameViewportRect(frameRef.current)
-      const metrics = getManualViewportDisplayMetrics({
-        imageHeight: frameHeight,
-        imageWidth: frameWidth,
-        viewportHeight: viewportRect.height,
-        viewportWidth: viewportRect.width,
-        zoom: viewport.zoom,
-      })
-
-      frameRef.current.style.height = `${metrics.displayHeight}px`
-      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
-      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
-      frameRef.current.style.width = `${metrics.displayWidth}px`
-      applyDividerVisual(dividerPercentRef.current)
-    },
-    [applyDividerVisual, frameHeight, frameWidth]
-  )
-
-  React.useLayoutEffect(() => {
-    const viewportElement = frameRef.current?.parentElement
-
-    if (!viewportElement) {
-      return
-    }
-
-    const updateViewportBox = () => {
-      const rect = viewportElement.getBoundingClientRect()
-      const nextViewportBox = {
-        height: Math.max(1, Math.round(rect.height)),
-        width: Math.max(1, Math.round(rect.width)),
-      }
-
-      setViewportBox(nextViewportBox)
-      onViewportBoxChange?.(nextViewportBox)
-    }
-
-    updateViewportBox()
-
-    const observer = new ResizeObserver(updateViewportBox)
-    observer.observe(viewportElement)
-
-    return () => observer.disconnect()
-  }, [onViewportBoxChange])
 
   React.useLayoutEffect(() => {
     viewportRef.current = previewViewport ?? null
   }, [previewViewport])
-
-  React.useLayoutEffect(() => {
-    if (
-      previewViewport?.mode !== "manual" ||
-      centeredManualViewport ||
-      !viewportBox
-    ) {
-      return
-    }
-
-    applyManualFrameViewport(previewViewport)
-  }, [
-    applyManualFrameViewport,
-    centeredManualViewport,
-    previewViewport,
-    viewportBox,
-  ])
-
-  function scheduleManualFramePosition(center: { x: number; y: number }) {
-    if (panAnimationFrameRef.current !== null) {
-      cancelAnimationFrame(panAnimationFrameRef.current)
-    }
-
-    panAnimationFrameRef.current = requestAnimationFrame(() => {
-      panAnimationFrameRef.current = null
-      applyManualFramePosition(center)
-    })
-  }
 
   function scheduleDividerVisual(percent: number) {
     pendingDividerPercentRef.current = clampSlideDivider(percent)
@@ -442,499 +261,86 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     commitDividerVisual(nextPercent)
   }
 
-  const handleWheel = React.useCallback(
-    (event: WheelEvent, viewportElement: HTMLDivElement) => {
-      const currentViewport = viewportRef.current ?? previewViewport
-
-      if (!currentViewport || !frameRef.current) {
-        return
-      }
-
-      event.preventDefault()
-
-      const viewportRect = viewportElement.getBoundingClientRect()
-      const anchorViewportPoint = {
-        x: event.clientX - viewportRect.left,
-        y: event.clientY - viewportRect.top,
-      }
-      const coordinates = getViewportPointImageCoordinates({
-        imageHeight: frameHeight,
-        imageWidth: frameWidth,
-        viewport: currentViewport,
-        viewportHeight: viewportRect.height,
-        viewportPoint: anchorViewportPoint,
-        viewportWidth: viewportRect.width,
-      })
-
-      const nextZoom = getWheelZoom(currentViewport.zoom, event.deltaY)
-      const nextViewport = coordinates
-        ? getAnchoredZoomViewport({
-            anchorImagePoint: coordinates,
-            anchorViewportPoint,
-            imageHeight: frameHeight,
-            imageWidth: frameWidth,
-            nextZoom,
-            viewport: currentViewport,
-            viewportHeight: viewportRect.height,
-            viewportWidth: viewportRect.width,
-          })
-        : {
-            ...currentViewport,
-            mode: "manual" as const,
-            zoom: nextZoom,
-          }
-
-      viewportRef.current = nextViewport
-      applyManualFrameViewport(nextViewport)
-
-      onViewportChange?.({
-        mode: "manual",
-        zoom: nextViewport.zoom,
-        center: nextViewport.center,
-      })
-    },
-    [
-      applyManualFrameViewport,
-      frameHeight,
-      frameWidth,
-      onViewportChange,
-      previewViewport,
-    ]
-  )
-
-  React.useEffect(() => {
-    const viewportElement = viewportElementRef.current
-
-    if (!viewportElement) {
-      return
-    }
-
-    const handleNativeWheel = (event: WheelEvent) => {
-      handleWheel(event, viewportElement)
-    }
-
-    viewportElement.addEventListener("wheel", handleNativeWheel, {
-      passive: false,
-    })
-
-    return () => {
-      viewportElement.removeEventListener("wheel", handleNativeWheel)
-    }
-  }, [handleWheel])
-
-  function startPinchGesture() {
-    const currentViewport = viewportRef.current ?? previewViewport
-    const pointerPair = getActivePointerPair(activePointersRef.current)
-
-    if (!currentViewport || !pointerPair) {
-      return
-    }
-
-    pinchStateRef.current = {
-      latestViewport: null,
-      startPointers: pointerPair,
-      startViewport: currentViewport,
-    }
-    panStateRef.current = null
-  }
-
-  function updatePinchGesture(element: HTMLElement) {
-    if (activePointersRef.current.size < 2) {
-      return
-    }
-
-    if (!pinchStateRef.current) {
-      startPinchGesture()
-    }
-
-    const pointerPair = getActivePointerPair(activePointersRef.current)
-    const pinchState = pinchStateRef.current
-
-    if (!pointerPair || !pinchState) {
-      return
-    }
-
-    const viewportRect = element.getBoundingClientRect()
-    const nextViewport = getPinchGestureViewport({
-      currentPointers: pointerPair,
-      imageHeight: frameHeight,
-      imageWidth: frameWidth,
-      startPointers: pinchState.startPointers,
-      startViewport: pinchState.startViewport,
-      viewportHeight: viewportRect.height,
-      viewportWidth: viewportRect.width,
-    })
-
-    if (!nextViewport) {
-      return
-    }
-
-    viewportRef.current = nextViewport
-    pinchState.latestViewport = nextViewport
-    applyManualFrameViewport(nextViewport)
-  }
-
-  function commitGestureViewport() {
-    const latestViewport = pinchStateRef.current?.latestViewport
-
-    if (latestViewport) {
-      onViewportChange?.({
-        mode: "manual",
-        zoom: latestViewport.zoom,
-        center: latestViewport.center,
-      })
-    }
-
-    pinchStateRef.current = null
-  }
-
-  function inspectPointer(event: React.PointerEvent<HTMLDivElement>) {
-    if (
-      !pixelInspectorEnabled ||
-      !previewViewport?.loupeEnabled ||
-      !frameRef.current
-    ) {
-      return
-    }
-
-    const rect = frameRef.current.getBoundingClientRect()
-    const coordinates =
-      previewViewport.mode === "manual"
-        ? getFramePointImageCoordinates({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            frameLeft: rect.left,
-            frameTop: rect.top,
-            imageHeight: frameHeight,
-            imageWidth: frameWidth,
-            viewportHeight: getFrameViewportRect(frameRef.current).height,
-            viewportWidth: getFrameViewportRect(frameRef.current).width,
-            zoom: previewViewport.zoom,
-          })
-        : getDisplayPointImageCoordinates({
-            clientX: event.clientX,
-            clientY: event.clientY,
-            frameLeft: rect.left,
-            frameTop: rect.top,
-            imageHeight: frameHeight,
-            imageWidth: frameWidth,
-            viewport: previewViewport,
-            viewportHeight: rect.height,
-            viewportWidth: rect.width,
-          })
-
-    setInspector(
-      coordinates
-        ? getPixelInspectorSample({
-            coordinates,
-            original,
-            processed,
-          })
-        : null
-    )
-  }
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
-      <div
-        ref={viewportElementRef}
+      <PreviewPresentationSurface
         className={cn(
-          "relative flex min-h-0 min-w-0 flex-1 items-center justify-center",
-          "overflow-hidden",
           viewScale === "actual" &&
             (previewViewport?.loupeEnabled
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        style={
-          viewScale === "fit" || centeredManualViewport
-            ? { containerType: "size", touchAction: "none" }
-            : { touchAction: "none" }
-        }
-        onPointerDown={(event) => {
-          if (!processedReady) {
-            return
-          }
-
-          event.currentTarget.setPointerCapture(event.pointerId)
-          activePointersRef.current.set(
-            event.pointerId,
-            getPointerViewportPoint(event.currentTarget, event)
-          )
-
-          if (activePointersRef.current.size >= 2) {
-            startPinchGesture()
-            return
-          }
-
-          const currentViewport = viewportRef.current ?? previewViewport
-
-          if (currentViewport?.mode === "manual") {
-            panStateRef.current = {
-              center: currentViewport.center,
-              pointerX: event.clientX,
-              pointerY: event.clientY,
-            }
-            return
-          }
-
-          updateDividerFromPointer(event.clientX)
+        frameRef={frameRef}
+        imageHeight={frameHeight}
+        imageWidth={frameWidth}
+        initialViewportBox={initialViewportBox}
+        manualImageHeight={manualFrameHeight}
+        manualImageWidth={manualFrameWidth}
+        inspectorBuffers={{ original, processed }}
+        nativeWheel
+        pixelInspectorEnabled={pixelInspectorEnabled}
+        pointerInteractionEnabled={processedReady}
+        previewViewport={previewViewport}
+        viewScale={viewScale}
+        onManualFramePositionChange={(viewport) => {
+          viewportRef.current = viewport
+          applyDividerVisual(dividerPercentRef.current)
         }}
-        onPointerMove={(event) => {
-          if (activePointersRef.current.has(event.pointerId)) {
-            activePointersRef.current.set(
-              event.pointerId,
-              getPointerViewportPoint(event.currentTarget, event)
-            )
-            updatePinchGesture(event.currentTarget)
-          }
-
-          if (activePointersRef.current.size >= 2 || pinchStateRef.current) {
-            return
-          }
-
-          inspectPointer(event)
-
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            if (previewViewport?.mode === "manual") {
-              if (!panStateRef.current) {
-                return
-              }
-
-              const viewportRect = event.currentTarget.getBoundingClientRect()
-              const scale = getManualViewportScale({
-                imageHeight: frameHeight,
-                imageWidth: frameWidth,
-                viewportHeight: viewportRect.height,
-                viewportWidth: viewportRect.width,
-                zoom: previewViewport.zoom,
-              })
-              const nextCenter = clampManualViewportCenter({
-                center: {
-                  x:
-                    panStateRef.current.center.x -
-                    (event.clientX - panStateRef.current.pointerX) / scale,
-                  y:
-                    panStateRef.current.center.y -
-                    (event.clientY - panStateRef.current.pointerY) / scale,
-                },
-                imageHeight: frameHeight,
-                imageWidth: frameWidth,
-                viewportHeight: viewportRect.height,
-                viewportWidth: viewportRect.width,
-                zoom: previewViewport.zoom,
-              })
-
-              panStateRef.current = {
-                center: nextCenter,
-                pointerX: event.clientX,
-                pointerY: event.clientY,
-              }
-              viewportRef.current = {
-                ...previewViewport,
-                center: nextCenter,
-              }
-              scheduleManualFramePosition(nextCenter)
-              return
-            }
-
-            updateDividerFromPointer(event.clientX)
-          }
+        fitPointerInteraction={{
+          onCommit: commitDividerFromPointer,
+          onUpdate: updateDividerFromPointer,
         }}
-        onPointerUp={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-
-          activePointersRef.current.delete(event.pointerId)
-          if (pinchStateRef.current) {
-            commitGestureViewport()
-            return
-          }
-
-          if (previewViewport?.mode !== "manual") {
-            commitDividerFromPointer(event.clientX)
-          }
-
-          if (panStateRef.current) {
-            onViewportChange?.({ center: panStateRef.current.center })
-            panStateRef.current = null
-          }
+        onViewportBoxChange={(box) => {
+          setViewportBox(box)
+          onViewportBoxChange?.(box)
         }}
-        onPointerCancel={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.releasePointerCapture(event.pointerId)
-          }
-
-          activePointersRef.current.delete(event.pointerId)
-          pinchStateRef.current = null
-          panStateRef.current = null
-        }}
-        onPointerLeave={() => setInspector(null)}
+        onViewportChange={onViewportChange}
       >
-        <div
-          ref={frameRef}
-          className={cn(
-            "relative overflow-hidden bg-background ring-1 ring-border",
-            processedReady &&
-              (previewViewport?.loupeEnabled
-                ? "cursor-default"
-                : previewViewport?.mode === "manual"
-                  ? "cursor-grab active:cursor-grabbing"
-                  : "cursor-ew-resize"),
-            viewScale === "fit" ? "shrink-0" : "h-fit w-fit max-w-none shrink-0"
-          )}
-          style={effectiveFrameStyle}
-        >
-          <canvas
-            ref={originalCanvasRef}
-            className="absolute inset-0 block size-full bg-background"
-          />
-          {processedReady ? (
-            <canvas
-              ref={processedCanvasRef}
-              className="absolute inset-0 block size-full bg-background"
-              style={{
-                clipPath: `inset(0 0 0 ${effectiveDividerPercent}%)`,
-              }}
-            />
-          ) : null}
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-between gap-2 font-mono text-[10px] text-foreground/80">
-            <span className="bg-background/80 px-1.5 py-0.5">Original</span>
-            <span className="bg-background/80 px-1.5 py-0.5">Processed</span>
-          </div>
-          {processedReady ? (
-            rendersDividerInViewport ? null : (
-              dividerControls
-            )
-          ) : (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
-              [{status ?? "processing"}]
-            </div>
-          )}
-        </div>
-        {rendersDividerInViewport ? dividerControls : null}
-        {pixelInspectorEnabled && inspector ? (
-          <PixelInspector sample={inspector} />
-        ) : null}
-      </div>
+        {({ frameStyle }) => {
+          return (
+            <>
+              <div
+                ref={frameRef}
+                className={cn(
+                  "relative overflow-hidden bg-background ring-1 ring-border",
+                  processedReady &&
+                    (previewViewport?.loupeEnabled
+                      ? "cursor-default"
+                      : previewViewport?.mode === "manual"
+                        ? "cursor-grab active:cursor-grabbing"
+                        : "cursor-ew-resize"),
+                  viewScale === "fit"
+                    ? "shrink-0"
+                    : "h-fit w-fit max-w-none shrink-0"
+                )}
+                style={frameStyle}
+              >
+                <canvas
+                  ref={originalCanvasRef}
+                  className="absolute inset-0 block size-full bg-background"
+                />
+                {processedReady ? (
+                  <canvas
+                    ref={processedCanvasRef}
+                    className="absolute inset-0 block size-full bg-background"
+                    style={{
+                      clipPath: `inset(0 0 0 ${effectiveDividerPercent}%)`,
+                    }}
+                  />
+                ) : null}
+                {processedReady ? (
+                  dividerLine
+                ) : (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
+                    [{status ?? "processing"}]
+                  </div>
+                )}
+              </div>
+              {dividerHandle}
+            </>
+          )
+        }}
+      </PreviewPresentationSurface>
     </div>
   )
 }, areSlideComparePreviewPropsEqual)
-
-function getFrameViewportRect(frame: HTMLElement) {
-  const rect = frame.parentElement?.getBoundingClientRect()
-
-  return {
-    height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
-    width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
-  }
-}
-
-function getDividerViewportPercent({
-  dividerPercent,
-  frameHeight,
-  frameWidth,
-  previewViewport,
-  viewportBox,
-}: {
-  dividerPercent: number
-  frameHeight: number
-  frameWidth: number
-  previewViewport: SlideComparePreviewProps["previewViewport"]
-  viewportBox: { height: number; width: number } | null
-}) {
-  if (previewViewport?.mode !== "manual" || !viewportBox) {
-    return clampSlideDivider(dividerPercent)
-  }
-
-  const imageSplitX = Math.max(1, frameWidth) * (dividerPercent / 100)
-  const scale = getManualViewportScale({
-    imageHeight: Math.max(1, frameHeight),
-    imageWidth: Math.max(1, frameWidth),
-    viewportHeight: Math.max(1, viewportBox.height),
-    viewportWidth: Math.max(1, viewportBox.width),
-    zoom: previewViewport.zoom,
-  })
-  const viewportX =
-    viewportBox.width / 2 + (imageSplitX - previewViewport.center.x) * scale
-
-  return clampSlideDivider((viewportX / Math.max(1, viewportBox.width)) * 100)
-}
-
-function getEffectiveDividerPercent({
-  dividerPercent,
-  frameHeight,
-  frameWidth,
-  previewViewport,
-  viewportBox,
-}: {
-  dividerPercent: number
-  frameHeight: number
-  frameWidth: number
-  previewViewport: SlideComparePreviewProps["previewViewport"]
-  viewportBox: { height: number; width: number } | null
-}) {
-  if (previewViewport?.mode !== "manual" || !viewportBox) {
-    return clampSlideDivider(dividerPercent)
-  }
-
-  const safeFrameWidth = Math.max(1, frameWidth)
-  const safeViewportWidth = Math.max(1, viewportBox.width)
-  const scale = getManualViewportScale({
-    imageHeight: Math.max(1, frameHeight),
-    imageWidth: safeFrameWidth,
-    viewportHeight: Math.max(1, viewportBox.height),
-    viewportWidth: safeViewportWidth,
-    zoom: previewViewport.zoom,
-  })
-  const rawViewportX =
-    safeViewportWidth / 2 +
-    (safeFrameWidth * (dividerPercent / 100) - previewViewport.center.x) * scale
-  const clampedViewportX = Math.min(
-    safeViewportWidth * (SLIDE_COMPARE_MAX / 100),
-    Math.max(safeViewportWidth * (SLIDE_COMPARE_MIN / 100), rawViewportX)
-  )
-  const imageSplitX =
-    previewViewport.center.x +
-    (clampedViewportX - safeViewportWidth / 2) / scale
-
-  return clampSlideDivider((imageSplitX / safeFrameWidth) * 100)
-}
-
-function getPointerViewportPoint(
-  element: HTMLElement,
-  event: Pick<React.PointerEvent, "clientX" | "clientY">
-) {
-  const rect =
-    element.parentElement?.getBoundingClientRect() ??
-    element.getBoundingClientRect()
-
-  return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
-  }
-}
-
-function getActivePointerPair(pointers: Map<number, { x: number; y: number }>) {
-  const [first, second] = [...pointers.values()]
-
-  if (!first || !second) {
-    return null
-  }
-
-  return { first, second }
-}
-
-function PixelInspector({ sample }: { sample: PixelInspectorSample }) {
-  return (
-    <div className="pointer-events-none absolute right-2 bottom-2 border border-foreground/15 bg-background/95 px-2 py-1 font-mono text-[10px] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <div className="tabular-nums">
-        x{sample.x} y{sample.y}
-      </div>
-      <div className="text-muted-foreground">
-        O {sample.originalHex ?? "--"} P {sample.processedHex ?? "--"}
-      </div>
-    </div>
-  )
-}

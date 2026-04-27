@@ -558,6 +558,7 @@ The web app owns browser-specific and React-specific layers:
 - Processing Jobs
 - Worker Client
 - Preview Stage
+- Preview Presentation Module
 - Auto-Tune Panel
 - Auto-Tune recommendation hook and bundled demo recommendation seed
 - Slide Compare Preview Module

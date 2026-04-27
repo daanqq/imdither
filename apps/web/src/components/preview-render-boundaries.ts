@@ -17,6 +17,7 @@ export type CanvasPanelProps = {
   status?: string
   previewViewport?: PreviewViewport
   viewScale: ViewScale
+  onViewportChange: (viewport: Partial<PreviewViewport>) => void
   onViewportBoxChange?: (box: { height: number; width: number }) => void
 }
 
@@ -26,6 +27,8 @@ export type SlideComparePreviewProps = {
   dividerPercent: number
   displayHeight?: number
   displayWidth?: number
+  manualDisplayHeight?: number
+  manualDisplayWidth?: number
   initialViewportBox?: {
     height: number
     width: number
@@ -55,6 +58,7 @@ export function areCanvasPanelPropsEqual(
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
     previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale ||
+    previous.onViewportChange !== next.onViewportChange ||
     previous.onViewportBoxChange !== next.onViewportBoxChange
   ) {
     return false
@@ -75,6 +79,8 @@ export function areSlideComparePreviewPropsEqual(
     previous.dividerPercent !== next.dividerPercent ||
     previous.displayHeight !== next.displayHeight ||
     previous.displayWidth !== next.displayWidth ||
+    previous.manualDisplayHeight !== next.manualDisplayHeight ||
+    previous.manualDisplayWidth !== next.manualDisplayWidth ||
     previous.initialViewportBox !== next.initialViewportBox ||
     previous.original !== next.original ||
     previous.processed !== next.processed ||

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { PRESET_PALETTES, getEffectivePalette } from "./palettes"
 import { processImage } from "./process"
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings"
-import { flattenAlpha, nearestPaletteColor } from "./stages"
+import { flattenAlpha, nearestPaletteColor, resizeImage } from "./stages"
 import type { PixelBuffer } from "./types"
 
 describe("core pipeline", () => {
@@ -29,6 +29,29 @@ describe("core pipeline", () => {
     expect(nearestPaletteColor([240, 240, 240], blackWhite)).toEqual([
       255, 255, 255,
     ])
+  })
+
+  it("does not create alpha-background borders when upscaling a same-aspect image", () => {
+    const input: PixelBuffer = {
+      width: 2,
+      height: 2,
+      data: new Uint8ClampedArray([
+        0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255,
+      ]),
+    }
+
+    const output = resizeImage(
+      input,
+      {
+        fit: "contain",
+        height: 4,
+        mode: "bilinear",
+        width: 4,
+      },
+      "white"
+    )
+
+    expect(collectRgbTriples(output)).toEqual(new Set(["0,0,0"]))
   })
 
   it("keeps palette ids unique and processable", () => {
