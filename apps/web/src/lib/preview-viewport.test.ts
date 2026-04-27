@@ -49,7 +49,7 @@ describe("preview viewport geometry", () => {
       displayHeight: 376,
       displayWidth: 564,
       translateX: -38,
-      translateY: 0,
+      translateY: 6,
     })
   })
 
@@ -118,7 +118,7 @@ describe("preview viewport geometry", () => {
           center: { x: 200, y: 100 },
         }),
       })
-    ).toEqual({ x: 200, y: 100 })
+    ).toEqual({ x: 200, y: 93.61702127659575 })
   })
 
   it("maps manual frame coordinates directly to image pixels", () => {
@@ -161,7 +161,7 @@ describe("preview viewport geometry", () => {
     ).toEqual({ x: 0, y: 49 })
   })
 
-  it("clamps manual pan so image edges can reach viewport edges", () => {
+  it("clamps manual pan so image edges can reach the viewport center", () => {
     const center = clampManualViewportCenter({
       center: { x: 0, y: 999 },
       imageHeight: 400,
@@ -171,11 +171,11 @@ describe("preview viewport geometry", () => {
       zoom: 2,
     })
 
-    expect(center.x).toBeCloseTo(159.5744680851)
-    expect(center.y).toBeCloseTo(293.6170212766)
+    expect(center.x).toBe(0)
+    expect(center.y).toBe(400)
   })
 
-  it("locks manual center when zoomed image fits inside the viewport", () => {
+  it("keeps manual pan available when the image fits inside the viewport", () => {
     expect(
       clampManualViewportCenter({
         center: { x: 0, y: 999 },
@@ -185,7 +185,7 @@ describe("preview viewport geometry", () => {
         viewportWidth: 800,
         zoom: 1,
       })
-    ).toEqual({ x: 300, y: 200 })
+    ).toEqual({ x: 0, y: 400 })
   })
 
   it("anchors zoom around the inspected image point", () => {

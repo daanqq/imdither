@@ -108,25 +108,14 @@ export function clampManualViewportCenter({
   center,
   imageHeight,
   imageWidth,
-  viewportHeight,
-  viewportWidth,
-  zoom,
 }: ImageDimensions &
   ViewportBox & {
     center: ViewportCenter
     zoom: number
   }): ViewportCenter {
-  const scale = getManualViewportScale({
-    imageHeight,
-    imageWidth,
-    viewportHeight,
-    viewportWidth,
-    zoom,
-  })
-
   return {
-    x: clampManualCenterAxis(center.x, imageWidth, viewportWidth, scale),
-    y: clampManualCenterAxis(center.y, imageHeight, viewportHeight, scale),
+    x: clampManualCenterAxis(center.x, imageWidth),
+    y: clampManualCenterAxis(center.y, imageHeight),
   }
 }
 
@@ -513,23 +502,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
-function clampManualCenterAxis(
-  center: number,
-  imageSize: number,
-  viewportSize: number,
-  zoom: number
-) {
+function clampManualCenterAxis(center: number, imageSize: number) {
   const safeImageSize = Math.max(1, imageSize)
-  const safeViewportSize = Math.max(1, viewportSize)
-  const safeZoom = clampZoom(zoom)
-  const halfVisibleImageSize = safeViewportSize / 2 / safeZoom
 
-  if (safeImageSize * safeZoom <= safeViewportSize) {
-    return safeImageSize / 2
-  }
-
-  const min = halfVisibleImageSize
-  const max = safeImageSize - halfVisibleImageSize
-
-  return Math.min(max, Math.max(min, center))
+  return Math.min(safeImageSize, Math.max(0, center))
 }
