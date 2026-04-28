@@ -333,7 +333,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                 <div className="grid h-8 w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2 md:h-full md:grid-cols-[auto_1fr_auto]">
                   <div className="grid min-w-0 grid-cols-2 gap-2 md:w-[20rem]">
                     <Button
-                      className="h-full w-full min-w-0"
+                      className="h-full w-full min-w-0 !pl-2.5"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                     >
