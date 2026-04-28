@@ -18,6 +18,8 @@ import { MoonIcon, SunIcon } from "lucide-react"
 import { InspectorPanel } from "@/components/inspector-panel"
 import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
+
+import brandMarkUrl from "@/assets/brand-mark.svg"
 import { applyAutoTuneLookSettings } from "@/lib/auto-tune-application"
 import {
   encodePixelBuffer,
@@ -44,6 +46,20 @@ import {
 import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
+
+function BrandMark() {
+  return (
+    <span
+      aria-hidden="true"
+      className="block aspect-[214/34] w-[10.5rem] shrink-0 bg-primary drop-shadow-[0_0_10px_color-mix(in_srgb,var(--primary)_42%,transparent)] md:w-[14rem]"
+      style={{
+        mask: `url(${brandMarkUrl}) center / contain no-repeat`,
+        WebkitMask: `url(${brandMarkUrl}) center / contain no-repeat`,
+      }}
+    />
+  )
+}
+
 export function App() {
   const settings = useEditorStore((state) => state.settings)
   const compareMode = useEditorStore((state) => state.compareMode)
@@ -711,14 +727,9 @@ export function App() {
       <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-2 overflow-hidden p-2 md:gap-3 md:p-3">
         <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border pb-1.5 md:gap-3 md:pb-2">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex min-w-0 items-baseline gap-2 md:gap-3">
-              <span className="h-3 w-px bg-primary md:h-5" />
-              <h1 className="font-display text-lg leading-none tracking-[-0.03em] md:text-3xl">
-                IMDITHER
-              </h1>
-              <span className="hidden font-mono text-[11px] text-muted-foreground md:inline">
-                raster proof desk
-              </span>
+            <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
+              <BrandMark />
+              <h1 className="sr-only">IMDITHER</h1>
             </div>
           </div>
           <ThemeToggle />

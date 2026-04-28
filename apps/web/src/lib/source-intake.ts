@@ -1,6 +1,6 @@
 import type { PixelBuffer } from "@workspace/core"
 
-import demoImageUrl from "../assets/demo.png"
+import demoImageUrl from "../assets/demo.webp"
 import { hidePixelBufferData } from "./pixel-buffer-visibility"
 import {
   acceptLoadedSource,
@@ -64,7 +64,7 @@ export async function createDemoSourceIntake(): Promise<SourceIntakeResult> {
 
   const blob = await response.blob()
   const file = new File([blob], "Bundled demo image", {
-    type: blob.type || "image/png",
+    type: blob.type || "image/webp",
   })
   const result = await intakeImageFile(file)
 
