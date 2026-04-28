@@ -377,6 +377,21 @@ Screen-sized preview:
   pending, not merely because the current preview buffer is smaller than the
   selected output size
 
+Preview presentation:
+
+- Preview Stage owns the preview-area shell: upload/drop affordances,
+  processing and source-error overlays, floating view controls, export entry
+  point, Export Drawer, and undo/redo action row
+- Preview Presentation owns processed-only, original-only, and slide comparison
+  surface selection from a product-state model
+- Preview Presentation owns view scale derivation, display-frame measurement,
+  manual frame dimensions, preview frame dimensions, Pixel Inspector sampling,
+  and slide divider runtime state
+- Slide Compare remains an internal Preview Surface Adapter for the two-layer
+  composition and divider interaction
+- Screen Preview target calculation and Preview Job scheduling remain outside
+  Preview Presentation
+
 ### 8.11 Processing Jobs and Responsiveness
 
 The editor keeps heavy local image work behind explicit async boundaries:
@@ -581,7 +596,10 @@ The web app owns browser-specific and React-specific layers:
 - Export Image layer
 - editor store persistence
 
-These modules should expose small contracts and avoid pushing domain policy into broad React components.
+These modules should expose small contracts and avoid pushing domain policy into
+broad React components. Preview Stage passes product state into Preview
+Presentation instead of choosing preview surface implementations or precomputing
+per-mode display geometry.
 
 ### 10.6 State Management
 
@@ -608,7 +626,7 @@ Runtime state includes:
 - metadata
 - Auto-Tune recommendation state, inline error state, loading state, and applied
   marker
-- slide divider position
+- slide divider position inside Preview Presentation
 
 Large source and processed pixel buffers must not be stored in Zustand.
 

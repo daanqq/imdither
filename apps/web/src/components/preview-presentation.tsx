@@ -2,8 +2,15 @@ import * as React from "react"
 import type { PixelBuffer } from "@workspace/core"
 import { cn } from "@workspace/ui/lib/utils"
 
+import { SlideComparePreview } from "@/components/slide-compare-preview"
+import {
+  areCanvasPanelPropsEqual,
+  type CanvasPanelProps,
+} from "@/components/preview-render-boundaries"
+import { drawPixelBuffer } from "@/lib/image"
 import { getPinchGestureViewport } from "@/lib/preview-gestures"
 import {
+  getPreviewPresentationDisplayModel,
   getPreviewPresentationFrame,
   getPreviewPresentationPanCenter,
   getPreviewPresentationWheelViewport,
@@ -21,6 +28,8 @@ import {
   type PixelInspectorSample,
 } from "@/lib/pixel-inspector"
 import type { ViewScale } from "@/store/editor-store"
+import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
+import type { CompareMode, JobStatus } from "@/store/editor-store"
 
 type ViewportBox = {
   height: number
@@ -42,6 +51,21 @@ type PreviewPresentationSurfaceRenderProps = {
 type PreviewPresentationFitPointerInteraction = {
   onCommit: (clientX: number) => void
   onUpdate: (clientX: number) => void
+}
+
+export type PreviewPresentationProps = {
+  compareMode: CompareMode
+  desktopPrecisionEnabled: boolean
+  fullOutputHeight: number
+  fullOutputWidth: number
+  original: PixelBuffer
+  preview: PixelBuffer | null
+  previewTargetHeight: number
+  previewTargetWidth: number
+  previewViewport: PreviewViewport
+  status: JobStatus
+  onDisplayFrameChange?: (box: ViewportBox) => void
+  onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }
 
 export type PreviewPresentationSurfaceProps = {
@@ -598,6 +622,81 @@ export function PreviewPresentationSurface({
   )
 }
 
+export function PreviewPresentation({
+  compareMode,
+  desktopPrecisionEnabled,
+  fullOutputHeight,
+  fullOutputWidth,
+  original,
+  preview,
+  previewTargetHeight,
+  previewTargetWidth,
+  previewViewport,
+  status,
+  onDisplayFrameChange,
+  onViewportChange,
+}: PreviewPresentationProps) {
+  const [slideDividerState, setSlideDividerState] = React.useState<{
+    percent: number
+    source: PixelBuffer
+  } | null>(null)
+  const slideDividerPercent =
+    slideDividerState?.source === original
+      ? slideDividerState.percent
+      : SLIDE_COMPARE_DEFAULT
+  const displayModel = getPreviewPresentationDisplayModel({
+    fullOutputHeight,
+    fullOutputWidth,
+    previewTargetHeight,
+    previewTargetWidth,
+    viewport: previewViewport,
+  })
+
+  if (compareMode === "slide") {
+    return (
+      <SlideComparePreview
+        dividerPercent={slideDividerPercent}
+        original={original}
+        pixelInspectorEnabled={desktopPrecisionEnabled}
+        processed={preview}
+        displayHeight={displayModel.frameHeight}
+        displayWidth={displayModel.frameWidth}
+        manualDisplayHeight={displayModel.manualFrameHeight}
+        manualDisplayWidth={displayModel.manualFrameWidth}
+        status={status}
+        previewViewport={previewViewport}
+        viewScale={displayModel.viewScale}
+        onDividerChange={(percent) =>
+          setSlideDividerState({ percent, source: original })
+        }
+        onViewportChange={onViewportChange}
+        onViewportBoxChange={onDisplayFrameChange}
+      />
+    )
+  }
+
+  const buffer = compareMode === "original" ? original : preview
+  const label = compareMode === "original" ? "Original" : "Processed"
+
+  return (
+    <CanvasPanel
+      buffer={buffer}
+      label={label}
+      expectedHeight={displayModel.frameHeight}
+      expectedWidth={displayModel.frameWidth}
+      manualExpectedHeight={displayModel.manualFrameHeight}
+      manualExpectedWidth={displayModel.manualFrameWidth}
+      missing={compareMode === "processed" && !preview}
+      pixelInspectorEnabled={desktopPrecisionEnabled}
+      previewViewport={previewViewport}
+      status={status}
+      viewScale={displayModel.viewScale}
+      onViewportBoxChange={onDisplayFrameChange}
+      onViewportChange={onViewportChange}
+    />
+  )
+}
+
 function getFrameViewportRect(frame: HTMLElement) {
   const rect = frame.parentElement?.getBoundingClientRect()
 
@@ -625,6 +724,107 @@ function PixelInspector({ sample }: { sample: PixelInspectorSample }) {
       </div>
       <div className="text-muted-foreground">
         O {sample.originalHex ?? "--"} P {sample.processedHex ?? "--"}
+      </div>
+    </div>
+  )
+}
+
+const CanvasPanel = React.memo(function CanvasPanel({
+  buffer,
+  expectedHeight,
+  expectedWidth,
+  label,
+  manualExpectedHeight,
+  manualExpectedWidth,
+  missing = false,
+  pixelInspectorEnabled = true,
+  previewViewport,
+  status,
+  viewScale,
+  onViewportBoxChange,
+  onViewportChange,
+}: CanvasPanelProps & {
+  onViewportChange: (viewport: Partial<PreviewViewport>) => void
+}) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null)
+
+  React.useEffect(() => {
+    if (!buffer || !canvasRef.current) {
+      return
+    }
+
+    drawPixelBuffer(canvasRef.current, buffer)
+  }, [buffer])
+
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
+      <PreviewPresentationSurface
+        className={cn(
+          viewScale === "actual" &&
+            (previewViewport?.loupeEnabled
+              ? "cursor-default"
+              : "cursor-grab active:cursor-grabbing")
+        )}
+        imageHeight={expectedHeight}
+        imageWidth={expectedWidth}
+        manualImageHeight={manualExpectedHeight}
+        manualImageWidth={manualExpectedWidth}
+        inspectorBuffers={{
+          original: label === "Original" ? buffer : null,
+          processed: label === "Processed" ? buffer : null,
+        }}
+        pixelInspectorEnabled={pixelInspectorEnabled}
+        previewViewport={previewViewport}
+        viewScale={viewScale}
+        onViewportBoxChange={onViewportBoxChange}
+        onViewportChange={onViewportChange}
+      >
+        {({ frameRef, frameStyle }) => (
+          <div
+            ref={frameRef}
+            className={cn(
+              "relative shrink-0 overflow-hidden bg-background ring-1 ring-border",
+              missing && "border border-dashed border-border ring-0",
+              viewScale === "actual" && "h-fit w-fit max-w-none",
+              previewViewport?.mode === "manual" && "shrink-0"
+            )}
+            style={frameStyle}
+          >
+            {missing ? (
+              <PreviewPlaceholder
+                height={expectedHeight}
+                status={status}
+                width={expectedWidth}
+              />
+            ) : (
+              <canvas
+                ref={canvasRef}
+                className="absolute inset-0 block size-full bg-background"
+              />
+            )}
+          </div>
+        )}
+      </PreviewPresentationSurface>
+    </div>
+  )
+}, areCanvasPanelPropsEqual)
+
+function PreviewPlaceholder({
+  height,
+  status,
+  width,
+}: {
+  height: number
+  status?: string
+  width: number
+}) {
+  return (
+    <div className="dot-grid-subtle flex size-full items-center justify-center bg-background text-center">
+      <div className="flex flex-col gap-1 font-mono text-[11px] text-muted-foreground">
+        <span>[{status ?? "processing"}]</span>
+        <span>
+          {width}x{height}
+        </span>
       </div>
     </div>
   )

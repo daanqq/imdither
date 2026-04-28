@@ -33,6 +33,49 @@ export type PreviewPresentationFrame = {
   style: CSSProperties
 }
 
+export type PreviewPresentationDisplayModel = {
+  frameHeight: number
+  frameWidth: number
+  manualFrameHeight: number
+  manualFrameWidth: number
+  viewScale: ViewScale
+}
+
+export function getPreviewPresentationDisplayModel({
+  fullOutputHeight,
+  fullOutputWidth,
+  previewTargetHeight,
+  previewTargetWidth,
+  viewport,
+}: {
+  fullOutputHeight: number
+  fullOutputWidth: number
+  previewTargetHeight: number
+  previewTargetWidth: number
+  viewport: PreviewViewport
+}): PreviewPresentationDisplayModel {
+  const manualFrameHeight = Math.max(1, fullOutputHeight)
+  const manualFrameWidth = Math.max(1, fullOutputWidth)
+
+  if (viewport.mode === "manual") {
+    return {
+      frameHeight: manualFrameHeight,
+      frameWidth: manualFrameWidth,
+      manualFrameHeight,
+      manualFrameWidth,
+      viewScale: "actual",
+    }
+  }
+
+  return {
+    frameHeight: Math.max(1, previewTargetHeight),
+    frameWidth: Math.max(1, previewTargetWidth),
+    manualFrameHeight,
+    manualFrameWidth,
+    viewScale: "fit",
+  }
+}
+
 export function getPreviewPresentationFrame({
   imageHeight,
   imageWidth,

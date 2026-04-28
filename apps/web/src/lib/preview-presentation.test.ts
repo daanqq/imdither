@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  getPreviewPresentationDisplayModel,
   getPreviewPresentationDividerPercent,
   getPreviewPresentationFrame,
   getPreviewPresentationPanCenter,
@@ -10,6 +11,44 @@ import {
 import { migrateViewScaleToViewport } from "./preview-viewport"
 
 describe("preview presentation core", () => {
+  it("derives display dimensions from preview state instead of caller geometry", () => {
+    expect(
+      getPreviewPresentationDisplayModel({
+        fullOutputHeight: 3000,
+        fullOutputWidth: 4000,
+        previewTargetHeight: 450,
+        previewTargetWidth: 600,
+        viewport: viewport({ mode: "fit" }),
+      })
+    ).toMatchObject({
+      frameHeight: 450,
+      frameWidth: 600,
+      manualFrameHeight: 3000,
+      manualFrameWidth: 4000,
+      viewScale: "fit",
+    })
+
+    expect(
+      getPreviewPresentationDisplayModel({
+        fullOutputHeight: 3000,
+        fullOutputWidth: 4000,
+        previewTargetHeight: 450,
+        previewTargetWidth: 600,
+        viewport: viewport({
+          mode: "manual",
+          zoom: 2,
+          center: { x: 2000, y: 1500 },
+        }),
+      })
+    ).toMatchObject({
+      frameHeight: 3000,
+      frameWidth: 4000,
+      manualFrameHeight: 3000,
+      manualFrameWidth: 4000,
+      viewScale: "actual",
+    })
+  })
+
   it("uses fit framing for a centered 100 percent manual viewport", () => {
     const frame = getPreviewPresentationFrame({
       imageHeight: 400,

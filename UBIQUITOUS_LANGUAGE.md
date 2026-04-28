@@ -192,33 +192,34 @@
 
 ## Runtime Responsiveness
 
-| Term                            | Definition                                                                                                                     | Aliases to avoid                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| **Direct Slider Movement**      | The property that a slider thumb follows pointer movement without waiting for React or worker work.                            | Smooth slider, fast slider, instant drag  |
-| **Draft Slider Value**          | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.                            | Temporary setting, live setting           |
-| **Committed Settings**          | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.                   | Real settings, saved settings             |
-| **Commit-on-Release**           | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur.                | Debounce, delayed update                  |
-| **Reset Commit**                | A slider reset action that immediately writes the slider default into **Committed Settings**.                                  | Reset draft, default click                |
-| **Native Range Slider**         | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.                      | Custom slider, Radix slider               |
-| **Slider Primitive**            | A general-purpose UI slider component that owns accessibility and composition behavior for non-hot-path slider controls.       | Native slider, browser slider             |
-| **Hot Drag Path**               | The work executed repeatedly while the pointer is moving a slider thumb.                                                       | Drag handler, input loop                  |
-| **Render Boundary**             | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                                | Memo wrapper, render fix                  |
-| **Preview Stage**               | The editor area that owns preview layout, preview controls, drop affordances, and preview-local interactions.                  | Preview card, canvas area                 |
-| **Preview Presentation**        | The UI layer that owns preview display mechanics without changing image processing semantics.                                  | Preview rendering, canvas rendering       |
-| **Preview Presentation Core**   | The deterministic calculation layer for frame sizing, viewport movement, coordinate mapping, and divider mapping.              | Preview math, geometry helpers            |
-| **Preview Presentation Shell**  | The React runtime layer for frame measurement, pointer capture, gestures, wheel zoom, and **Pixel Inspector** sampling.        | Preview wrapper, shared preview component |
-| **Preview Surface Adapter**     | The surface-specific layer that supplies buffers, labels, canvas drawing, and unique interactions to **Preview Presentation**. | Canvas component, preview implementation  |
-| **Preview Surface**             | A visible canvas or placeholder inside **Preview Presentation**.                                                               | Canvas, preview component                 |
-| **Canvas Redraw Boundary**      | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                                         | Canvas memo, draw optimization            |
-| **Ready Preview Surface**       | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                                 | Ready canvas, stable canvas               |
-| **Preview Placeholder**         | A **Preview Surface** shown while a processed buffer is missing.                                                               | Empty preview, loading canvas             |
-| **Status-only Update**          | A **Processing Status** change that does not include a new **Pixel Buffer**.                                                   | Status render, worker ping                |
-| **Processing Status**           | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                                     | Status, job state                         |
-| **Worker Status Update**        | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.                              | Worker update, worker render              |
-| **Control Tree**                | The rendered settings controls that should update only from control-relevant state.                                            | Control panel render tree, sidebar tree   |
-| **View-local State**            | Interaction state owned by a view and not persisted in **Editor Settings**.                                                    | Local state, UI state                     |
-| **Preview Display Measurement** | The debounced observation of **Display Frame** size used to restart **Screen-Sized Preview** work.                             | Resize tracking, frame measurement        |
-| **Resize Threshold**            | The minimum **Display Frame** size change required before restarting preview processing.                                       | Resize debounce, resize tolerance         |
+| Term                            | Definition                                                                                                                                     | Aliases to avoid                          |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Direct Slider Movement**      | The property that a slider thumb follows pointer movement without waiting for React or worker work.                                            | Smooth slider, fast slider, instant drag  |
+| **Draft Slider Value**          | The transient value shown while a slider is being dragged before it becomes **Committed Settings**.                                            | Temporary setting, live setting           |
+| **Committed Settings**          | The current **Editor Settings** value that is allowed to start **Preview Jobs**, clipboard copy, and export.                                   | Real settings, saved settings             |
+| **Commit-on-Release**           | The slider rule where **Draft Slider Value** becomes **Committed Settings** only after pointer release or blur.                                | Debounce, delayed update                  |
+| **Reset Commit**                | A slider reset action that immediately writes the slider default into **Committed Settings**.                                                  | Reset draft, default click                |
+| **Native Range Slider**         | A browser-owned range input used when **Direct Slider Movement** matters more than primitive composition.                                      | Custom slider, Radix slider               |
+| **Slider Primitive**            | A general-purpose UI slider component that owns accessibility and composition behavior for non-hot-path slider controls.                       | Native slider, browser slider             |
+| **Hot Drag Path**               | The work executed repeatedly while the pointer is moving a slider thumb.                                                                       | Drag handler, input loop                  |
+| **Render Boundary**             | A component boundary that prevents unrelated state changes from rebuilding a protected UI area.                                                | Memo wrapper, render fix                  |
+| **Preview Stage**               | The editor area that owns preview layout, preview controls, drop affordances, overlays, export entry, and history actions.                     | Preview card, canvas area                 |
+| **Preview Presentation**        | The UI layer that renders preview surfaces from a **Preview Product State** without changing image processing semantics.                       | Preview rendering, canvas rendering       |
+| **Preview Presentation Core**   | The deterministic calculation layer for frame sizing, viewport movement, coordinate mapping, and divider mapping.                              | Preview math, geometry helpers            |
+| **Preview Presentation Shell**  | The React runtime layer for frame measurement, pointer capture, gestures, wheel zoom, and **Pixel Inspector** sampling.                        | Preview wrapper, shared preview component |
+| **Preview Surface Adapter**     | The surface-specific layer that supplies buffers, labels, canvas drawing, and unique interactions to **Preview Presentation**.                 | Canvas component, preview implementation  |
+| **Preview Surface**             | A visible canvas or placeholder inside **Preview Presentation**.                                                                               | Canvas, preview component                 |
+| **Preview Product State**       | The preview input model containing compare mode, viewport, pixel buffers, output dimensions, preview target, status, and precision capability. | Surface props, display geometry props     |
+| **Canvas Redraw Boundary**      | The rule that a canvas redraw happens only when its **Pixel Buffer** identity changes.                                                         | Canvas memo, draw optimization            |
+| **Ready Preview Surface**       | A **Preview Surface** with a buffer already drawn and not dependent on processing status text.                                                 | Ready canvas, stable canvas               |
+| **Preview Placeholder**         | A **Preview Surface** shown while a processed buffer is missing.                                                                               | Empty preview, loading canvas             |
+| **Status-only Update**          | A **Processing Status** change that does not include a new **Pixel Buffer**.                                                                   | Status render, worker ping                |
+| **Processing Status**           | The current lifecycle label for queued, processing, ready, exporting, idle, or error work.                                                     | Status, job state                         |
+| **Worker Status Update**        | A **Status-only Update** emitted by worker orchestration while preview or export work progresses.                                              | Worker update, worker render              |
+| **Control Tree**                | The rendered settings controls that should update only from control-relevant state.                                                            | Control panel render tree, sidebar tree   |
+| **View-local State**            | Interaction state owned by a view and not persisted in **Editor Settings**.                                                                    | Local state, UI state                     |
+| **Preview Display Measurement** | The debounced observation of **Display Frame** size used to restart **Screen-Sized Preview** work.                                             | Resize tracking, frame measurement        |
+| **Resize Threshold**            | The minimum **Display Frame** size change required before restarting preview processing.                                                       | Resize debounce, resize tolerance         |
 
 ## Editor Experience
 
@@ -396,11 +397,15 @@
 - An **Export Contract Fixture** protects **Browser Encoder** requests and JPEG pre-encode pixels, not byte-for-byte encoded files.
 - A **Visual Contract** may be covered by deterministic unit and component tests before screenshot-diff infrastructure exists.
 - A **Performance Baseline** is report-style and non-gating until a calibrated **Performance Threshold** is introduced.
-- **Preview Stage** owns **Preview Presentation** and **View-local State** for drop affordance and **Slide Divider** position.
+- **Preview Stage** owns **Preview Presentation** and **View-local State** for drop affordances, overlays, export entry, and history actions.
+- **Preview Stage** passes **Preview Product State** to **Preview Presentation** instead of choosing **Preview Surface Adapters**.
 - **Preview Presentation** contains one **Preview Presentation Core** and one **Preview Presentation Shell**.
+- **Preview Presentation** owns **View-local State** for **Slide Divider** position.
+- **Preview Presentation Core** derives display dimensions from **Preview Product State**.
 - **Preview Presentation Shell** samples **Pixel Inspector** data from original and processed **Pixel Buffers** supplied by a **Preview Surface Adapter**.
 - A **Preview Surface Adapter** owns canvas drawing and any surface-specific interaction such as **Slide Divider** updates.
-- A **Preview Stage** contains one or more **Preview Surfaces**.
+- A **Preview Stage** contains one **Preview Presentation**.
+- A **Preview Presentation** contains one or more **Preview Surfaces**.
 - A **Ready Preview Surface** should ignore a **Status-only Update**.
 - A **Preview Placeholder** should reflect a **Status-only Update** because its visible text depends on **Processing Status**.
 - A **Canvas Redraw Boundary** depends on **Pixel Buffer** identity, not on **Processing Status**.
@@ -445,6 +450,7 @@
 - "Status update" can mean visible placeholder text or background worker progress. Use **Status-only Update** when no **Pixel Buffer** changes and **Worker Status Update** when it originates from worker orchestration.
 - "Preview rendering" was used for both **Preview Presentation** and image processing. Use **Preview Presentation** for UI surfaces and **Preview Job** for producing a processed buffer.
 - "Adapter" can be too generic. Use **Preview Surface Adapter** only for the processed, original, or **Slide Compare** layer behind **Preview Presentation**.
+- "Product state" can sound like global app state. Use **Preview Product State** only for the model passed from **Preview Stage** into **Preview Presentation**.
 - "Local state" should be narrowed to **View-local State** when it is UI interaction state and **Draft Slider Value** when it is transient slider input.
 - "Algorithm" was used for ids, labels, UI options, and execution. Use **Dither Algorithm** for the method, **Dither Algorithm Id** for persisted settings, **Dither Algorithm Option** for UI selection, and **Algorithm Metadata Label** for export-facing text.
 - "Registry" can sound like a UI list. In this domain, **Dither Algorithm Registry** is the core source of truth for selection, execution, capabilities, and metadata.

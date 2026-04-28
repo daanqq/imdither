@@ -83,7 +83,7 @@ flowchart LR
   intake["Source Intake<br/>Decode<br/>Analysis Sample"]
   worker["Processing Worker<br/>Preview Job<br/>Preview Refinement<br/>Export Job"]
   autotune["Auto-Tune Worker<br/>Recommendation Job<br/>Sample Cache"]
-  preview["Preview Stage<br/>Canvas Preview<br/>Slide Compare<br/>Local UI State"]
+  preview["Preview Stage<br/>Preview Presentation<br/>Surface Adapters"]
   looks["Looks Panel<br/>Auto-Tune Shortlist"]
   file["Export File<br/>PNG / WebP / JPEG"]
 

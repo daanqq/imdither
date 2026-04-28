@@ -45,14 +45,8 @@ import {
   UploadIcon,
 } from "lucide-react"
 
-import { SlideComparePreview } from "@/components/slide-compare-preview"
-import { PreviewPresentationSurface } from "@/components/preview-presentation"
-import {
-  areCanvasPanelPropsEqual,
-  type CanvasPanelProps,
-} from "@/components/preview-render-boundaries"
+import { PreviewPresentation } from "@/components/preview-presentation"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
-import { drawPixelBuffer } from "@/lib/image"
 import {
   EXPORT_FORMAT_OPTIONS,
   EXPORT_QUALITY_STEP,
@@ -66,9 +60,7 @@ import {
   MIN_PREVIEW_ZOOM,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
-import { getPreviewStageFrameDimensions } from "@/lib/preview-stage-geometry"
-import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
-import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
+import type { CompareMode, JobStatus } from "@/store/editor-store"
 
 const noop = () => {}
 const noopCompareModeChange = () => {}
@@ -133,33 +125,9 @@ export const PreviewStage = React.memo(function PreviewStage({
   onUndoSettingsChange,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
-  const [slideDividerPercent, setSlideDividerPercent] = React.useState(
-    SLIDE_COMPARE_DEFAULT
-  )
-  const [surfaceViewportBox, setSurfaceViewportBox] = React.useState<{
-    height: number
-    width: number
-  } | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const showOriginal = compareMode === "original"
-  const showProcessed = compareMode === "processed"
-  const viewScale: ViewScale = previewViewport.mode === "fit" ? "fit" : "actual"
-  const realPixelsMode = previewViewport.mode === "manual"
-  const {
-    controlsFrameHeight,
-    controlsFrameWidth,
-    manualFrameHeight,
-    manualFrameWidth,
-    previewFrameHeight,
-    previewFrameWidth,
-  } = getPreviewStageFrameDimensions({
-    isDesktopViewScale,
-    outputHeight,
-    outputWidth,
-    previewTargetHeight,
-    previewTargetWidth,
-    realPixelsMode,
-  })
+  const fullOutputHeight = outputHeight ?? previewTargetHeight
+  const fullOutputWidth = outputWidth ?? previewTargetWidth
   const previewReduced = preview
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
@@ -232,8 +200,8 @@ export const PreviewStage = React.memo(function PreviewStage({
             {original ? (
               <PreviewSurfaceControls
                 compareMode={compareMode}
-                imageHeight={controlsFrameHeight}
-                imageWidth={controlsFrameWidth}
+                imageHeight={fullOutputHeight}
+                imageWidth={fullOutputWidth}
                 pixelInspectorEnabled={isDesktopViewScale}
                 viewport={previewViewport}
                 onCompareModeChange={onCompareModeChange}
@@ -251,75 +219,20 @@ export const PreviewStage = React.memo(function PreviewStage({
               </Empty>
             ) : (
               <div className="grid h-full min-h-0 w-full items-stretch gap-3">
-                {compareMode === "slide" ? (
-                  <SlideComparePreview
-                    dividerPercent={slideDividerPercent}
-                    original={original}
-                    pixelInspectorEnabled={isDesktopViewScale}
-                    processed={preview}
-                    displayHeight={
-                      viewScale === "actual"
-                        ? previewFrameHeight
-                        : previewTargetHeight
-                    }
-                    displayWidth={
-                      viewScale === "actual"
-                        ? previewFrameWidth
-                        : previewTargetWidth
-                    }
-                    manualDisplayHeight={manualFrameHeight}
-                    manualDisplayWidth={manualFrameWidth}
-                    initialViewportBox={surfaceViewportBox}
-                    status={status}
-                    previewViewport={previewViewport}
-                    viewScale={viewScale}
-                    onDividerChange={setSlideDividerPercent}
-                    onViewportChange={onPreviewViewportChange}
-                    onViewportBoxChange={setSurfaceViewportBox}
-                  />
-                ) : null}
-                {showOriginal ? (
-                  <CanvasPanel
-                    buffer={original}
-                    label="Original"
-                    expectedHeight={previewFrameHeight}
-                    expectedWidth={previewFrameWidth}
-                    initialViewportBox={surfaceViewportBox}
-                    manualExpectedHeight={manualFrameHeight}
-                    manualExpectedWidth={manualFrameWidth}
-                    pixelInspectorEnabled={isDesktopViewScale}
-                    previewViewport={previewViewport}
-                    viewScale={viewScale}
-                    onViewportBoxChange={setSurfaceViewportBox}
-                    onViewportChange={onPreviewViewportChange}
-                  />
-                ) : null}
-                {showProcessed ? (
-                  <CanvasPanel
-                    buffer={preview}
-                    expectedHeight={
-                      viewScale === "actual"
-                        ? previewFrameHeight
-                        : previewTargetHeight
-                    }
-                    expectedWidth={
-                      viewScale === "actual"
-                        ? previewFrameWidth
-                        : previewTargetWidth
-                    }
-                    initialViewportBox={surfaceViewportBox}
-                    label="Processed"
-                    manualExpectedHeight={manualFrameHeight}
-                    manualExpectedWidth={manualFrameWidth}
-                    missing={!preview}
-                    pixelInspectorEnabled={isDesktopViewScale}
-                    status={status}
-                    previewViewport={previewViewport}
-                    viewScale={viewScale}
-                    onViewportBoxChange={setSurfaceViewportBox}
-                    onViewportChange={onPreviewViewportChange}
-                  />
-                ) : null}
+                <PreviewPresentation
+                  compareMode={compareMode}
+                  desktopPrecisionEnabled={isDesktopViewScale}
+                  fullOutputHeight={fullOutputHeight}
+                  fullOutputWidth={fullOutputWidth}
+                  original={original}
+                  preview={preview}
+                  previewTargetHeight={previewTargetHeight}
+                  previewTargetWidth={previewTargetWidth}
+                  previewViewport={previewViewport}
+                  status={status}
+                  onDisplayFrameChange={onPreviewDisplaySizeChange}
+                  onViewportChange={onPreviewViewportChange}
+                />
               </div>
             )}
           </div>
@@ -875,107 +788,4 @@ function getCompareModeLabel(compareMode: CompareMode) {
     : compareMode === "processed"
       ? "Processed"
       : "Original"
-}
-
-const CanvasPanel = React.memo(function CanvasPanel({
-  buffer,
-  expectedHeight,
-  expectedWidth,
-  initialViewportBox,
-  label,
-  manualExpectedHeight,
-  manualExpectedWidth,
-  missing = false,
-  pixelInspectorEnabled = true,
-  previewViewport,
-  status,
-  viewScale,
-  onViewportBoxChange,
-  onViewportChange,
-}: CanvasPanelProps & {
-  onViewportChange: (viewport: Partial<PreviewViewport>) => void
-}) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null)
-
-  React.useEffect(() => {
-    if (!buffer || !canvasRef.current) {
-      return
-    }
-
-    drawPixelBuffer(canvasRef.current, buffer)
-  }, [buffer])
-
-  return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
-      <PreviewPresentationSurface
-        className={cn(
-          viewScale === "actual" &&
-            (previewViewport?.loupeEnabled
-              ? "cursor-default"
-              : "cursor-grab active:cursor-grabbing")
-        )}
-        imageHeight={expectedHeight}
-        imageWidth={expectedWidth}
-        initialViewportBox={initialViewportBox}
-        manualImageHeight={manualExpectedHeight}
-        manualImageWidth={manualExpectedWidth}
-        inspectorBuffers={{
-          original: label === "Original" ? buffer : null,
-          processed: label === "Processed" ? buffer : null,
-        }}
-        pixelInspectorEnabled={pixelInspectorEnabled}
-        previewViewport={previewViewport}
-        viewScale={viewScale}
-        onViewportBoxChange={onViewportBoxChange}
-        onViewportChange={onViewportChange}
-      >
-        {({ frameRef, frameStyle }) => (
-          <div
-            ref={frameRef}
-            className={cn(
-              "relative shrink-0 overflow-hidden bg-background ring-1 ring-border",
-              missing && "border border-dashed border-border ring-0",
-              viewScale === "actual" && "h-fit w-fit max-w-none",
-              previewViewport?.mode === "manual" && "shrink-0"
-            )}
-            style={frameStyle}
-          >
-            {missing ? (
-              <PreviewPlaceholder
-                height={expectedHeight}
-                status={status}
-                width={expectedWidth}
-              />
-            ) : (
-              <canvas
-                ref={canvasRef}
-                className="absolute inset-0 block size-full bg-background"
-              />
-            )}
-          </div>
-        )}
-      </PreviewPresentationSurface>
-    </div>
-  )
-}, areCanvasPanelPropsEqual)
-
-function PreviewPlaceholder({
-  height,
-  status,
-  width,
-}: {
-  height: number
-  status?: string
-  width: number
-}) {
-  return (
-    <div className="dot-grid-subtle flex size-full items-center justify-center bg-background text-center">
-      <div className="flex flex-col gap-1 font-mono text-[11px] text-muted-foreground">
-        <span>[{status ?? "processing"}]</span>
-        <span>
-          {width}x{height}
-        </span>
-      </div>
-    </div>
-  )
 }
