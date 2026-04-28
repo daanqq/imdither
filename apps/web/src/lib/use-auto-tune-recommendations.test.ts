@@ -10,6 +10,11 @@ describe("Auto-Tune recommendation readiness", () => {
       height: 1,
       data: new Uint8ClampedArray([0, 0, 0, 255]),
     },
+    autoTuneAnalysisSample: {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([0, 0, 0, 255]),
+    },
   }
 
   it("waits until preview work has produced a visible output", () => {

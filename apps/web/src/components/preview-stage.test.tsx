@@ -501,6 +501,46 @@ describe("PreviewStage", () => {
     expect(onExportQualityChange).not.toHaveBeenCalled()
   })
 
+  it("shows reduced preview overlay only while a refined preview is pending", () => {
+    const baseProps = {
+      algorithm: "floyd-steinberg",
+      compareMode: "processed",
+      isDesktopViewScale: true,
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 3000,
+      previewTargetWidth: 4000,
+      status: "ready",
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+      exportFormat: "png",
+      exportQuality: 0.92,
+      onExport: vi.fn(),
+      onExportFormatChange: vi.fn(),
+      onExportQualityChange: vi.fn(),
+      onFileSelected: vi.fn(),
+      onInvalidDrop: vi.fn(),
+      onPreviewDisplaySizeChange: vi.fn(),
+      onPreviewViewportChange: vi.fn(),
+    } as const
+
+    expect(renderToStaticMarkup(<PreviewStage {...baseProps} />)).not.toContain(
+      "PREVIEW ONLY"
+    )
+    expect(
+      renderToStaticMarkup(
+        <PreviewStage {...baseProps} previewRefiningPending />
+      )
+    ).toContain("PREVIEW ONLY")
+  })
+
   it("keeps ready canvas presentation stable across status-only updates", () => {
     const onViewportChange = vi.fn()
     const baseProps = {

@@ -214,6 +214,7 @@ function prepareSourceIntakeResult(
 ): SourceIntakeResult {
   if (result.type === "accepted") {
     hidePixelBufferData(result.source.buffer)
+    hidePixelBufferData(result.source.autoTuneAnalysisSample)
   }
 
   return result

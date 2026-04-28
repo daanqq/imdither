@@ -75,6 +75,8 @@ export function App() {
   const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
     null
   )
+  const [previewRefiningPending, setPreviewRefiningPending] =
+    React.useState(false)
   const [previewDisplaySize, setPreviewDisplaySize] = React.useState<{
     height: number
     width: number
@@ -138,6 +140,7 @@ export function App() {
 
       setSource(result.source)
       setPreview(null)
+      setPreviewRefiningPending(false)
       setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT)
       setError(null)
       setSourceNotice(formatSourceNotices(result.notices))
@@ -212,15 +215,23 @@ export function App() {
             setStatus("processing")
             return
           case "reduced-preview-ready":
+            setPreview(event.result.image)
+            setMetadata(event.result.metadata)
+            setError(null)
+            setStatus("ready")
+            setPreviewRefiningPending(event.willRefine)
+            return
           case "refined-preview-ready":
             setPreview(event.result.image)
             setMetadata(event.result.metadata)
             setError(null)
             setStatus("ready")
+            setPreviewRefiningPending(false)
             return
           case "failed":
             setError(event.error.message)
             setStatus("error")
+            setPreviewRefiningPending(false)
             return
         }
       },
@@ -722,6 +733,7 @@ export function App() {
             outputHeight={settings.resize.height}
             outputWidth={settings.resize.width}
             preview={preview}
+            previewRefiningPending={previewRefiningPending}
             previewTargetHeight={
               previewTarget?.height ?? settings.resize.height
             }

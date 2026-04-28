@@ -1,4 +1,5 @@
 import {
+  createAutoTuneAnalysisSample,
   MAX_SOURCE_DIMENSION,
   clampOutputSize,
   type PixelBuffer,
@@ -8,8 +9,13 @@ export type LoadedSource = {
   id: string
   name: string
   buffer: PixelBuffer
+  autoTuneAnalysisSample: PixelBuffer
   originalWidth: number
   originalHeight: number
+}
+
+type LoadedSourceInput = Omit<LoadedSource, "autoTuneAnalysisSample"> & {
+  autoTuneAnalysisSample?: PixelBuffer
 }
 
 export type SourceNotice = {
@@ -30,13 +36,19 @@ export type SourceIntakeResult =
     }
 
 export function acceptLoadedSource(
-  source: LoadedSource,
+  source: LoadedSourceInput,
   initialNotices: SourceNotice[] = []
 ): SourceIntakeResult {
   if (isOversizedSource(source.buffer.width, source.buffer.height)) {
     return rejectOversizedSource(source.buffer.width, source.buffer.height)
   }
 
+  const acceptedSource = {
+    ...source,
+    autoTuneAnalysisSample:
+      source.autoTuneAnalysisSample ??
+      createAutoTuneAnalysisSample(source.buffer),
+  }
   const outputSize = clampOutputSize(source.buffer.width, source.buffer.height)
   const notices = [...initialNotices]
 
@@ -49,7 +61,7 @@ export function acceptLoadedSource(
 
   return {
     type: "accepted",
-    source,
+    source: acceptedSource,
     outputSize,
     notices,
   }

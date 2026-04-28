@@ -83,7 +83,7 @@ export function analyzeAutoTuneImage(
 ): AutoTuneAnalysis {
   assertUsableSource(source)
 
-  const sample = sampleSource(source)
+  const sample = createAutoTuneAnalysisSample(source)
   const bins = new Array<number>(32).fill(0)
   const colorBins = new Set<number>()
   let lumaMin = 255
@@ -182,7 +182,7 @@ export function recommendAutoTuneLooks(
   source: PixelBuffer,
   context: AutoTuneContext
 ): AutoTuneRecommendation[] {
-  const sample = sampleSource(source)
+  const sample = createAutoTuneAnalysisSample(source)
   const analysis = analyzeAutoTuneImage(sample, context)
 
   return selectDiverseAutoTuneRecommendations(
@@ -195,7 +195,7 @@ export function rankAutoTuneLookCandidates(
   source: PixelBuffer,
   context: AutoTuneContext
 ): AutoTuneRecommendation[] {
-  const sample = sampleSource(source)
+  const sample = createAutoTuneAnalysisSample(source)
   const analysis = analyzeAutoTuneImage(sample, context)
 
   return rankAutoTuneLookCandidatesFromAnalysis(sample, context, analysis)
@@ -615,7 +615,10 @@ function extractPaletteOrFallback(
           ? 16
           : size
 
-    return extractPaletteFromSource(sampleSource(source), targetSize)
+    return extractPaletteFromSource(
+      createAutoTuneAnalysisSample(source),
+      targetSize
+    )
   } catch {
     return size === 32
       ? [
@@ -640,7 +643,7 @@ function extractPaletteOrFallback(
   }
 }
 
-function sampleSource(source: PixelBuffer): PixelBuffer {
+export function createAutoTuneAnalysisSample(source: PixelBuffer): PixelBuffer {
   const maxLongEdge = 256
   const longEdge = Math.max(source.width, source.height)
 

@@ -109,7 +109,10 @@ function createSourceId(): string {
 
 function postResponse(response: SourceIntakeWorkerResponse) {
   if (response.type === "complete" && response.result.type === "accepted") {
-    scope.postMessage(response, [response.result.source.buffer.data.buffer])
+    scope.postMessage(response, [
+      response.result.source.buffer.data.buffer,
+      response.result.source.autoTuneAnalysisSample.data.buffer,
+    ])
     return
   }
 

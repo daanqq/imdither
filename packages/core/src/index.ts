@@ -1,5 +1,6 @@
 export {
   analyzeAutoTuneImage,
+  createAutoTuneAnalysisSample,
   expandAutoTuneLookCandidates,
   getAutoTuneCandidateDefinitions,
   getPerceptualColorDistance,

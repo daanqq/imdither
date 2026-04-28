@@ -12,6 +12,8 @@ in the browser; the app does not upload source images to a server.
   settings change.
 - Preview with a reduced working buffer for interaction, then export the full
   selected output.
+- Generate Auto-Tune recommendations in a separate worker after the first
+  preview is ready.
 - Compare original and processed output with a slide before/after preview,
   processed-only view, or original-only view.
 - Use Fit or Real Pixels preview with mouse, wheel, and touch zoom/pan; desktop
@@ -78,17 +80,24 @@ flowchart LR
   user["User Input<br/>Upload / Paste / Drop<br/>Controls<br/>Export"]
   app["App Shell<br/>Source Image<br/>Preview Buffer<br/>Stable callbacks"]
   store["Editor Store<br/>Committed Settings<br/>View State<br/>Job Status"]
-  worker["Worker Jobs<br/>Preview Job<br/>Preview Refinement<br/>Export Job"]
+  intake["Source Intake<br/>Decode<br/>Analysis Sample"]
+  worker["Processing Worker<br/>Preview Job<br/>Preview Refinement<br/>Export Job"]
+  autotune["Auto-Tune Worker<br/>Recommendation Job<br/>Sample Cache"]
   preview["Preview Stage<br/>Canvas Preview<br/>Slide Compare<br/>Local UI State"]
+  looks["Looks Panel<br/>Auto-Tune Shortlist"]
   file["Export File<br/>PNG / WebP / JPEG"]
 
   user --> app
+  user --> intake
+  intake -->|source + analysis sample| app
   app --> store
   app -->|palette import/export/extraction| app
   store --> worker
   app --> worker
+  app --> autotune
   worker -->|preview buffer| preview
   worker -->|full output| file
+  autotune -->|ranked looks| looks
   preview -. status-only updates do not redraw ready canvases .-> preview
 ```
 

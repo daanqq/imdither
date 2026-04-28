@@ -152,6 +152,9 @@
 | **Applied Recommendation Marker** | The runtime marker showing which visible **Auto-Tune Recommendation** was last applied.                      | Active auto preset, selected look     |
 | **Demo Auto-Tune Seed**           | The bundled demo recommendation fixture shown immediately for the **Demo Image** before runtime analysis.    | Demo preset list, cached results      |
 | **Auto-Tune Analysis**            | The deterministic source-image metrics used with rendered scoring to rank Auto-Tune candidates.              | Reasoning, ML inference, score data   |
+| **Auto-Tune Analysis Sample**     | A runtime-only bounded **Pixel Buffer** created during **Source Intake** for Auto-Tune recommendation work.  | Auto sample, worker image             |
+| **Auto-Tune Worker**              | The dedicated browser worker that generates **Auto-Tune Recommendations** after the first preview is ready.  | AI worker, recommendation thread      |
+| **Worker Sample Cache**           | The Auto-Tune worker-side cache of recent **Auto-Tune Analysis Samples** by source identity.                 | Auto cache, analysis cache            |
 
 ## Preview And Comparison
 
@@ -181,10 +184,11 @@
 | **Fit Inset**                      | The spacing subtracted from the measured preview area before sizing a **Display Frame** in **Fit View**.                  | Padding, margin, frame gap         |
 | **CSS Pixel Preview Target**       | A **Preview Target Override** expressed in CSS pixels rather than device pixels.                                          | DPR target, retina preview target  |
 | **Screen-Sized Preview**           | The behavior where **Fit View** generates a **Screen Preview** instead of browser-scaling **Full Output**.                | Screen preview mode, fit render    |
-| **Desktop Reduced Preview Notice** | A desktop-only overlay that says the on-screen preview is reduced while export remains full size.                         | Preview only, warning banner       |
+| **Desktop Reduced Preview Notice** | A desktop-only overlay shown while **Preview Refinement** is pending for a reduced on-screen preview.                     | Preview only, warning banner       |
 | **Preview Refinement**             | A follow-up **Preview Job** that replaces a fast **Reduced Preview** with a larger preview buffer.                        | Final preview, preview catch-up    |
+| **Preview Refinement Pending**     | The runtime state that a reduced preview has appeared and a scheduled refined preview has not completed yet.              | Preview-only delay, waiting state  |
 | **Processing Preview**             | The visible state where a **Preview Job** is queued or running while the previous preview remains usable.                 | Loading preview, rendering state   |
-| **Preview Only Notice**            | A visible notice that the current on-screen preview is not the full export-quality **Full Output**.                       | Preview only, preview-only state   |
+| **Preview Only Notice**            | The visible copy inside the **Desktop Reduced Preview Notice** while **Preview Refinement Pending** is true.              | Preview only, preview-only state   |
 
 ## Runtime Responsiveness
 
@@ -241,6 +245,7 @@
 | **Mobile Fit Preview**  | The mobile preview behavior that maximizes visible image area while still allowing gesture entry into **Manual View**.     | Mobile 1:1, phone zoom             |
 | **Main Thread Freeze**  | A user-visible pause caused by expensive browser work on the thread that handles editor input and rendering.               | UI lock, app stuck, frozen UI      |
 | **Worker Source Cache** | The worker-side retained **Source Image** data used to avoid resending a large **Pixel Buffer** for every **Preview Job**. | Worker cache, source cache         |
+| **Worker Cache Miss**   | The condition where a worker expects cached image data but must request the client to resend the runtime sample or source. | Missing cache, stale cache         |
 | **Trace Capture**       | A browser performance recording used to identify where **Responsive Editing** is lost.                                     | Performance trace, profiler trace  |
 | **Dev Instrumentation** | Browser or React development tooling that observes renders and can add overhead to **Pixel Buffer** props.                 | DevTools overhead, React profiling |
 
@@ -270,6 +275,8 @@
 - **Output Size** must stay within the **Output Cap**.
 - **Source Intake** produces either an accepted **Source Image** or a rejected source.
 - **Source Intake** may produce a **Source Notice**.
+- Accepted **Source Intake** also creates one **Auto-Tune Analysis Sample** for
+  the current **Source Image**.
 - A **Source Image** owns one current **Pixel Buffer** after **Source Intake** accepts it.
 - **Editor Settings** select exactly one **Dither Algorithm** and one **Palette** per processing run.
 - **Default Settings** must match exactly one **Default Processing Preset**.
@@ -327,6 +334,13 @@
   **Auto-Tune**.
 - **Auto-Tune Analysis** must not be stored in **Editor Settings**,
   **Settings JSON**, or **Look Snapshot**.
+- **Auto-Tune Analysis Sample** must not be stored in **Editor Settings**,
+  **Settings JSON**, **Look Snapshot**, export metadata, or copied payloads.
+- **Auto-Tune Worker** starts after the first processed preview buffer exists.
+- **Auto-Tune Worker** uses an **Auto-Tune Analysis Sample**, not the full
+  **Source Image**.
+- **Worker Sample Cache** may hold recent **Auto-Tune Analysis Samples** and may
+  recover from a **Worker Cache Miss** by resending the sample once.
 - **Palette Fit**, rendered scores, candidate ids, and hidden variant ids must
   not be stored in **Editor Settings**, **Settings JSON**, or **Look Snapshot**.
 - **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
@@ -355,6 +369,8 @@
 - **Pixel Inspector** must not affect **Processed Image**, **Full Output**, or **Export File**.
 - A **CSS Pixel Preview Target** must account for the **Fit Inset** so the processed buffer matches the **Display Frame**.
 - **Desktop Reduced Preview Notice** may appear only in **Desktop Experience**.
+- **Desktop Reduced Preview Notice** may appear only while **Preview Refinement
+  Pending** is true.
 - **Slide Compare** uses one **Source Image** layer and one **Processed Image** layer in the same **Display Frame**.
 - **Slide Compare** should draw the source layer into the same **Display Frame** dimensions as the processed layer when **Screen Preview** is ready.
 - A **Preview Job** may be cancelled by newer **Settings Transitions**.
@@ -392,25 +408,21 @@
 
 ## Example Dialogue
 
-> **Dev:** "When the user clicks **Undo Settings Change**, should it restore the last **Preview Viewport** too?"
+> **Dev:** "When **Source Intake** accepts a file, do we send the full **Source Image** to the **Auto-Tune Worker**?"
 >
-> **Domain expert:** "No. **Settings History** records **Editor Settings** only. **Preview Viewport** is **View-local State**."
+> **Domain expert:** "No. **Source Intake** creates an **Auto-Tune Analysis Sample**, and the **Auto-Tune Worker** uses that runtime sample after the first preview is ready."
 >
-> **Dev:** "So **Screen Fit** versus **Real Pixels** never appears in **Settings JSON**?"
+> **Dev:** "Can that sample be copied in **Settings JSON** or a **Look Snapshot**?"
 >
-> **Domain expert:** "Correct. **Screen Fit** maps to **Fit View**, **Real Pixels** maps to **Manual View**, and both stay outside **Editor Settings**."
+> **Domain expert:** "No. **Auto-Tune Analysis Sample** and **Auto-Tune Analysis** are runtime-only. A visible **Auto-Tune Recommendation** still applies a normal **Look Snapshot**."
 >
-> **Dev:** "What happens when they use **1:1 Zoom** from **Screen Fit**?"
+> **Dev:** "If the worker forgets the sample, is that a failed recommendation?"
 >
-> **Domain expert:** "That switches the **Preview Viewport** into **Real Pixels** at 100% zoom. It does not change the **Processed Image**."
+> **Domain expert:** "Not immediately. A **Worker Cache Miss** can retry once by resending the **Auto-Tune Analysis Sample**."
 >
-> **Dev:** "Does **Touch Pinch Zoom** create a new processing setting?"
+> **Dev:** "And if the screen says preview only, does that mean processing is stuck?"
 >
-> **Domain expert:** "No. It updates the **Preview Viewport** using a **Gesture Anchor**. The exported pixels and shared settings stay unchanged."
->
-> **Dev:** "Should the hidden **Quality Control** be undoable?"
->
-> **Domain expert:** "No. **Export Quality** belongs to **Export Preferences**, so it is independent from **Settings History**."
+> **Domain expert:** "Only use **Preview Only Notice** while **Preview Refinement Pending** is true. A **Reduced Preview** by itself is not a blocker."
 >
 > **Dev:** "Is a copied **Look Snapshot** just **Settings JSON** with a different button?"
 >
@@ -438,8 +450,8 @@
 - "Registry" can sound like a UI list. In this domain, **Dither Algorithm Registry** is the core source of truth for selection, execution, capabilities, and metadata.
 - "None" is a UI label and stable id, but the domain behavior is **No Dither**: direct palette mapping without spatial dithering.
 - "Bayer Matrix" was used for both the setting and the control. Use **Bayer Size** for the value and **Bayer Matrix Control** for the editor UI.
-- "Preview Only" sounded like a broken app state. Canonical terms: **Reduced Preview** for the image state and **Desktop Reduced Preview Notice** for the desktop overlay.
-- "Processing Preview" and "Preview Only" were used as if they were separate blockers. Use **Processing Preview** for queued or running preview work and **Preview Only Notice** when the screen is showing a reduced or non-export-quality preview.
+- "Preview Only" sounded like a broken app state. Canonical terms: **Reduced Preview** for the image state, **Preview Refinement Pending** for active catch-up work, and **Desktop Reduced Preview Notice** for the desktop overlay.
+- "Processing Preview" and "Preview Only" were used as if they were separate blockers. Use **Processing Preview** for queued or running preview work and **Preview Only Notice** only when a reduced preview is visible while **Preview Refinement Pending** is true.
 - "Preview" was used for displayed canvas, reduced buffer, and compare selection. Canonical terms: **Preview**, **Reduced Preview**, and **Compare Mode**.
 - "Screen preview" and "preview target" can sound like persistent settings. Use **Screen Preview** for the generated image and **Preview Target Override** for the temporary processing size; neither belongs in **Settings JSON**.
 - "Display size", "frame size", and "container size" overlap. Use **Display Frame** for the actual on-screen image rectangle and **Preview Display Measurement** for observing it.
@@ -502,7 +514,8 @@
 - "Palette match" can mean manual **Matching Mode** or Auto-Tune **Palette Fit**.
   Use **Palette Fit** only for the Auto-Tune source-to-palette score.
 - Oversized **Source Image** handling is a **Source Intake** rejection. **Output Size** may still be auto-sized to stay within the **Output Cap**.
-- "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for the worker-backed image run, **Worker Source Cache** for retained source data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
+- "Worker" was used to imply all UI freezes are solved. Use **Processing Job** for preview/export image runs, **Auto-Tune Worker** for recommendation jobs, **Worker Source Cache** or **Worker Sample Cache** for retained worker data, and **Main Thread Freeze** for browser-side pauses outside worker compute.
+- "Analysis sample" can sound like persisted reasoning. Use **Auto-Tune Analysis Sample** only for the runtime bounded pixel sample, and **Auto-Tune Analysis** for derived ranking metrics.
 - "Trace" should mean **Trace Capture**, not a product log or analytics event.
 - "Buffer" should mean **Pixel Buffer** only when it carries image dimensions and pixel data; avoid using it for generic transport or cache objects.
 - "DevTools freeze" should be described as **Dev Instrumentation** causing or exposing a **Main Thread Freeze**, not as core processing slowness unless a **Trace Capture** proves it.

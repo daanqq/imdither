@@ -81,6 +81,7 @@ export type PreviewStageProps = {
   outputHeight?: number
   outputWidth?: number
   preview: PixelBuffer | null
+  previewRefiningPending?: boolean
   status: JobStatus
   error?: string | null
   previewTargetHeight: number
@@ -110,6 +111,7 @@ export const PreviewStage = React.memo(function PreviewStage({
   outputHeight,
   outputWidth,
   preview,
+  previewRefiningPending = false,
   previewTargetHeight,
   previewTargetWidth,
   status,
@@ -162,6 +164,7 @@ export const PreviewStage = React.memo(function PreviewStage({
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
     : false
+  const previewRefining = previewReduced && previewRefiningPending
   const busy =
     status === "queued" || status === "processing" || status === "exporting"
   const { previewDisplayRef } = usePreviewDisplayMeasurement(
@@ -212,7 +215,7 @@ export const PreviewStage = React.memo(function PreviewStage({
         <ProcessingOverlay
           algorithm={algorithm}
           busy={busy}
-          previewReduced={isDesktopViewScale && previewReduced}
+          previewReduced={isDesktopViewScale && previewRefining}
           status={status}
         />
         <SourceErrorOverlay error={error} status={status} />

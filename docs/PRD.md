@@ -1,7 +1,7 @@
 # IMDITHER PRD
 
 Status: in progress
-Last updated: 2026-04-27
+Last updated: 2026-04-29
 
 ## 1. Product Summary
 
@@ -121,12 +121,16 @@ Source Intake owns:
 
 - accepted versus rejected source decisions
 - source dimensions and source identity
+- a runtime Auto-Tune analysis sample bounded to a maximum long edge of 256px
 - bundled demo source notices
 - oversized source rejection messages
 - output auto-size notices
 - async intake behavior for upload, drop, paste, and demo flows
 
 Source Intake must not silently downscale an oversized source.
+The Auto-Tune analysis sample is runtime-only and must not be included in
+Editor Settings, Settings JSON, Look Snapshots, export metadata, or copied
+payloads.
 
 ### 8.4 Settings and Transitions
 
@@ -178,6 +182,10 @@ Auto-Tune is an image-aware starting-point workflow, not a persisted mode.
 Rules:
 
 - Auto-Tune analyzes the current Source Image from a DOM-free Pixel Buffer.
+- Auto-Tune starts only after the first processed preview buffer exists.
+- Runtime Auto-Tune recommendation generation runs behind a dedicated
+  persistent Auto-Tune worker using the Source-Intake-created analysis sample,
+  not the full Source Image.
 - Auto-Tune keeps ten visible candidate archetypes in core.
 - Auto-Tune expands those archetypes into a bounded hidden candidate pool of
   roughly 70 to 80 normal Look Snapshot variants.
@@ -196,6 +204,8 @@ Rules:
   Settings History entries.
 - Auto-Tune state, loading, inline error, and applied marker are runtime UI
   state, not persisted editor state.
+- Worker-side Auto-Tune sample cache is runtime-only and may be retried by
+  resending the analysis sample if a worker cache entry is missing.
 - Manual settings changes clear the applied marker.
 - Runtime failures are shown inside the Auto-Tune panel, not as global app
   errors.
@@ -363,14 +373,17 @@ Screen-sized preview:
 - Manual zoom keeps output-pixel inspection behavior without mutating processing settings
 - preview target overrides do not mutate Editor Settings
 - export jobs ignore preview target overrides and always use final output settings
+- desktop reduced-preview notice appears only while Preview Refinement work is
+  pending, not merely because the current preview buffer is smaller than the
+  selected output size
 
 ### 8.11 Processing Jobs and Responsiveness
 
 The editor keeps heavy local image work behind explicit async boundaries:
 
-- Source Intake handles source loading and rejection.
+- Source Intake handles source loading, rejection, and the Auto-Tune analysis sample.
 - Processing Jobs own preview scheduling, reduced preview, refined preview, cancellation, and export coordination.
-- The worker protocol stays typed.
+- The preview/export worker protocol and the Auto-Tune worker protocol stay typed and separate.
 - Stale preview results must not overwrite newer source or settings state.
 - Large pixel buffers must stay out of global Zustand state.
 - The previous preview should remain visible while replacement work is queued or processing.

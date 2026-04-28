@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   analyzeAutoTuneImage,
   createLookSnapshot,
+  createAutoTuneAnalysisSample,
   DEFAULT_SETTINGS,
   editorSettingsSchema,
   expandAutoTuneLookCandidates,
@@ -86,6 +87,27 @@ describe("Auto-Tune public recommendation contract", () => {
     expect(flat.flatAreaRatio).toBeGreaterThan(gradient.flatAreaRatio)
     expect(gradient.gradientAreaRatio).toBeGreaterThan(flat.gradientAreaRatio)
     expect(gradient.uniqueColorApprox).toBeGreaterThan(flat.uniqueColorApprox)
+  })
+
+  it("creates a deterministic bounded Auto-Tune analysis sample", () => {
+    const source = createLargeGradientSource(640, 320)
+    const sample = createAutoTuneAnalysisSample(source)
+    const second = createAutoTuneAnalysisSample(source)
+
+    expect(sample).toEqual(second)
+    expect(sample.width).toBe(256)
+    expect(sample.height).toBe(128)
+    expect(sample.data).toHaveLength(256 * 128 * 4)
+    expect(sample.data.slice(0, 4)).toEqual(source.data.slice(0, 4))
+  })
+
+  it("keeps small Auto-Tune analysis samples at source dimensions", () => {
+    const source = createRepresentativeSource()
+    const sample = createAutoTuneAnalysisSample(source)
+
+    expect(sample.width).toBe(source.width)
+    expect(sample.height).toBe(source.height)
+    expect(sample.data).toEqual(source.data)
   })
 
   it("keeps public recommendations valid across the compact scoring fixture matrix", () => {
@@ -480,6 +502,22 @@ function createRepresentativeSource(): PixelBuffer {
       data[index] = ramp
       data[index + 1] = Math.round((y / (height - 1)) * 180)
       data[index + 2] = x % 4 === 0 ? 220 : 80
+      data[index + 3] = 255
+    }
+  }
+
+  return { width, height, data }
+}
+
+function createLargeGradientSource(width: number, height: number): PixelBuffer {
+  const data = new Uint8ClampedArray(width * height * 4)
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4
+      data[index] = x % 256
+      data[index + 1] = y % 256
+      data[index + 2] = (x + y) % 256
       data[index + 3] = 255
     }
   }

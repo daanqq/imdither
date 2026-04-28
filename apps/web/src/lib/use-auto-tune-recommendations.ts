@@ -1,16 +1,17 @@
 import * as React from "react"
 import {
-  recommendAutoTuneLooks,
   type AutoTuneRecommendation,
   type EditorSettings,
   type PixelBuffer,
 } from "@workspace/core"
 
 import { applyAutoTuneLookSettings } from "./auto-tune-application"
+import { runAutoTuneJob } from "./auto-tune-worker-client"
 
 type AutoTuneSource = {
   id: string
   buffer: PixelBuffer
+  autoTuneAnalysisSample: PixelBuffer
 } | null
 
 export type AutoTuneRecommendationState = {
@@ -47,6 +48,7 @@ export function useAutoTuneRecommendations({
     null
   )
   const generationIdRef = React.useRef(0)
+  const nextJobIdRef = React.useRef(0)
   const settingsRef = React.useRef(settings)
   const sourceId = source?.id ?? null
   const visibleRecommendations =
@@ -90,6 +92,7 @@ export function useAutoTuneRecommendations({
     }
 
     const currentSource = source
+    const controller = new AbortController()
 
     async function generateAutoTune() {
       try {
@@ -98,21 +101,19 @@ export function useAutoTuneRecommendations({
         setErrorSourceId(null)
         await waitForLoadingPaint()
         const currentSettings = settingsRef.current
+        nextJobIdRef.current += 1
 
-        const nextRecommendations = recommendAutoTuneLooks(
-          currentSource.buffer,
-          {
-            settings: currentSettings,
-            sourceDimensions: {
-              width: currentSource.buffer.width,
-              height: currentSource.buffer.height,
-            },
-            outputDimensions: {
-              width: currentSettings.resize.width,
-              height: currentSettings.resize.height,
-            },
-          }
-        )
+        const nextRecommendations = await runAutoTuneJob({
+          jobId: nextJobIdRef.current,
+          sourceId: currentSource.id,
+          analysisSample: currentSource.autoTuneAnalysisSample,
+          settings: currentSettings,
+          outputDimensions: {
+            width: currentSettings.resize.width,
+            height: currentSettings.resize.height,
+          },
+          signal: controller.signal,
+        })
 
         if (generationIdRef.current !== generationId) {
           return
@@ -127,15 +128,15 @@ export function useAutoTuneRecommendations({
           return
         }
 
+        if (isAbortError(autoTuneError)) {
+          return
+        }
+
         setRecommendations([])
         setRecommendationsSourceId(null)
         setAppliedRecommendationId(null)
         setAppliedSourceId(null)
-        setError(
-          autoTuneError instanceof Error
-            ? autoTuneError.message
-            : "Auto-Tune failed"
-        )
+        setError(getAutoTuneErrorMessage(autoTuneError))
         setErrorSourceId(currentSource.id)
       } finally {
         if (generationIdRef.current === generationId) {
@@ -146,7 +147,9 @@ export function useAutoTuneRecommendations({
 
     void generateAutoTune()
 
-    return undefined
+    return () => {
+      controller.abort()
+    }
   }, [enabled, source, sourceId])
 
   const markApplied = React.useCallback(
@@ -170,6 +173,14 @@ export function useAutoTuneRecommendations({
     markApplied,
     clearAppliedMarker,
   }
+}
+
+function getAutoTuneErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Auto-Tune failed"
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError"
 }
 
 function waitForLoadingPaint() {

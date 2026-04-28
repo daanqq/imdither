@@ -53,8 +53,14 @@ describe("Source Intake", () => {
     expect(result.source.name).toBe("source.png")
     expect(result.source.buffer.width).toBe(2)
     expect(result.source.buffer.height).toBe(1)
+    expect(result.source.autoTuneAnalysisSample.width).toBe(2)
+    expect(result.source.autoTuneAnalysisSample.height).toBe(1)
     expect(result.source.buffer.data).toBeInstanceOf(Uint8ClampedArray)
     expect(Object.keys(result.source.buffer)).toEqual(["width", "height"])
+    expect(Object.keys(result.source.autoTuneAnalysisSample)).toEqual([
+      "width",
+      "height",
+    ])
   })
 
   it("falls back to main-thread Source Intake when workers are unavailable", async () => {
@@ -80,7 +86,14 @@ describe("Source Intake", () => {
     expect(result.source.buffer.data).toEqual(
       new Uint8ClampedArray([1, 2, 3, 255])
     )
+    expect(result.source.autoTuneAnalysisSample.data).toEqual(
+      new Uint8ClampedArray([1, 2, 3, 255])
+    )
     expect(Object.keys(result.source.buffer)).toEqual(["width", "height"])
+    expect(Object.keys(result.source.autoTuneAnalysisSample)).toEqual([
+      "width",
+      "height",
+    ])
   })
 
   it("yields before main-thread fallback decode starts", async () => {
@@ -164,6 +177,10 @@ describe("Source Intake", () => {
     expect(result.source.id).toBe("demo")
     expect(result.source.name).toBe("Bundled demo image")
     expect(Object.keys(result.source.buffer)).toEqual(["width", "height"])
+    expect(Object.keys(result.source.autoTuneAnalysisSample)).toEqual([
+      "width",
+      "height",
+    ])
     expect(formatSourceNotices(result.notices)).toBe("[DEMO SOURCE LOADED]")
   })
 })
@@ -173,6 +190,11 @@ function sourceWithSize(width: number, height: number) {
     id: "source",
     name: "source.png",
     buffer: {
+      width,
+      height,
+      data: new Uint8ClampedArray(0),
+    },
+    autoTuneAnalysisSample: {
       width,
       height,
       data: new Uint8ClampedArray(0),
