@@ -23,9 +23,11 @@ export type AutoTuneRecommendationState = {
 }
 
 export function useAutoTuneRecommendations({
+  enabled = true,
   settings,
   source,
 }: {
+  enabled?: boolean
   settings: EditorSettings
   source: AutoTuneSource
 }): AutoTuneRecommendationState {
@@ -70,7 +72,7 @@ export function useAutoTuneRecommendations({
     const generationId = generationIdRef.current + 1
     generationIdRef.current = generationId
 
-    if (!sourceId || !source) {
+    if (!isAutoTuneGenerationReady({ enabled, source, sourceId }) || !source) {
       queueMicrotask(() => {
         if (generationIdRef.current !== generationId) {
           return
@@ -145,7 +147,7 @@ export function useAutoTuneRecommendations({
     void generateAutoTune()
 
     return undefined
-  }, [source, sourceId])
+  }, [enabled, source, sourceId])
 
   const markApplied = React.useCallback(
     (recommendationId: string) => {
@@ -179,6 +181,18 @@ function waitForLoadingPaint() {
 
     setTimeout(resolve, 0)
   })
+}
+
+export function isAutoTuneGenerationReady({
+  enabled,
+  source,
+  sourceId,
+}: {
+  enabled: boolean
+  source: AutoTuneSource
+  sourceId: string | null
+}): boolean {
+  return enabled && Boolean(sourceId) && Boolean(source)
 }
 
 function findAppliedRecommendationId({

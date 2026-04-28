@@ -114,7 +114,11 @@ export function App() {
       previewViewport.mode,
     ]
   )
-  const autoTune = useAutoTuneRecommendations({ settings, source })
+  const autoTune = useAutoTuneRecommendations({
+    enabled: Boolean(preview),
+    settings,
+    source,
+  })
   const {
     appliedRecommendationId,
     clearAppliedMarker,
