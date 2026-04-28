@@ -141,14 +141,17 @@ export const PreviewStage = React.memo(function PreviewStage({
   const showOriginal = compareMode === "original"
   const showProcessed = compareMode === "processed"
   const viewScale: ViewScale = previewViewport.mode === "fit" ? "fit" : "actual"
-  const previewFrameWidth = isDesktopViewScale
-    ? (outputWidth ?? previewTargetWidth)
-    : previewTargetWidth
-  const previewFrameHeight = isDesktopViewScale
-    ? (outputHeight ?? previewTargetHeight)
-    : previewTargetHeight
-  const controlsFrameWidth = previewFrameWidth
-  const controlsFrameHeight = previewFrameHeight
+  const realPixelsMode = previewViewport.mode === "manual"
+  const previewFrameWidth =
+    isDesktopViewScale || realPixelsMode
+      ? (outputWidth ?? previewTargetWidth)
+      : previewTargetWidth
+  const previewFrameHeight =
+    isDesktopViewScale || realPixelsMode
+      ? (outputHeight ?? previewTargetHeight)
+      : previewTargetHeight
+  const controlsFrameWidth = outputWidth ?? previewFrameWidth
+  const controlsFrameHeight = outputHeight ?? previewFrameHeight
   const previewReduced = preview
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
@@ -273,6 +276,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                     expectedHeight={previewFrameHeight}
                     expectedWidth={previewFrameWidth}
                     initialViewportBox={surfaceViewportBox}
+                    manualExpectedHeight={previewFrameHeight}
+                    manualExpectedWidth={previewFrameWidth}
                     pixelInspectorEnabled={isDesktopViewScale}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
@@ -283,10 +288,20 @@ export const PreviewStage = React.memo(function PreviewStage({
                 {showProcessed ? (
                   <CanvasPanel
                     buffer={preview}
-                    expectedHeight={previewTargetHeight}
-                    expectedWidth={previewTargetWidth}
+                    expectedHeight={
+                      viewScale === "actual"
+                        ? previewFrameHeight
+                        : previewTargetHeight
+                    }
+                    expectedWidth={
+                      viewScale === "actual"
+                        ? previewFrameWidth
+                        : previewTargetWidth
+                    }
                     initialViewportBox={surfaceViewportBox}
                     label="Processed"
+                    manualExpectedHeight={previewFrameHeight}
+                    manualExpectedWidth={previewFrameWidth}
                     missing={!preview}
                     pixelInspectorEnabled={isDesktopViewScale}
                     status={status}
@@ -859,6 +874,8 @@ const CanvasPanel = React.memo(function CanvasPanel({
   expectedWidth,
   initialViewportBox,
   label,
+  manualExpectedHeight,
+  manualExpectedWidth,
   missing = false,
   pixelInspectorEnabled = true,
   previewViewport,
@@ -891,6 +908,8 @@ const CanvasPanel = React.memo(function CanvasPanel({
         imageHeight={expectedHeight}
         imageWidth={expectedWidth}
         initialViewportBox={initialViewportBox}
+        manualImageHeight={manualExpectedHeight}
+        manualImageWidth={manualExpectedWidth}
         inspectorBuffers={{
           original: label === "Original" ? buffer : null,
           processed: label === "Processed" ? buffer : null,

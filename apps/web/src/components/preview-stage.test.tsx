@@ -278,7 +278,7 @@ describe("PreviewStage", () => {
     )
   })
 
-  it("centers manual zoom from the rendered preview frame while fit preview is reduced", () => {
+  it("centers mobile manual zoom at the full output size while fit preview is reduced", () => {
     const onPreviewViewportChange = vi.fn()
 
     renderToStaticMarkup(
@@ -315,7 +315,7 @@ describe("PreviewStage", () => {
     toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
 
     expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 300, y: 225 },
+      center: { x: 2000, y: 1500 },
       mode: "manual",
       zoom: 1,
     })
@@ -1035,6 +1035,87 @@ describe("PreviewStage", () => {
     )
 
     expect(html).toContain("touch-action:none")
+  })
+
+  it("uses full output dimensions for mobile real-pixels zoom", () => {
+    const html = renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale={false}
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(600, 450)}
+        previewTargetHeight={450}
+        previewTargetWidth={600}
+        status="ready"
+        previewViewport={{
+          mode: "manual",
+          zoom: 2,
+          center: { x: 2000, y: 1500 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={vi.fn()}
+      />
+    )
+
+    expect(html).toContain("height:5976px")
+    expect(html).toContain("width:7968px")
+    expect(html).toContain("margin-left:-3984px")
+    expect(html).toContain("margin-top:-2988px")
+  })
+
+  it("keeps mobile manual geometry based on output size after Fit preview", () => {
+    const onPreviewViewportChange = vi.fn()
+
+    renderToStaticMarkup(
+      <PreviewStage
+        algorithm="bayer"
+        compareMode="processed"
+        isDesktopViewScale={false}
+        original={makeBuffer(4000, 3000)}
+        outputHeight={3000}
+        outputWidth={4000}
+        preview={makeBuffer(600, 450)}
+        previewTargetHeight={450}
+        previewTargetWidth={600}
+        status="ready"
+        previewViewport={{
+          mode: "fit",
+          zoom: 1,
+          center: { x: 0, y: 0 },
+          gridEnabled: false,
+          loupeEnabled: false,
+        }}
+        exportFormat="png"
+        exportQuality={0.92}
+        onExport={vi.fn()}
+        onExportFormatChange={vi.fn()}
+        onExportQualityChange={vi.fn()}
+        onFileSelected={vi.fn()}
+        onInvalidDrop={vi.fn()}
+        onPreviewDisplaySizeChange={vi.fn()}
+        onPreviewViewportChange={onPreviewViewportChange}
+      />
+    )
+
+    sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
+
+    expect(onPreviewViewportChange).toHaveBeenCalledWith({
+      center: { x: 2000, y: 1500 },
+      mode: "manual",
+      zoom: 2,
+    })
   })
 
   it("reserves mobile touch gestures while fit preview can pinch into manual mode", () => {

@@ -104,13 +104,9 @@ export function App() {
         displayWidth: previewDisplaySize?.width,
         outputHeight: settings.resize.height,
         outputWidth: settings.resize.width,
-        viewScale:
-          !isDesktopViewScale || previewViewport.mode === "fit"
-            ? "fit"
-            : "actual",
+        viewScale: previewViewport.mode === "fit" ? "fit" : "actual",
       }),
     [
-      isDesktopViewScale,
       previewDisplaySize?.height,
       previewDisplaySize?.width,
       settings.resize.height,
