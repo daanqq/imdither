@@ -12,6 +12,8 @@ export type CanvasPanelProps = {
     width: number
   } | null
   label: string
+  manualExpectedHeight?: number
+  manualExpectedWidth?: number
   missing?: boolean
   pixelInspectorEnabled?: boolean
   status?: string
@@ -54,6 +56,8 @@ export function areCanvasPanelPropsEqual(
     previous.expectedWidth !== next.expectedWidth ||
     previous.initialViewportBox !== next.initialViewportBox ||
     previous.label !== next.label ||
+    previous.manualExpectedHeight !== next.manualExpectedHeight ||
+    previous.manualExpectedWidth !== next.manualExpectedWidth ||
     previous.missing !== next.missing ||
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
     previous.previewViewport !== next.previewViewport ||

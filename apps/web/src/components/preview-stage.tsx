@@ -66,6 +66,7 @@ import {
   MIN_PREVIEW_ZOOM,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
+import { getPreviewStageFrameDimensions } from "@/lib/preview-stage-geometry"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
 import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
 
@@ -142,16 +143,21 @@ export const PreviewStage = React.memo(function PreviewStage({
   const showProcessed = compareMode === "processed"
   const viewScale: ViewScale = previewViewport.mode === "fit" ? "fit" : "actual"
   const realPixelsMode = previewViewport.mode === "manual"
-  const previewFrameWidth =
-    isDesktopViewScale || realPixelsMode
-      ? (outputWidth ?? previewTargetWidth)
-      : previewTargetWidth
-  const previewFrameHeight =
-    isDesktopViewScale || realPixelsMode
-      ? (outputHeight ?? previewTargetHeight)
-      : previewTargetHeight
-  const controlsFrameWidth = outputWidth ?? previewFrameWidth
-  const controlsFrameHeight = outputHeight ?? previewFrameHeight
+  const {
+    controlsFrameHeight,
+    controlsFrameWidth,
+    manualFrameHeight,
+    manualFrameWidth,
+    previewFrameHeight,
+    previewFrameWidth,
+  } = getPreviewStageFrameDimensions({
+    isDesktopViewScale,
+    outputHeight,
+    outputWidth,
+    previewTargetHeight,
+    previewTargetWidth,
+    realPixelsMode,
+  })
   const previewReduced = preview
     ? preview.width !== previewTargetWidth ||
       preview.height !== previewTargetHeight
@@ -258,8 +264,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                         ? previewFrameWidth
                         : previewTargetWidth
                     }
-                    manualDisplayHeight={previewFrameHeight}
-                    manualDisplayWidth={previewFrameWidth}
+                    manualDisplayHeight={manualFrameHeight}
+                    manualDisplayWidth={manualFrameWidth}
                     initialViewportBox={surfaceViewportBox}
                     status={status}
                     previewViewport={previewViewport}
@@ -276,8 +282,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                     expectedHeight={previewFrameHeight}
                     expectedWidth={previewFrameWidth}
                     initialViewportBox={surfaceViewportBox}
-                    manualExpectedHeight={previewFrameHeight}
-                    manualExpectedWidth={previewFrameWidth}
+                    manualExpectedHeight={manualFrameHeight}
+                    manualExpectedWidth={manualFrameWidth}
                     pixelInspectorEnabled={isDesktopViewScale}
                     previewViewport={previewViewport}
                     viewScale={viewScale}
@@ -300,8 +306,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                     }
                     initialViewportBox={surfaceViewportBox}
                     label="Processed"
-                    manualExpectedHeight={previewFrameHeight}
-                    manualExpectedWidth={previewFrameWidth}
+                    manualExpectedHeight={manualFrameHeight}
+                    manualExpectedWidth={manualFrameWidth}
                     missing={!preview}
                     pixelInspectorEnabled={isDesktopViewScale}
                     status={status}

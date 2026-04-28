@@ -8,6 +8,7 @@ import {
   getPreviewPresentationPanCenter,
   getPreviewPresentationWheelViewport,
 } from "@/lib/preview-presentation"
+import { getViewportPointFromClientPoint } from "@/lib/preview-pointer"
 import {
   getDisplayPointImageCoordinates,
   getFramePointImageCoordinates,
@@ -484,7 +485,7 @@ export function PreviewPresentationSurface({
         event.currentTarget.setPointerCapture(event.pointerId)
         activePointersRef.current.set(
           event.pointerId,
-          getPointerViewportPoint(event.currentTarget, event)
+          getViewportPointFromClientPoint(event.currentTarget, event)
         )
 
         if (activePointersRef.current.size >= 2) {
@@ -507,7 +508,7 @@ export function PreviewPresentationSurface({
         if (activePointersRef.current.has(event.pointerId)) {
           activePointersRef.current.set(
             event.pointerId,
-            getPointerViewportPoint(event.currentTarget, event)
+            getViewportPointFromClientPoint(event.currentTarget, event)
           )
           updatePinchGesture(event.currentTarget)
         }
@@ -603,20 +604,6 @@ function getFrameViewportRect(frame: HTMLElement) {
   return {
     height: Math.max(1, Math.round(rect?.height ?? frame.clientHeight)),
     width: Math.max(1, Math.round(rect?.width ?? frame.clientWidth)),
-  }
-}
-
-function getPointerViewportPoint(
-  element: HTMLElement,
-  event: Pick<React.PointerEvent, "clientX" | "clientY">
-) {
-  const rect =
-    element.parentElement?.getBoundingClientRect() ??
-    element.getBoundingClientRect()
-
-  return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
   }
 }
 
