@@ -6,6 +6,8 @@ export type PreviewTarget = {
   width: number
 }
 
+export const FIT_PREVIEW_PIXEL_RATIO = 2
+
 export function getScreenPreviewTarget({
   displayHeight,
   displayWidth,
@@ -42,8 +44,8 @@ export function getScreenPreviewTarget({
   )
   const scale = Math.min(
     1,
-    safeDisplayWidth / safeOutputWidth,
-    safeDisplayHeight / safeOutputHeight
+    (safeDisplayWidth * FIT_PREVIEW_PIXEL_RATIO) / safeOutputWidth,
+    (safeDisplayHeight * FIT_PREVIEW_PIXEL_RATIO) / safeOutputHeight
   )
 
   return {

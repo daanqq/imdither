@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { getScreenPreviewTarget } from "./screen-preview"
 
 describe("screen preview sizing", () => {
-  it("uses measured CSS pixels for Fit preview without device-pixel scaling", () => {
+  it("uses a 2x CSS pixel target for Fit preview without device-pixel scaling", () => {
     expect(
       getScreenPreviewTarget({
         displayHeight: 300,
@@ -13,10 +13,10 @@ describe("screen preview sizing", () => {
         outputWidth: 1200,
         viewScale: "fit",
       })
-    ).toEqual({ height: 300, width: 450 })
+    ).toEqual({ height: 600, width: 900 })
   })
 
-  it("matches the inset used by the rendered Fit frame", () => {
+  it("matches the inset used by the rendered Fit frame before doubling", () => {
     expect(
       getScreenPreviewTarget({
         displayHeight: 300,
@@ -25,7 +25,7 @@ describe("screen preview sizing", () => {
         outputWidth: 1200,
         viewScale: "fit",
       })
-    ).toEqual({ height: 288, width: 432 })
+    ).toEqual({ height: 576, width: 864 })
   })
 
   it("clamps Fit preview to final output dimensions", () => {
