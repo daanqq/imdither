@@ -8,6 +8,9 @@ const shouldAnalyzeBundle = process.env.ANALYZE === "true"
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 1000,
+  },
   plugins: [
     react({
       babel: {

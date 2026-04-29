@@ -121,7 +121,13 @@ Format files:
 bun format
 ```
 
-Run the standard verification after changes:
+Run the standard checks after changes:
+
+```sh
+bun check
+```
+
+Run the full verification gate:
 
 ```sh
 bun verify

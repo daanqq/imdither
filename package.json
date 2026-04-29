@@ -12,6 +12,7 @@
     "format": "turbo format",
     "format:check": "turbo format:check",
     "typecheck": "turbo typecheck",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
     "prepare": "husky",
     "lint-staged": "lint-staged"
