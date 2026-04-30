@@ -898,7 +898,7 @@ function PaletteEditor({
                 />
                 <Button
                   aria-label={`Delete color ${index + 1}`}
-                  className="h-8 min-w-0 rounded-none border-0 border-l border-input p-0 shadow-none focus-visible:ring-0"
+                  className="h-8 min-w-0 rounded-none border-0 border-input p-0 shadow-none focus-visible:ring-0"
                   disabled={!canDeleteColor}
                   size="icon"
                   type="button"

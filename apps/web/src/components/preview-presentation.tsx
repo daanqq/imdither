@@ -488,7 +488,7 @@ export function PreviewPresentationSurface({
     <div
       ref={viewportElementRef}
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden",
+        "relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xl",
         className
       )}
       style={{

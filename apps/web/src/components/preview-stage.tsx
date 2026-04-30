@@ -191,7 +191,7 @@ export const PreviewStage = React.memo(function PreviewStage({
           <div
             ref={previewDisplayRef}
             className={cn(
-              "relative mx-2 mt-2 flex min-h-0 flex-1",
+              "relative mx-2 flex min-h-0 flex-1",
               previewViewport.mode === "fit"
                 ? "items-center justify-center overflow-hidden"
                 : "overflow-hidden"
@@ -270,7 +270,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                   <HistoryControls
                     canRedo={canRedoSettingsChange}
                     canUndo={canUndoSettingsChange}
-                    className="md:w-[10rem]"
+                    className="md:w-40"
                     onRedo={onRedoSettingsChange}
                     onUndo={onUndoSettingsChange}
                   />
@@ -309,23 +309,25 @@ function HistoryControls({
     <div className={cn("grid h-full w-full grid-cols-2 gap-2", className)}>
       <Button
         aria-label="Undo settings change"
-        className="h-full w-full"
+        className="h-full w-full gap-1"
         disabled={!canUndo}
         size="icon"
         variant="outline"
         onClick={onUndo ?? noop}
       >
         <Undo2Icon />
+        Undo
       </Button>
       <Button
         aria-label="Redo settings change"
-        className="h-full w-full"
+        className="h-full w-full gap-1"
         disabled={!canRedo}
         size="icon"
         variant="outline"
         onClick={onRedo ?? noop}
       >
         <Redo2Icon />
+        Redo
       </Button>
     </div>
   )

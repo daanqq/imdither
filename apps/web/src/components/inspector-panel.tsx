@@ -974,7 +974,7 @@ function PaletteEditor({
             />
             <Button
               aria-label={`Delete palette swatch color ${index + 1}`}
-              className="h-8 rounded-none border-0 border-l border-input p-0"
+              className="h-8 rounded-none border-0 border-input p-0"
               disabled={!canDeleteColor}
               size="icon"
               type="button"
