@@ -26,10 +26,9 @@ import {
   pasteSettingsJson,
 } from "@/lib/clipboard-settings-adapter"
 import {
-  encodePixelBuffer,
-  getExportFormatOption,
-  makeExportName,
-} from "@/lib/export-image"
+  applyExportAction,
+  type ExportActionRuntimeAdapter,
+} from "@/lib/export-action-application"
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
@@ -267,44 +266,32 @@ export function App() {
     [setError]
   )
 
+  const exportActionAdapter: ExportActionRuntimeAdapter = React.useMemo(
+    () => ({
+      setStatus,
+      setError,
+      setMetadata,
+      downloadBlob,
+    }),
+    [downloadBlob, setError, setMetadata, setStatus]
+  )
+
   const handleExport = React.useCallback(async () => {
-    if (!source) {
-      return
-    }
-
-    setStatus("exporting")
-
-    try {
-      const result = await processingJobs.runExportJob({
-        sourceKey: source.id,
-        image: source.buffer,
+    await applyExportAction(
+      {
+        source,
         settings,
-      })
-      const blob = await encodePixelBuffer(result.image, {
-        alphaBackground: settings.alphaBackground,
         format: exportFormat,
         quality: exportQuality,
-      })
-      downloadBlob(blob, makeExportName(source.name, exportFormat))
-      setMetadata({
-        ...result.metadata,
-        exportFormat: getExportFormatOption(exportFormat).label,
-      })
-      setError(null)
-      setStatus("ready")
-    } catch (exportError) {
-      setError(
-        exportError instanceof Error ? exportError.message : "Export failed"
-      )
-      setStatus("error")
-    }
+      },
+      exportActionAdapter,
+      { runExportJob: processingJobs.runExportJob }
+    )
   }, [
+    exportActionAdapter,
     exportFormat,
     exportQuality,
     processingJobs,
-    setError,
-    setMetadata,
-    setStatus,
     settings,
     source,
   ])

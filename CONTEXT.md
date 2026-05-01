@@ -165,7 +165,12 @@ Use these terms consistently:
 - Export Preferences: persisted editor UI preferences for encoding.
 - Export Format: PNG, WebP, or JPEG.
 - Export Quality: shared lossy encoder quality for WebP and JPEG.
-- Export Action: command that starts an Export Job and downloads an Export File.
+- Export Action: command that starts an Export Job, passes the Full Output
+  through the Browser Encoder, downloads an Export File, and reports export
+  metadata, status, and errors.
+- Export Action Application: browser-side seam that applies an Export Action to
+  editor runtime state without making the App Shell own Export Job ordering,
+  Browser Encoder calls, download naming, metadata updates, status, or errors.
 - Export Drawer: responsive drawer that owns Export Format, Export Quality, and
   the final Export Action.
 - Export Layer: browser-side layer that encodes a Pixel Buffer.
@@ -175,6 +180,15 @@ Use these terms consistently:
 
 Preserve the rule that PNG remains the default export path unless a feature
 explicitly widens the behavior.
+An Export Action without a current Source Image is a safe no-op; the UI should
+normally disable the action, but the Export Action Application should not report
+an error or change status for this case.
+The current runtime uses one shared Job Status for preview and export. Until a
+future PRD changes that model, a successful Export Action sets status to ready
+and a failed Export Action sets status to error.
+After successful Browser Encoder output, Export Action metadata reports the
+selected Export Format label. Browser MIME fallback detection is separate
+Encoder Failure hardening, not part of the Export Action Application seam.
 
 ## Auto-Tune Context
 
