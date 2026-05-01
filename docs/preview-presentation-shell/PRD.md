@@ -152,11 +152,15 @@ Preview Job scheduling rather than only display mechanics.
 - Preview Presentation owns Display Frame measurement.
 - Preview Presentation reports Display Frame size through an external callback.
 - Screen Preview target calculation remains outside Preview Presentation for
-  this PRD.
-- Preview Job scheduling remains outside Preview Presentation for this PRD.
+  this PRD and is now owned by the Preview Cycle module.
+- Preview Job scheduling remains outside Preview Presentation for this PRD and
+  is wired by the Preview Cycle module.
 - Preview Presentation owns manual frame and preview frame sizing decisions.
 - Preview Presentation owns the measured surface viewport box.
 - Preview Presentation owns the choice of internal Preview Surface Adapter.
+- Preview Presentation gives Preview Viewport Interaction Full Output image
+  dimensions even when Fit View is rendering a reduced Screen Preview, so wheel
+  zoom into Real Pixels stays anchored to the cursor.
 - Slide Compare remains a distinct internal Preview Surface Adapter.
 - Slide Compare no longer remains a public sibling branch owned by Preview Stage.
 - Original-only and processed-only modes use a canvas Preview Surface Adapter.
@@ -215,6 +219,8 @@ Preview Job scheduling rather than only display mechanics.
   target dimensions.
 - Preview Presentation Core tests should verify that Manual View uses Full
   Output dimensions.
+- Preview Presentation Core tests should verify that interaction layout uses
+  Full Output dimensions while Fit View renders a reduced Screen Preview.
 - Preview Presentation Core tests should verify that new Source Image identity
   resets Slide Divider.
 - Preview Presentation Core tests should verify the agreed Slide Divider

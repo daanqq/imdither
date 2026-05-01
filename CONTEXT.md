@@ -108,6 +108,9 @@ Architecture terms:
   coordinate mapping, and divider mapping.
 - Preview Presentation Shell: React runtime layer for measurement, pointer
   capture, gestures, wheel zoom, and Pixel Inspector sampling.
+- Preview Cycle: React runtime layer that owns Screen Preview target
+  calculation, Preview Job start/cancel wiring, reduced/refined Preview updates,
+  and Preview Refinement state before Preview Stage receives renderable state.
 - Preview Viewport Interaction: the view-local interaction module that owns
   Preview Viewport gesture policy, including wheel zoom, Manual View pan, Touch
   Pinch Zoom, pointer capture decisions, live viewport updates, and
@@ -121,6 +124,11 @@ Important invariant: Slide Divider coordinate spaces differ by concern. In Fit
 View, handle placement maps through the actual Display Frame, including Fit
 Inset. In Manual View, the visible handle, divider line, and processed canvas
 clip must share the same viewport-clamped split.
+
+Important invariant: Preview Viewport Interaction works in Full Output image
+coordinates even when Fit View is rendering a reduced Screen Preview. Wheel zoom
+from Screen Fit into Real Pixels must anchor around the cursor in Full Output
+space, not around the temporary Screen Preview Pixel Buffer dimensions.
 
 ## Runtime Responsiveness Context
 

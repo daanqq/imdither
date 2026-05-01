@@ -17,6 +17,7 @@ import { drawPixelBuffer } from "@/lib/image"
 import {
   getPreviewPresentationDisplayModel,
   getPreviewPresentationFrame,
+  getPreviewPresentationInteractionLayout,
 } from "@/lib/preview-presentation"
 import {
   getDisplayPointImageCoordinates,
@@ -129,18 +130,17 @@ export function PreviewPresentationSurface({
     const initial = previewViewport ?? {
       mode: "fit",
       zoom: 1,
-      center: { x: imageWidth / 2, y: imageHeight / 2 },
+      center: { x: manualImageWidth / 2, y: manualImageHeight / 2 },
       gridEnabled: false,
       loupeEnabled: false,
     }
-    const layout = {
-      width: viewportBox?.width ?? imageWidth,
-      height: viewportBox?.height ?? imageHeight,
-      left: 0,
-      top: 0,
-      imageWidth,
-      imageHeight,
-    }
+    const layout = getPreviewPresentationInteractionLayout({
+      displayImageHeight: imageHeight,
+      displayImageWidth: imageWidth,
+      manualImageHeight,
+      manualImageWidth,
+      viewportBox,
+    })
 
     return new PreviewViewportInteraction(initial, layout)
   })
@@ -173,7 +173,7 @@ export function PreviewPresentationSurface({
     const viewport = previewViewport ?? {
       mode: "fit",
       zoom: 1,
-      center: { x: imageWidth / 2, y: imageHeight / 2 },
+      center: { x: manualImageWidth / 2, y: manualImageHeight / 2 },
       gridEnabled: false,
       loupeEnabled: false,
     }
@@ -186,8 +186,8 @@ export function PreviewPresentationSurface({
   }, [
     controller,
     previewViewport,
-    imageWidth,
-    imageHeight,
+    manualImageWidth,
+    manualImageHeight,
     applyManualFrameViewport,
   ])
 
@@ -195,15 +195,28 @@ export function PreviewPresentationSurface({
     const rect = viewportElementRef.current?.getBoundingClientRect()
     if (rect) {
       controller.syncLayout({
-        width: rect.width,
-        height: rect.height,
-        left: rect.left,
-        top: rect.top,
-        imageWidth,
-        imageHeight,
+        ...getPreviewPresentationInteractionLayout({
+          displayImageHeight: imageHeight,
+          displayImageWidth: imageWidth,
+          left: rect.left,
+          manualImageHeight,
+          manualImageWidth,
+          top: rect.top,
+          viewportBox: {
+            height: rect.height,
+            width: rect.width,
+          },
+        }),
       })
     }
-  }, [controller, imageWidth, imageHeight, viewportBox])
+  }, [
+    controller,
+    imageHeight,
+    imageWidth,
+    manualImageHeight,
+    manualImageWidth,
+    viewportBox,
+  ])
 
   React.useLayoutEffect(() => {
     onViewportBoxChangeRef.current = onViewportBoxChange

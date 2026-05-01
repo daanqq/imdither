@@ -4,6 +4,7 @@ import {
   getPreviewPresentationDisplayModel,
   getPreviewPresentationDividerPercent,
   getPreviewPresentationFrame,
+  getPreviewPresentationInteractionLayout,
   getPreviewPresentationPanCenter,
   getPreviewPresentationViewportDividerPercent,
   getPreviewPresentationWheelViewport,
@@ -152,6 +153,25 @@ describe("preview presentation core", () => {
     expect(nextViewport.mode).toBe("manual")
     expect(nextViewport.zoom).toBeCloseTo(1.189207115002721)
     expect(nextViewport.center).toEqual({ x: 1024, y: 1024 })
+  })
+
+  it("keeps viewport interaction in full-output coordinates while fit preview is reduced", () => {
+    expect(
+      getPreviewPresentationInteractionLayout({
+        displayImageHeight: 768,
+        displayImageWidth: 1024,
+        manualImageHeight: 4000,
+        manualImageWidth: 6000,
+        viewportBox: { height: 600, width: 800 },
+      })
+    ).toEqual({
+      height: 600,
+      imageHeight: 4000,
+      imageWidth: 6000,
+      left: 0,
+      top: 0,
+      width: 800,
+    })
   })
 
   it("maps image-space slide divider into the visible manual viewport", () => {

@@ -28,8 +28,8 @@ import {
 } from "@/lib/export-image"
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
-import { getScreenPreviewTarget } from "@/lib/screen-preview"
 import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
+import { usePreviewCycle } from "@/lib/use-preview-cycle"
 import {
   createDemoSourceIntake,
   formatSourceNotices,
@@ -88,15 +88,6 @@ export function App() {
   const setSourceNotice = useEditorStore((state) => state.setSourceNotice)
   const setMetadata = useEditorStore((state) => state.setMetadata)
   const [source, setSource] = React.useState<LoadedSource | null>(null)
-  const [preview, setPreview] = React.useState<LoadedSource["buffer"] | null>(
-    null
-  )
-  const [previewRefiningPending, setPreviewRefiningPending] =
-    React.useState(false)
-  const [previewDisplaySize, setPreviewDisplaySize] = React.useState<{
-    height: number
-    width: number
-  } | null>(null)
   const [isDesktopViewScale, setIsDesktopViewScale] = React.useState(() =>
     typeof window === "undefined"
       ? true
@@ -115,23 +106,21 @@ export function App() {
     }),
     [source]
   )
-  const previewTarget = React.useMemo(
-    () =>
-      getScreenPreviewTarget({
-        displayHeight: previewDisplaySize?.height,
-        displayWidth: previewDisplaySize?.width,
-        outputHeight: settings.resize.height,
-        outputWidth: settings.resize.width,
-        viewScale: previewViewport.mode === "fit" ? "fit" : "actual",
-      }),
-    [
-      previewDisplaySize?.height,
-      previewDisplaySize?.width,
-      settings.resize.height,
-      settings.resize.width,
-      previewViewport.mode,
-    ]
-  )
+  const {
+    preview,
+    previewRefiningPending,
+    previewTarget,
+    resetPreviewCycle,
+    setPreviewDisplaySize,
+  } = usePreviewCycle({
+    processingJobs,
+    previewViewportMode: previewViewport.mode,
+    settings,
+    source,
+    onErrorChange: setError,
+    onMetadataChange: setMetadata,
+    onStatusChange: setStatus,
+  })
   const autoTune = useAutoTuneRecommendations({
     enabled: Boolean(preview),
     settings,
@@ -155,8 +144,7 @@ export function App() {
       }
 
       setSource(result.source)
-      setPreview(null)
-      setPreviewRefiningPending(false)
+      resetPreviewCycle()
       setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT)
       setError(null)
       setSourceNotice(formatSourceNotices(result.notices))
@@ -176,6 +164,7 @@ export function App() {
       setPreviewViewport,
       setSourceNotice,
       setStatus,
+      resetPreviewCycle,
       transitionSettings,
     ]
   )
@@ -211,60 +200,6 @@ export function App() {
       isCurrent = false
     }
   }, [applySourceIntake, setError, setStatus])
-
-  React.useEffect(() => {
-    if (!source) {
-      return undefined
-    }
-
-    const handle = processingJobs.startPreviewJob({
-      sourceKey: source.id,
-      image: source.buffer,
-      settings,
-      previewTarget,
-      onEvent: (event) => {
-        switch (event.type) {
-          case "queued":
-            setStatus("queued")
-            return
-          case "processing":
-            setStatus("processing")
-            return
-          case "reduced-preview-ready":
-            setPreview(event.result.image)
-            setMetadata(event.result.metadata)
-            setError(null)
-            setStatus("ready")
-            setPreviewRefiningPending(event.willRefine)
-            return
-          case "refined-preview-ready":
-            setPreview(event.result.image)
-            setMetadata(event.result.metadata)
-            setError(null)
-            setStatus("ready")
-            setPreviewRefiningPending(false)
-            return
-          case "failed":
-            setError(event.error.message)
-            setStatus("error")
-            setPreviewRefiningPending(false)
-            return
-        }
-      },
-    })
-
-    return () => {
-      handle.cancel()
-    }
-  }, [
-    previewTarget,
-    processingJobs,
-    settings,
-    source,
-    setError,
-    setMetadata,
-    setStatus,
-  ])
 
   const handleFile = React.useCallback(
     async (file: File) => {

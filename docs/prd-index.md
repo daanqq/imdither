@@ -38,6 +38,7 @@ feature shipped; update its status and keep this index current.
 | done   | [Preview Action Repartition](preview-action-repartition/PRD.md)                 | Preview-surface action ownership and export entry placement.              |
 | done   | [Preview Presentation Module](preview-presentation-module/PRD.md)               | Pure preview presentation calculations and shell extraction.              |
 | done   | [Preview Presentation Shell](preview-presentation-shell/PRD.md)                 | React shell, surface adapters, and interaction ownership.                 |
+| done   | [Preview Cycle Module](preview-cycle-module/PRD.md)                             | Screen Preview target and Preview Job lifecycle hook seam.                |
 | done   | [Auto-Tune Worker](auto-tune-worker/PRD.md)                                     | Worker-owned recommendation generation after first preview.               |
 | done   | [Auto-Tune Quality Ranking](auto-tune-quality-ranking/PRD.md)                   | Deterministic recommendation quality ranking.                             |
 | done   | [Auto-Tune Scoring Hardening](auto-tune-scoring-hardening/PRD.md)               | Dedicated scoring modules and scoring safeguards.                         |

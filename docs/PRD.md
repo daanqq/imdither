@@ -355,6 +355,8 @@ Inspection controls:
 - one-finger touch pan works in Manual mode
 - wheel zoom uses reciprocal quarter-octave steps (`2^(1/4)` in and `2^(-1/4)`
   out) so users can return to 100% from both 25% and 1600%
+- wheel zoom from `Fit` into `Manual` anchors in Full Output image coordinates,
+  even when the visible `Fit` surface is a reduced Screen Preview
 - optional pixel inspector with image coordinates and visible original/processed hex values
 
 Slide comparison:
@@ -390,13 +392,15 @@ Preview presentation:
 - Slide Compare remains an internal Preview Surface Adapter for the two-layer
   composition and divider interaction
 - Screen Preview target calculation and Preview Job scheduling remain outside
-  Preview Presentation
+  Preview Presentation and are owned by the Preview Cycle module
 
 ### 8.11 Processing Jobs and Responsiveness
 
 The editor keeps heavy local image work behind explicit async boundaries:
 
 - Source Intake handles source loading, rejection, and the Auto-Tune analysis sample.
+- Preview Cycle owns Screen Preview target calculation, Preview Job start/cancel
+  wiring, reduced/refined Preview updates, and Preview Refinement state.
 - Processing Jobs own preview scheduling, reduced preview, refined preview, cancellation, and export coordination.
 - The preview/export worker protocol and the Auto-Tune worker protocol stay typed and separate.
 - Stale preview results must not overwrite newer source or settings state.
@@ -584,6 +588,7 @@ The web app owns browser-specific and React-specific layers:
 - Editor Settings Transition Module
 - Settings History
 - Processing Jobs
+- Preview Cycle
 - Worker Client
 - Preview Stage
 - Preview Presentation Module

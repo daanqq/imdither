@@ -41,6 +41,15 @@ export type PreviewPresentationDisplayModel = {
   viewScale: ViewScale
 }
 
+export type PreviewPresentationInteractionLayout = {
+  height: number
+  imageHeight: number
+  imageWidth: number
+  left: number
+  top: number
+  width: number
+}
+
 export function getPreviewPresentationDisplayModel({
   fullOutputHeight,
   fullOutputWidth,
@@ -73,6 +82,33 @@ export function getPreviewPresentationDisplayModel({
     manualFrameHeight,
     manualFrameWidth,
     viewScale: "fit",
+  }
+}
+
+export function getPreviewPresentationInteractionLayout({
+  displayImageHeight,
+  displayImageWidth,
+  left = 0,
+  manualImageHeight,
+  manualImageWidth,
+  top = 0,
+  viewportBox,
+}: {
+  displayImageHeight: number
+  displayImageWidth: number
+  left?: number
+  manualImageHeight: number
+  manualImageWidth: number
+  top?: number
+  viewportBox: ViewportBox | null | undefined
+}): PreviewPresentationInteractionLayout {
+  return {
+    height: viewportBox?.height ?? displayImageHeight,
+    imageHeight: manualImageHeight,
+    imageWidth: manualImageWidth,
+    left,
+    top,
+    width: viewportBox?.width ?? displayImageWidth,
   }
 }
 
