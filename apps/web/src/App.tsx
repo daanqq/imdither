@@ -273,7 +273,7 @@ export function App() {
       setMetadata,
       downloadBlob,
     }),
-    [downloadBlob, setError, setMetadata, setStatus]
+    [setError, setMetadata, setStatus]
   )
 
   const handleExport = React.useCallback(async () => {

@@ -52,6 +52,12 @@ export async function applyExportAction(
     return
   }
 
+  if (!options.runExportJob) {
+    throw new Error(
+      "Export Job dependency is required when a Source Image is present"
+    )
+  }
+
   const { runExportJob } = options
   const encode = options.encodePixelBuffer ?? realEncodePixelBuffer
 

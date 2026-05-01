@@ -223,4 +223,28 @@ describe("applyExportAction", () => {
     expect(adapter.setError).toHaveBeenCalledWith("Export failed")
     expect(adapter.setStatus).toHaveBeenLastCalledWith("error")
   })
+
+  it("throws when source image is present but runExportJob is not provided", async () => {
+    const adapter = createAdapter()
+
+    await expect(
+      applyExportAction(
+        {
+          source: createSource(),
+          settings: {} as EditorSettings,
+          format: "png",
+          quality: 0.9,
+        },
+        adapter,
+        { runExportJob: undefined as unknown as () => Promise<DitherJobResult> }
+      )
+    ).rejects.toThrow(
+      "Export Job dependency is required when a Source Image is present"
+    )
+
+    expect(adapter.setStatus).not.toHaveBeenCalled()
+    expect(adapter.setError).not.toHaveBeenCalled()
+    expect(adapter.setMetadata).not.toHaveBeenCalled()
+    expect(adapter.downloadBlob).not.toHaveBeenCalled()
+  })
 })
