@@ -1,9 +1,12 @@
+import { createAutoTuneAnalysisSample, type PixelBuffer } from "@workspace/core"
+
 import {
-  createAutoTuneAnalysisSample,
-  MAX_SOURCE_DIMENSION,
-  clampOutputSize,
-  type PixelBuffer,
-} from "@workspace/core"
+  getOutputAutoSizedNotice,
+  getSourceRejectionMessage,
+  resolveOutputSizePolicy,
+  shouldRejectSourceSize,
+  type OutputSizePolicy,
+} from "./output-size-policy"
 
 export type LoadedSource = {
   id: string
@@ -27,7 +30,7 @@ export type SourceIntakeResult =
   | {
       type: "accepted"
       source: LoadedSource
-      outputSize: ReturnType<typeof clampOutputSize>
+      outputSize: OutputSizePolicy
       notices: SourceNotice[]
     }
   | {
@@ -49,13 +52,16 @@ export function acceptLoadedSource(
       source.autoTuneAnalysisSample ??
       createAutoTuneAnalysisSample(source.buffer),
   }
-  const outputSize = clampOutputSize(source.buffer.width, source.buffer.height)
+  const outputSize = resolveOutputSizePolicy(
+    source.buffer.width,
+    source.buffer.height
+  )
   const notices = [...initialNotices]
 
   if (outputSize.downscaled) {
     notices.push({
       kind: "output-auto-sized",
-      message: `[OUTPUT AUTO-SIZED: ${outputSize.width}x${outputSize.height} / 12MP]`,
+      message: getOutputAutoSizedNotice(outputSize),
     })
   }
 
@@ -73,7 +79,7 @@ export function formatSourceNotices(notices: SourceNotice[]): string | null {
 }
 
 export function isOversizedSource(width: number, height: number): boolean {
-  return width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION
+  return shouldRejectSourceSize(width, height)
 }
 
 export function rejectOversizedSource(
@@ -82,6 +88,6 @@ export function rejectOversizedSource(
 ): SourceIntakeResult {
   return {
     type: "rejected",
-    message: `Image is too large (${width}x${height}). Maximum source dimension is ${MAX_SOURCE_DIMENSION}px.`,
+    message: getSourceRejectionMessage(width, height),
   }
 }

@@ -1,7 +1,6 @@
 import {
   DEFAULT_SETTINGS,
   PRESET_PALETTES,
-  clampOutputSize,
   getProcessingPreset,
   getProcessingPresetColorMode,
   normalizePaletteColors,
@@ -15,6 +14,11 @@ import {
   type ProcessingPresetId,
   type ResizeMode,
 } from "@workspace/core"
+
+import {
+  getOutputClampedNotice,
+  resolveOutputSizePolicy,
+} from "./output-size-policy"
 
 export type SourceDimensions = {
   width: number
@@ -254,12 +258,10 @@ function withOutputSize(
   width: number,
   height: number
 ): SettingsTransitionResult {
-  const size = clampOutputSize(width, height)
+  const size = resolveOutputSizePolicy(width, height)
 
   return {
-    sourceNotice: size.downscaled
-      ? `[OUTPUT CLAMPED: ${size.width}x${size.height} / 12MP]`
-      : undefined,
+    sourceNotice: size.downscaled ? getOutputClampedNotice(size) : undefined,
     settings: {
       ...settings,
       resize: {

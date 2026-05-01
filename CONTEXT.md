@@ -211,6 +211,9 @@ Use these terms consistently:
   reset, Output Size transition, Source Notice, status, and error state.
 - Source Notice: short user-facing message about intake or Output Size policy.
 - Output Cap: maximum browser pixel budget for Output Size.
+- Output Size Policy: web-facing seam over core Output Cap math that owns Source
+  Image rejection checks, output auto-size recommendations, output clamp
+  notices, and source rejection copy.
 - Alpha Flattening: compositing transparent source pixels onto an Alpha
   Background before processing.
 - Auto-Tune Analysis Sample: runtime-only bounded Pixel Buffer created during
