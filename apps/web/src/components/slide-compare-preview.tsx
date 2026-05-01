@@ -25,17 +25,13 @@ import {
 
 export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
-  displayHeight,
-  displayWidth,
-  manualDisplayHeight,
-  manualDisplayWidth,
+  displayModel,
   initialViewportBox,
   original,
   pixelInspectorEnabled = true,
   processed,
   previewViewport,
   status,
-  viewScale,
   onDividerChange,
   onViewportChange,
   onViewportBoxChange,
@@ -55,10 +51,9 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     width: number
   } | null>(initialViewportBox ?? surfaceLifecycle.initialViewportBox)
   const processedReady = Boolean(processed)
-  const frameWidth = displayWidth ?? processed?.width ?? original.width
-  const frameHeight = displayHeight ?? processed?.height ?? original.height
-  const manualFrameWidth = manualDisplayWidth ?? frameWidth
-  const manualFrameHeight = manualDisplayHeight ?? frameHeight
+  const frameWidth = displayModel.frameWidth
+  const frameHeight = displayModel.frameHeight
+  const viewScale = displayModel.viewScale
   const clampedDivider = clampSlideDivider(dividerPercent)
   const effectiveDividerPercent = getPreviewPresentationDividerPercent({
     dividerPercent: clampedDivider,
@@ -282,28 +277,25 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
+        displayModel={displayModel}
         frameRef={frameRef}
-        imageHeight={frameHeight}
-        imageWidth={frameWidth}
         initialViewportBox={initialViewportBox}
-        manualImageHeight={manualFrameHeight}
-        manualImageWidth={manualFrameWidth}
-        inspectorBuffers={{ original, processed }}
-        nativeWheel
+        inspectorSource="slide-compare"
+        buffers={{ original, processed }}
+        capabilities={{
+          slideDivider: {
+            onCommit: commitDividerFromPointer,
+            onUpdate: updateDividerFromPointer,
+          },
+        }}
         pixelInspectorEnabled={pixelInspectorEnabled}
-        pointerInteractionEnabled={processedReady}
         previewViewport={previewViewport}
-        viewScale={viewScale}
         onManualFramePositionChange={(viewport) => {
           viewportRef.current = viewport
 
           if (previewViewport?.mode === "manual") {
             applyDividerVisual(dividerPercentRef.current)
           }
-        }}
-        fitPointerInteraction={{
-          onCommit: commitDividerFromPointer,
-          onUpdate: updateDividerFromPointer,
         }}
         onViewportBoxChange={(box) => {
           setViewportBox(box)

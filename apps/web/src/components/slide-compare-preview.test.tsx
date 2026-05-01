@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 
 import { areSlideComparePreviewPropsEqual } from "./preview-render-boundaries"
 import { SlideComparePreview } from "./slide-compare-preview"
+import type { PreviewSurfaceDisplayModel } from "@/lib/preview-presentation"
 
 function makePixelBuffer(width: number, height: number): PixelBuffer {
   return {
@@ -13,15 +14,40 @@ function makePixelBuffer(width: number, height: number): PixelBuffer {
   }
 }
 
+function fitDisplayModel(
+  overrides?: Partial<{ frameWidth: number; frameHeight: number }>
+): PreviewSurfaceDisplayModel {
+  return {
+    frameHeight: overrides?.frameHeight ?? 3,
+    frameWidth: overrides?.frameWidth ?? 4,
+    manualFrameHeight: overrides?.frameHeight ?? 3,
+    manualFrameWidth: overrides?.frameWidth ?? 4,
+    viewScale: "fit" as const,
+  }
+}
+
+function actualDisplayModel(
+  frameWidth: number,
+  frameHeight: number
+): PreviewSurfaceDisplayModel {
+  return {
+    frameHeight,
+    frameWidth,
+    manualFrameHeight: frameHeight,
+    manualFrameWidth: frameWidth,
+    viewScale: "actual" as const,
+  }
+}
+
 describe("SlideComparePreview", () => {
   it("keeps the placeholder visible and disables the divider while processed output is missing", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={50}
+        displayModel={fitDisplayModel()}
         original={makePixelBuffer(4, 3)}
         processed={null}
         status="processing"
-        viewScale="fit"
         onDividerChange={() => {}}
       />
     )
@@ -34,10 +60,10 @@ describe("SlideComparePreview", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={37}
+        displayModel={fitDisplayModel()}
         original={makePixelBuffer(4, 3)}
         processed={makePixelBuffer(4, 3)}
         status="processing"
-        viewScale="fit"
         onDividerChange={() => {}}
       />
     )
@@ -54,10 +80,10 @@ describe("SlideComparePreview", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={37}
+        displayModel={fitDisplayModel()}
         original={makePixelBuffer(4, 3)}
         processed={makePixelBuffer(4, 3)}
         status="ready"
-        viewScale="fit"
         onDividerChange={() => {}}
       />
     )
@@ -69,12 +95,13 @@ describe("SlideComparePreview", () => {
     const original = makePixelBuffer(4, 3)
     const processed = makePixelBuffer(4, 3)
     const onDividerChange = () => {}
+    const baseDisplayModel = fitDisplayModel()
     const baseProps = {
       dividerPercent: 37,
+      displayModel: baseDisplayModel,
       original,
       processed,
       status: "ready",
-      viewScale: "fit",
       onDividerChange,
     } as const
 
@@ -99,19 +126,17 @@ describe("SlideComparePreview", () => {
     const onDividerChange = () => {}
     const baseProps = {
       dividerPercent: 37,
-      displayHeight: 100,
-      displayWidth: 120,
+      displayModel: fitDisplayModel({ frameWidth: 120, frameHeight: 100 }),
       original,
       processed,
       status: "ready",
-      viewScale: "fit",
       onDividerChange,
     } as const
 
     expect(
       areSlideComparePreviewPropsEqual(baseProps, {
         ...baseProps,
-        displayWidth: 121,
+        displayModel: fitDisplayModel({ frameWidth: 121, frameHeight: 100 }),
       })
     ).toBe(false)
   })
@@ -121,10 +146,10 @@ describe("SlideComparePreview", () => {
     const onDividerChange = () => {}
     const baseProps = {
       dividerPercent: 37,
+      displayModel: fitDisplayModel(),
       original,
       processed: null,
       status: "queued",
-      viewScale: "fit",
       onDividerChange,
     } as const
 
@@ -140,13 +165,11 @@ describe("SlideComparePreview", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={37}
-        displayHeight={3000}
-        displayWidth={4000}
+        displayModel={actualDisplayModel(4000, 3000)}
         initialViewportBox={{ height: 600, width: 800 }}
         original={makePixelBuffer(4000, 3000)}
         processed={makePixelBuffer(4000, 3000)}
         status="ready"
-        viewScale="actual"
         previewViewport={{
           mode: "manual",
           zoom: 3,
@@ -169,13 +192,11 @@ describe("SlideComparePreview", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={50}
-        displayHeight={3000}
-        displayWidth={4000}
+        displayModel={actualDisplayModel(4000, 3000)}
         initialViewportBox={{ height: 600, width: 800 }}
         original={makePixelBuffer(4000, 3000)}
         processed={makePixelBuffer(4000, 3000)}
         status="ready"
-        viewScale="actual"
         previewViewport={{
           mode: "manual",
           zoom: 3,
@@ -196,13 +217,11 @@ describe("SlideComparePreview", () => {
     const html = renderToStaticMarkup(
       <SlideComparePreview
         dividerPercent={2}
-        displayHeight={300}
-        displayWidth={400}
+        displayModel={fitDisplayModel({ frameWidth: 400, frameHeight: 300 })}
         initialViewportBox={{ height: 600, width: 1000 }}
         original={makePixelBuffer(400, 300)}
         processed={makePixelBuffer(400, 300)}
         status="ready"
-        viewScale="fit"
         previewViewport={{
           mode: "fit",
           zoom: 1,

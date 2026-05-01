@@ -1,6 +1,7 @@
 import type { PixelBuffer } from "@workspace/core"
 
 import type { PreviewViewport } from "@/lib/preview-viewport"
+import type { PreviewSurfaceDisplayModel } from "@/lib/preview-presentation"
 import type { ViewScale } from "@/store/editor-store"
 
 export type CanvasPanelProps = {
@@ -18,14 +19,9 @@ export type CanvasPanelProps = {
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }
 
-export type SlideCompareViewScale = "fit" | "actual"
-
 export type SlideComparePreviewProps = {
   dividerPercent: number
-  displayHeight?: number
-  displayWidth?: number
-  manualDisplayHeight?: number
-  manualDisplayWidth?: number
+  displayModel: PreviewSurfaceDisplayModel
   initialViewportBox?: {
     height: number
     width: number
@@ -35,7 +31,6 @@ export type SlideComparePreviewProps = {
   pixelInspectorEnabled?: boolean
   status?: string
   previewViewport?: PreviewViewport
-  viewScale: SlideCompareViewScale
   onDividerChange: (percent: number) => void
   onViewportChange?: (viewport: Partial<PreviewViewport>) => void
   onViewportBoxChange?: (box: { height: number; width: number }) => void
@@ -74,16 +69,12 @@ export function areSlideComparePreviewPropsEqual(
 ) {
   if (
     previous.dividerPercent !== next.dividerPercent ||
-    previous.displayHeight !== next.displayHeight ||
-    previous.displayWidth !== next.displayWidth ||
-    previous.manualDisplayHeight !== next.manualDisplayHeight ||
-    previous.manualDisplayWidth !== next.manualDisplayWidth ||
+    previous.displayModel !== next.displayModel ||
     previous.initialViewportBox !== next.initialViewportBox ||
     previous.original !== next.original ||
     previous.processed !== next.processed ||
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
     previous.previewViewport !== next.previewViewport ||
-    previous.viewScale !== next.viewScale ||
     previous.onDividerChange !== next.onDividerChange ||
     previous.onViewportChange !== next.onViewportChange ||
     previous.onViewportBoxChange !== next.onViewportBoxChange

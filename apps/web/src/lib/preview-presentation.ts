@@ -20,6 +20,19 @@ import {
 
 type ViewScale = "fit" | "actual"
 
+export type PreviewSurfaceDisplayModel = {
+  frameHeight: number
+  frameWidth: number
+  manualFrameHeight: number
+  manualFrameWidth: number
+  viewScale: ViewScale
+}
+
+export type PreviewSurfaceInspectorSource =
+  | "processed-only"
+  | "original-only"
+  | "slide-compare"
+
 type ViewportBox = {
   height: number
   width: number

@@ -18,6 +18,8 @@ import {
   getPreviewPresentationDisplayModel,
   getPreviewPresentationFrame,
   getPreviewPresentationInteractionLayout,
+  type PreviewSurfaceDisplayModel,
+  type PreviewSurfaceInspectorSource,
 } from "@/lib/preview-presentation"
 import {
   getDisplayPointImageCoordinates,
@@ -30,7 +32,7 @@ import {
   type PixelInspectorSample,
 } from "@/lib/pixel-inspector"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
-import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
+import type { CompareMode, JobStatus } from "@/store/editor-store"
 import {
   PreviewViewportInteraction,
   type PreviewViewportInteractionOutcome,
@@ -48,6 +50,10 @@ type PreviewPresentationSurfaceRenderProps = {
 type PreviewPresentationFitPointerInteraction = {
   onCommit: (clientX: number) => void
   onUpdate: (clientX: number) => void
+}
+
+export type PreviewSurfaceCapabilities = {
+  slideDivider?: PreviewPresentationFitPointerInteraction
 }
 
 export type PreviewPresentationProps = {
@@ -68,23 +74,18 @@ export type PreviewPresentationProps = {
 export type PreviewPresentationSurfaceProps = {
   children: (props: PreviewPresentationSurfaceRenderProps) => React.ReactNode
   className?: string
+  displayModel: PreviewSurfaceDisplayModel
   frameRef?: React.RefObject<HTMLDivElement | null>
-  imageHeight: number
-  imageWidth: number
   initialViewportBox?: ViewportBox | null
-  manualImageHeight?: number
-  manualImageWidth?: number
-  inspectorBuffers: {
+  inspectorSource?: PreviewSurfaceInspectorSource
+  buffers: {
     original: PixelBuffer | null
     processed: PixelBuffer | null
   }
-  fitPointerInteraction?: PreviewPresentationFitPointerInteraction
-  nativeWheel?: boolean
+  capabilities?: PreviewSurfaceCapabilities
   pixelInspectorEnabled?: boolean
-  pointerInteractionEnabled?: boolean
   previewViewport?: PreviewViewport | null
   style?: React.CSSProperties
-  viewScale: ViewScale
   onManualFramePositionChange?: (viewport: PreviewViewport) => void
   onViewportBoxChange?: (box: ViewportBox) => void
   onViewportChange?: (viewport: Partial<PreviewViewport>) => void
@@ -93,20 +94,15 @@ export type PreviewPresentationSurfaceProps = {
 export function PreviewPresentationSurface({
   children,
   className,
+  displayModel,
   frameRef: externalFrameRef,
-  imageHeight,
-  imageWidth,
   initialViewportBox,
-  manualImageHeight = imageHeight,
-  manualImageWidth = imageWidth,
-  inspectorBuffers,
-  fitPointerInteraction,
-  nativeWheel = false,
+  inspectorSource,
+  buffers,
+  capabilities,
   pixelInspectorEnabled = true,
-  pointerInteractionEnabled = true,
   previewViewport,
   style,
-  viewScale,
   onManualFramePositionChange,
   onViewportBoxChange,
   onViewportChange,
@@ -115,6 +111,18 @@ export function PreviewPresentationSurface({
   const viewportElementRef = React.useRef<HTMLDivElement>(null)
   const fallbackFrameRef = React.useRef<HTMLDivElement>(null)
   const frameRef = externalFrameRef ?? fallbackFrameRef
+  const fitPointerInteraction = capabilities?.slideDivider
+  const nativeWheel = Boolean(capabilities?.slideDivider)
+  const pointerInteractionEnabled = capabilities?.slideDivider
+    ? Boolean(buffers.processed)
+    : true
+  const {
+    frameHeight: imageHeight,
+    frameWidth: imageWidth,
+    manualFrameHeight: manualImageHeight,
+    manualFrameWidth: manualImageWidth,
+    viewScale,
+  } = displayModel
   const [inspector, setInspector] = React.useState<PixelInspectorSample | null>(
     null
   )
@@ -397,7 +405,16 @@ export function PreviewPresentationSurface({
       coordinates
         ? getPixelInspectorSample({
             coordinates,
-            ...inspectorBuffers,
+            original:
+              inspectorSource === "slide-compare" ||
+              inspectorSource === "original-only"
+                ? buffers.original
+                : null,
+            processed:
+              inspectorSource === "slide-compare" ||
+              inspectorSource === "processed-only"
+                ? buffers.processed
+                : null,
           })
         : null
     )
@@ -584,13 +601,15 @@ export function PreviewPresentation({
           original={original}
           pixelInspectorEnabled={desktopPrecisionEnabled}
           processed={preview}
-          displayHeight={displayModel.frameHeight}
-          displayWidth={displayModel.frameWidth}
-          manualDisplayHeight={displayModel.manualFrameHeight}
-          manualDisplayWidth={displayModel.manualFrameWidth}
+          displayModel={{
+            frameHeight: displayModel.frameHeight,
+            frameWidth: displayModel.frameWidth,
+            manualFrameHeight: displayModel.manualFrameHeight,
+            manualFrameWidth: displayModel.manualFrameWidth,
+            viewScale: displayModel.viewScale,
+          }}
           status={status}
           previewViewport={previewViewport}
-          viewScale={displayModel.viewScale}
           onDividerChange={handleDividerChange}
           onViewportChange={onViewportChange}
         />
@@ -682,17 +701,22 @@ const CanvasPanel = React.memo(function CanvasPanel({
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing")
         )}
-        imageHeight={expectedHeight}
-        imageWidth={expectedWidth}
-        manualImageHeight={manualExpectedHeight}
-        manualImageWidth={manualExpectedWidth}
-        inspectorBuffers={{
+        displayModel={{
+          frameHeight: expectedHeight,
+          frameWidth: expectedWidth,
+          manualFrameHeight: manualExpectedHeight,
+          manualFrameWidth: manualExpectedWidth,
+          viewScale,
+        }}
+        inspectorSource={
+          label === "Original" ? "original-only" : "processed-only"
+        }
+        buffers={{
           original: label === "Original" ? buffer : null,
           processed: label === "Processed" ? buffer : null,
         }}
         pixelInspectorEnabled={pixelInspectorEnabled}
         previewViewport={previewViewport}
-        viewScale={viewScale}
         onViewportChange={onViewportChange}
       >
         {({ frameRef, frameStyle }) => (
