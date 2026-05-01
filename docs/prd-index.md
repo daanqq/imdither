@@ -10,8 +10,10 @@ feature shipped; update its status and keep this index current.
 
 - `done` - implemented and reflected in the current product/code contract.
 - `planned` - accepted planning artifact, not fully implemented.
+- `ready-for-agent` - local issue-tracker PRD accepted for implementation.
 - `needs-triage` - local issue-tracker PRD that still needs human or agent
   triage before promotion.
+- `superseded` - retained historical PRD replaced by a newer planning artifact.
 
 ## Product Contract
 
@@ -58,9 +60,10 @@ feature shipped; update its status and keep this index current.
 
 ## Local Scratch PRDs
 
-| Status       | PRD                                                                                   | Scope                                                                   |
-| ------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| needs-triage | [Viewport Interaction Controller](../.scratch/viewport-interaction-controller/PRD.md) | Local PRD for viewport interaction controller extraction and hardening. |
+| Status     | PRD                                                                                   | Scope                                                             |
+| ---------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| done       | [Preview Viewport Interaction](../.scratch/preview-viewport-interaction/PRD.md)       | Session-style outcome module for Preview Viewport gesture policy. |
+| superseded | [Viewport Interaction Controller](../.scratch/viewport-interaction-controller/PRD.md) | Replaced by Preview Viewport Interaction.                         |
 
 ## Maintenance Rules
 

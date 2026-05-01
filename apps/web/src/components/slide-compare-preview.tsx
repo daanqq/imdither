@@ -176,11 +176,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     applyDividerVisual(dividerPercentRef.current)
   }, [applyDividerVisual, processed])
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     drawOriginalCanvas()
   }, [drawOriginalCanvas])
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     drawProcessedCanvas()
   }, [drawProcessedCanvas])
 

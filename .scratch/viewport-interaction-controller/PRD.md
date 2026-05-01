@@ -1,6 +1,8 @@
 # PRD: Viewport Interaction Controller
 
-Status: needs-triage
+Status: superseded
+
+Superseded by `.scratch/preview-viewport-interaction/PRD.md`.
 
 ## Problem Statement
 

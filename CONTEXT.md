@@ -108,6 +108,10 @@ Architecture terms:
   coordinate mapping, and divider mapping.
 - Preview Presentation Shell: React runtime layer for measurement, pointer
   capture, gestures, wheel zoom, and Pixel Inspector sampling.
+- Preview Viewport Interaction: the view-local interaction module that owns
+  Preview Viewport gesture policy, including wheel zoom, Manual View pan, Touch
+  Pinch Zoom, pointer capture decisions, live viewport updates, and
+  commit-on-release outcomes.
 - Preview Surface Adapter: surface-specific layer for buffers, labels, canvas
   drawing, and unique interactions.
 - Preview Product State: compare mode, viewport, pixel buffers, output

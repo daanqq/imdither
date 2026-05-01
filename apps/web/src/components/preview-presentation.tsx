@@ -24,7 +24,10 @@ import {
 } from "@/lib/pixel-inspector"
 import { SLIDE_COMPARE_DEFAULT } from "@/lib/slide-compare"
 import type { CompareMode, JobStatus, ViewScale } from "@/store/editor-store"
-import { ViewportInteractionController } from "@/lib/viewport-interaction-controller"
+import {
+  PreviewViewportInteraction,
+  type PreviewViewportInteractionOutcome,
+} from "@/lib/preview-viewport-interaction"
 
 type ViewportBox = {
   height: number
@@ -135,7 +138,7 @@ export function PreviewPresentationSurface({
       imageHeight,
     }
 
-    return new ViewportInteractionController(initial, layout)
+    return new PreviewViewportInteraction(initial, layout)
   })
 
   const applyManualFrameViewport = React.useCallback(
@@ -161,19 +164,6 @@ export function PreviewPresentationSurface({
     },
     [frameRef, manualImageHeight, manualImageWidth, onManualFramePositionChange]
   )
-
-  React.useLayoutEffect(() => {
-    controller.onUpdate((viewport) => {
-      if (panAnimationFrameRef.current !== null) {
-        cancelAnimationFrame(panAnimationFrameRef.current)
-      }
-
-      panAnimationFrameRef.current = requestAnimationFrame(() => {
-        panAnimationFrameRef.current = null
-        applyManualFrameViewport(viewport)
-      })
-    })
-  }, [controller, applyManualFrameViewport])
 
   React.useLayoutEffect(() => {
     const viewport = previewViewport ?? {
@@ -276,6 +266,60 @@ export function PreviewPresentationSurface({
   })
   const centeredManualViewport = presentationFrame.centeredManualViewport
 
+  const scheduleManualFrameViewport = React.useCallback(
+    (viewport: PreviewViewport) => {
+      if (panAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(panAnimationFrameRef.current)
+      }
+
+      panAnimationFrameRef.current = requestAnimationFrame(() => {
+        panAnimationFrameRef.current = null
+        applyManualFrameViewport(viewport)
+      })
+    },
+    [applyManualFrameViewport]
+  )
+
+  const applyInteractionOutcome = React.useCallback(
+    (
+      outcome: PreviewViewportInteractionOutcome,
+      target: Pick<
+        HTMLElement,
+        "hasPointerCapture" | "releasePointerCapture" | "setPointerCapture"
+      >
+    ) => {
+      const pending = [outcome]
+
+      while (pending.length > 0) {
+        const nextOutcome = pending.shift()
+
+        switch (nextOutcome?.type) {
+          case undefined:
+          case "ignore":
+            break
+          case "capture-pointer":
+            target.setPointerCapture(nextOutcome.pointerId)
+            break
+          case "release-pointer":
+            if (target.hasPointerCapture(nextOutcome.pointerId)) {
+              target.releasePointerCapture(nextOutcome.pointerId)
+            }
+            break
+          case "live-viewport":
+            scheduleManualFrameViewport(nextOutcome.viewport)
+            break
+          case "commit-viewport":
+            onViewportChange?.(nextOutcome.viewport)
+            break
+          case "batch":
+            pending.unshift(...nextOutcome.outcomes)
+            break
+        }
+      }
+    },
+    [onViewportChange, scheduleManualFrameViewport]
+  )
+
   React.useEffect(() => {
     const viewportElement = viewportElementRef.current
 
@@ -284,8 +328,7 @@ export function PreviewPresentationSurface({
     }
 
     const handleNativeWheel = (event: WheelEvent) => {
-      controller.handleWheel(event)
-      onViewportChange?.(controller.getViewport())
+      applyInteractionOutcome(controller.wheel(event), viewportElement)
     }
 
     viewportElement.addEventListener("wheel", handleNativeWheel, {
@@ -295,7 +338,7 @@ export function PreviewPresentationSurface({
     return () => {
       viewportElement.removeEventListener("wheel", handleNativeWheel)
     }
-  }, [controller, nativeWheel, onViewportChange])
+  }, [controller, nativeWheel, applyInteractionOutcome])
 
   function inspectPointer(event: React.PointerEvent<HTMLDivElement>) {
     if (
@@ -360,8 +403,10 @@ export function PreviewPresentationSurface({
         nativeWheel
           ? undefined
           : (event) => {
-              controller.handleWheel(event)
-              onViewportChange?.(controller.getViewport())
+              applyInteractionOutcome(
+                controller.wheel(event),
+                event.currentTarget
+              )
             }
       }
       onPointerDown={(event) => {
@@ -375,13 +420,19 @@ export function PreviewPresentationSurface({
             fitInteractionPointerIdRef.current = event.pointerId
             fitPointerInteraction.onUpdate(event.clientX)
           } else if (event.pointerType === "touch") {
-            controller.handlePointerDown(event)
+            applyInteractionOutcome(
+              controller.startPointer(event),
+              event.currentTarget
+            )
           }
 
           return
         }
 
-        controller.handlePointerDown(event)
+        applyInteractionOutcome(
+          controller.startPointer(event),
+          event.currentTarget
+        )
       }}
       onPointerMove={(event) => {
         inspectPointer(event)
@@ -391,7 +442,10 @@ export function PreviewPresentationSurface({
           return
         }
 
-        controller.handlePointerMove(event)
+        applyInteractionOutcome(
+          controller.movePointer(event),
+          event.currentTarget
+        )
       }}
       onPointerLeave={() => setInspector(null)}
       onPointerUp={(event) => {
@@ -412,8 +466,10 @@ export function PreviewPresentationSurface({
           return
         }
 
-        controller.handlePointerUp(event)
-        onViewportChange?.(controller.getViewport())
+        applyInteractionOutcome(
+          controller.finishPointer(event),
+          event.currentTarget
+        )
       }}
       onPointerCancel={(event) => {
         if (fitInteractionPointerIdRef.current === event.pointerId) {
@@ -432,8 +488,10 @@ export function PreviewPresentationSurface({
           return
         }
 
-        controller.handlePointerUp(event)
-        onViewportChange?.(controller.getViewport())
+        applyInteractionOutcome(
+          controller.cancelPointer(event),
+          event.currentTarget
+        )
       }}
     >
       {children({
@@ -467,6 +525,9 @@ export function PreviewPresentation({
     percent: number
     source: PixelBuffer
   } | null>(null)
+  const [displayFrame, setDisplayFrame] = React.useState<ViewportBox | null>(
+    null
+  )
   const slideDividerPercent =
     slideDividerState?.source === original
       ? slideDividerState.percent
@@ -478,6 +539,17 @@ export function PreviewPresentation({
     previewTargetWidth,
     viewport: previewViewport,
   })
+  const handleDisplayFrameChange = React.useCallback(
+    (box: ViewportBox) => {
+      setDisplayFrame((current) =>
+        current?.height === box.height && current.width === box.width
+          ? current
+          : box
+      )
+      onDisplayFrameChange?.(box)
+    },
+    [onDisplayFrameChange]
+  )
 
   if (compareMode === "slide") {
     return (
@@ -488,6 +560,7 @@ export function PreviewPresentation({
         processed={preview}
         displayHeight={displayModel.frameHeight}
         displayWidth={displayModel.frameWidth}
+        initialViewportBox={displayFrame}
         manualDisplayHeight={displayModel.manualFrameHeight}
         manualDisplayWidth={displayModel.manualFrameWidth}
         status={status}
@@ -497,7 +570,7 @@ export function PreviewPresentation({
           setSlideDividerState({ percent, source: original })
         }
         onViewportChange={onViewportChange}
-        onViewportBoxChange={onDisplayFrameChange}
+        onViewportBoxChange={handleDisplayFrameChange}
       />
     )
   }
@@ -511,6 +584,7 @@ export function PreviewPresentation({
       label={label}
       expectedHeight={displayModel.frameHeight}
       expectedWidth={displayModel.frameWidth}
+      initialViewportBox={displayFrame}
       manualExpectedHeight={displayModel.manualFrameHeight}
       manualExpectedWidth={displayModel.manualFrameWidth}
       missing={compareMode === "processed" && !preview}
@@ -518,7 +592,7 @@ export function PreviewPresentation({
       previewViewport={previewViewport}
       status={status}
       viewScale={displayModel.viewScale}
-      onViewportBoxChange={onDisplayFrameChange}
+      onViewportBoxChange={handleDisplayFrameChange}
       onViewportChange={onViewportChange}
     />
   )
@@ -550,6 +624,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
   buffer,
   expectedHeight,
   expectedWidth,
+  initialViewportBox,
   label,
   manualExpectedHeight,
   manualExpectedWidth,
@@ -565,7 +640,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!buffer || !canvasRef.current) {
       return
     }
@@ -584,6 +659,7 @@ const CanvasPanel = React.memo(function CanvasPanel({
         )}
         imageHeight={expectedHeight}
         imageWidth={expectedWidth}
+        initialViewportBox={initialViewportBox}
         manualImageHeight={manualExpectedHeight}
         manualImageWidth={manualExpectedWidth}
         inspectorBuffers={{
