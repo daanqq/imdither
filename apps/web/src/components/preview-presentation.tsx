@@ -568,6 +568,10 @@ export function PreviewPresentation({
     },
     [onDisplayFrameChange]
   )
+  const handleDividerChange = React.useCallback(
+    (percent: number) => setSlideDividerState({ percent, source: original }),
+    [original]
+  )
 
   if (compareMode === "slide") {
     return (
@@ -587,9 +591,7 @@ export function PreviewPresentation({
           status={status}
           previewViewport={previewViewport}
           viewScale={displayModel.viewScale}
-          onDividerChange={(percent) =>
-            setSlideDividerState({ percent, source: original })
-          }
+          onDividerChange={handleDividerChange}
           onViewportChange={onViewportChange}
         />
       </PreviewSurfaceLifecycleProvider>

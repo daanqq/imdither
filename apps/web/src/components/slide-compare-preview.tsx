@@ -153,7 +153,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         )
       }
     },
-    [frameHeight, frameWidth, previewViewport, viewportBox]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- viewport read via viewportRef
+    [frameHeight, frameWidth, viewportBox]
   )
 
   const drawOriginalCanvas = React.useCallback(() => {
