@@ -28,21 +28,20 @@ import {
 } from "@/lib/export-image"
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
+import {
+  applySourceIntakeResult,
+  runDemoSourceIntake,
+  runFileSourceIntake,
+} from "@/lib/source-intake-application"
 import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import { usePreviewCycle } from "@/lib/use-preview-cycle"
 import {
-  createDemoSourceIntake,
-  formatSourceNotices,
-  intakeImageFile,
   pickImageFromClipboard,
   type LoadedSource,
   type SourceIntakeResult,
 } from "@/lib/source-intake"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import {
-  DEFAULT_PREVIEW_VIEWPORT,
-  type PreviewViewport,
-} from "@/lib/preview-viewport"
+import type { PreviewViewport } from "@/lib/preview-viewport"
 import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
@@ -136,29 +135,16 @@ export function App() {
   } = autoTune
 
   const applySourceIntake = React.useCallback(
-    (result: SourceIntakeResult) => {
-      if (result.type === "rejected") {
-        setError(result.message)
-        setStatus("error")
-        return false
-      }
-
-      setSource(result.source)
-      resetPreviewCycle()
-      setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT)
-      setError(null)
-      setSourceNotice(formatSourceNotices(result.notices))
-      transitionSettings(
-        {
-          type: "set-output-size",
-          width: result.outputSize.width,
-          height: result.outputSize.height,
-        },
-        undefined,
-        { recordHistory: false }
-      )
-      return true
-    },
+    (result: SourceIntakeResult) =>
+      applySourceIntakeResult(result, {
+        onErrorChange: setError,
+        onPreviewCycleReset: resetPreviewCycle,
+        onPreviewViewportChange: setPreviewViewport,
+        onSettingsTransition: transitionSettings,
+        onSourceChange: setSource,
+        onSourceNoticeChange: setSourceNotice,
+        onStatusChange: setStatus,
+      }),
     [
       setError,
       setPreviewViewport,
@@ -172,29 +158,12 @@ export function App() {
   React.useEffect(() => {
     let isCurrent = true
 
-    async function loadDemoSource() {
-      try {
-        setStatus("processing")
-        const result = await createDemoSourceIntake()
-
-        if (isCurrent) {
-          applySourceIntake(result)
-        }
-      } catch (demoError) {
-        if (!isCurrent) {
-          return
-        }
-
-        setError(
-          demoError instanceof Error
-            ? demoError.message
-            : "Demo image failed to load"
-        )
-        setStatus("error")
-      }
-    }
-
-    void loadDemoSource()
+    void runDemoSourceIntake({
+      isCurrent: () => isCurrent,
+      onErrorChange: setError,
+      onResult: applySourceIntake,
+      onStatusChange: setStatus,
+    })
 
     return () => {
       isCurrent = false
@@ -202,17 +171,12 @@ export function App() {
   }, [applySourceIntake, setError, setStatus])
 
   const handleFile = React.useCallback(
-    async (file: File) => {
-      try {
-        setStatus("processing")
-        applySourceIntake(await intakeImageFile(file))
-      } catch (fileError) {
-        setError(
-          fileError instanceof Error ? fileError.message : "Image decode failed"
-        )
-        setStatus("error")
-      }
-    },
+    (file: File) =>
+      runFileSourceIntake(file, {
+        onErrorChange: setError,
+        onResult: applySourceIntake,
+        onStatusChange: setStatus,
+      }),
     [applySourceIntake, setError, setStatus]
   )
 

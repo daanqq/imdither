@@ -399,6 +399,9 @@ Preview presentation:
 The editor keeps heavy local image work behind explicit async boundaries:
 
 - Source Intake handles source loading, rejection, and the Auto-Tune analysis sample.
+- Source Intake Application owns applying accepted/rejected intake results to
+  React source state, Preview Cycle reset, Preview Viewport reset, Output Size
+  transition, Source Notice, status, and error state.
 - Preview Cycle owns Screen Preview target calculation, Preview Job start/cancel
   wiring, reduced/refined Preview updates, and Preview Refinement state.
 - Processing Jobs own preview scheduling, reduced preview, refined preview, cancellation, and export coordination.
@@ -585,6 +588,7 @@ Requirements:
 The web app owns browser-specific and React-specific layers:
 
 - Source Intake
+- Source Intake Application
 - Editor Settings Transition Module
 - Settings History
 - Processing Jobs

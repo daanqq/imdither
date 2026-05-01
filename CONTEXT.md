@@ -206,6 +206,9 @@ Source Intake accepts or rejects a Source Image before processing.
 Use these terms consistently:
 
 - Source Intake: decision flow that accepts or rejects a Source Image.
+- Source Intake Application: browser-side seam that applies accepted/rejected
+  Source Intake results to source state, Preview Viewport reset, Preview Cycle
+  reset, Output Size transition, Source Notice, status, and error state.
 - Source Notice: short user-facing message about intake or Output Size policy.
 - Output Cap: maximum browser pixel budget for Output Size.
 - Alpha Flattening: compositing transparent source pixels onto an Alpha
