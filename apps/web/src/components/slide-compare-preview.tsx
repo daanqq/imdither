@@ -151,7 +151,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     [frameHeight, frameWidth, previewViewport, viewportBox]
   )
 
-  React.useEffect(() => {
+  const drawOriginalCanvas = React.useCallback(() => {
     if (!originalCanvasRef.current) {
       return
     }
@@ -167,7 +167,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     drawPixelBuffer(originalCanvasRef.current, original)
   }, [frameHeight, frameWidth, original, processedReady])
 
-  React.useEffect(() => {
+  const drawProcessedCanvas = React.useCallback(() => {
     if (!processed || !processedCanvasRef.current) {
       return
     }
@@ -175,6 +175,33 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     drawPixelBuffer(processedCanvasRef.current, processed)
     applyDividerVisual(dividerPercentRef.current)
   }, [applyDividerVisual, processed])
+
+  React.useEffect(() => {
+    drawOriginalCanvas()
+  }, [drawOriginalCanvas])
+
+  React.useEffect(() => {
+    drawProcessedCanvas()
+  }, [drawProcessedCanvas])
+
+  React.useEffect(() => {
+    const restoreCanvasContents = () => {
+      if (document.visibilityState !== "visible") {
+        return
+      }
+
+      drawOriginalCanvas()
+      drawProcessedCanvas()
+    }
+
+    document.addEventListener("visibilitychange", restoreCanvasContents)
+    window.addEventListener("pageshow", restoreCanvasContents)
+
+    return () => {
+      document.removeEventListener("visibilitychange", restoreCanvasContents)
+      window.removeEventListener("pageshow", restoreCanvasContents)
+    }
+  }, [drawOriginalCanvas, drawProcessedCanvas])
 
   React.useEffect(() => {
     dividerPercentRef.current = clampedDivider
@@ -284,7 +311,10 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         viewScale={viewScale}
         onManualFramePositionChange={(viewport) => {
           viewportRef.current = viewport
-          applyDividerVisual(dividerPercentRef.current)
+
+          if (previewViewport?.mode === "manual") {
+            applyDividerVisual(dividerPercentRef.current)
+          }
         }}
         fitPointerInteraction={{
           onCommit: commitDividerFromPointer,
