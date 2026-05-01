@@ -767,23 +767,12 @@ Explicitly out:
 
 ## 14. Implemented PRD Modules
 
-The current product contract is informed by the implemented feature PRDs in this folder:
+The current product contract is informed by the implemented feature PRDs listed
+in [PRD Index](prd-index.md).
 
-- Dither Algorithm Registry
-- Editor Settings Transition Module
-- Import and Processing Responsiveness
-- Editor Runtime Responsiveness
-- Slide Before/After Preview
-- Slide Compare Preview Module
-- Screen-Sized Preview
-- Mobile Preview Gestures
-- Processing Presets
-- Export Layer
-- Market Impact Roadmap Phase 1 Palette Platform MVP
-- Market Impact Roadmap Phase 3 Look Payloads
-- Market Impact Roadmap Phase 3 Auto-Tune
-
-These feature PRDs are subordinate detail documents. This root PRD should stay aligned with their implemented contracts and with the current code state.
+Feature PRDs are subordinate detail documents. This root PRD should stay aligned
+with their implemented contracts, [CONTEXT.md](../CONTEXT.md), and the current
+code state.
 
 ## 15. Roadmap Candidates
 

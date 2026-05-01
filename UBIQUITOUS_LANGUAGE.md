@@ -1,5 +1,13 @@
 # Ubiquitous Language
 
+Status: legacy glossary archive
+
+The canonical domain context for agents is now [CONTEXT.md](CONTEXT.md), using
+the repo layout described in [docs/agents/domain.md](docs/agents/domain.md).
+This file is retained as the expanded historical glossary and terminology
+source. Prefer updating `CONTEXT.md` for current terms and use this document only
+when deeper historical vocabulary is needed.
+
 ## Image Lifecycle
 
 | Term                 | Definition                                                                                          | Aliases to avoid                              |

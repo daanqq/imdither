@@ -64,11 +64,17 @@ in the browser; the app does not upload source images to a server.
 - `packages/core` - deterministic image processing, palettes, settings schema,
   and tests.
 - `packages/ui` - shared shadcn/ui primitive layer.
-- `docs/` - Product Requirements Documents (PRDs), architecture, etc.
+- `docs/` - Product Requirements Documents (PRDs), architecture, and agent
+  workflow notes.
+- `CONTEXT.md` - canonical domain context and vocabulary for agents.
 
 ## Public Contracts
 
 - [Product PRD](docs/PRD.md) - current product behavior and architecture.
+- [Domain Context](CONTEXT.md) - canonical terms and architecture context for
+  agents.
+- [PRD Index](docs/prd-index.md) - implemented, planned, and scratch PRD
+  navigation.
 - [Editor Settings Schema](docs/settings-schema.md) - versioned Settings JSON
   contract for clipboard copy/paste and Look Snapshot sharing boundaries.
 - [MIT License](LICENSE) - usage and contribution licensing.
