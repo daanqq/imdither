@@ -7,10 +7,6 @@ export type CanvasPanelProps = {
   buffer: PixelBuffer | null
   expectedHeight: number
   expectedWidth: number
-  initialViewportBox?: {
-    height: number
-    width: number
-  } | null
   label: string
   manualExpectedHeight?: number
   manualExpectedWidth?: number
@@ -20,7 +16,6 @@ export type CanvasPanelProps = {
   previewViewport?: PreviewViewport
   viewScale: ViewScale
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
-  onViewportBoxChange?: (box: { height: number; width: number }) => void
 }
 
 export type SlideCompareViewScale = "fit" | "actual"
@@ -54,7 +49,6 @@ export function areCanvasPanelPropsEqual(
     previous.buffer !== next.buffer ||
     previous.expectedHeight !== next.expectedHeight ||
     previous.expectedWidth !== next.expectedWidth ||
-    previous.initialViewportBox !== next.initialViewportBox ||
     previous.label !== next.label ||
     previous.manualExpectedHeight !== next.manualExpectedHeight ||
     previous.manualExpectedWidth !== next.manualExpectedWidth ||
@@ -62,8 +56,7 @@ export function areCanvasPanelPropsEqual(
     previous.pixelInspectorEnabled !== next.pixelInspectorEnabled ||
     previous.previewViewport !== next.previewViewport ||
     previous.viewScale !== next.viewScale ||
-    previous.onViewportChange !== next.onViewportChange ||
-    previous.onViewportBoxChange !== next.onViewportBoxChange
+    previous.onViewportChange !== next.onViewportChange
   ) {
     return false
   }

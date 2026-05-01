@@ -7,6 +7,12 @@ import {
   areCanvasPanelPropsEqual,
   type CanvasPanelProps,
 } from "@/components/preview-render-boundaries"
+import {
+  PreviewSurfaceLifecycleProvider,
+  usePreviewCanvasRedrawBoundary,
+  usePreviewSurfaceLifecycle,
+  type PreviewSurfaceViewportBox,
+} from "@/components/preview-surface-lifecycle"
 import { drawPixelBuffer } from "@/lib/image"
 import {
   getPreviewPresentationDisplayModel,
@@ -29,10 +35,7 @@ import {
   type PreviewViewportInteractionOutcome,
 } from "@/lib/preview-viewport-interaction"
 
-type ViewportBox = {
-  height: number
-  width: number
-}
+type ViewportBox = PreviewSurfaceViewportBox
 
 type PreviewPresentationSurfaceRenderProps = {
   centeredManualViewport: boolean
@@ -107,6 +110,7 @@ export function PreviewPresentationSurface({
   onViewportBoxChange,
   onViewportChange,
 }: PreviewPresentationSurfaceProps) {
+  const surfaceLifecycle = usePreviewSurfaceLifecycle()
   const viewportElementRef = React.useRef<HTMLDivElement>(null)
   const fallbackFrameRef = React.useRef<HTMLDivElement>(null)
   const frameRef = externalFrameRef ?? fallbackFrameRef
@@ -114,7 +118,7 @@ export function PreviewPresentationSurface({
     null
   )
   const [viewportBox, setViewportBox] = React.useState<ViewportBox | null>(
-    initialViewportBox ?? null
+    initialViewportBox ?? surfaceLifecycle.initialViewportBox
   )
   const onViewportBoxChangeRef = React.useRef(onViewportBoxChange)
   const lastNotifiedViewportBoxRef = React.useRef<ViewportBox | null>(null)
@@ -220,8 +224,9 @@ export function PreviewPresentationSurface({
     }
 
     lastNotifiedViewportBoxRef.current = viewportBox
+    surfaceLifecycle.onViewportBoxChange?.(viewportBox)
     onViewportBoxChangeRef.current?.(viewportBox)
-  }, [viewportBox])
+  }, [surfaceLifecycle, viewportBox])
 
   React.useLayoutEffect(() => {
     const viewportElement = viewportElementRef.current
@@ -553,25 +558,28 @@ export function PreviewPresentation({
 
   if (compareMode === "slide") {
     return (
-      <SlideComparePreview
-        dividerPercent={slideDividerPercent}
-        original={original}
-        pixelInspectorEnabled={desktopPrecisionEnabled}
-        processed={preview}
-        displayHeight={displayModel.frameHeight}
-        displayWidth={displayModel.frameWidth}
+      <PreviewSurfaceLifecycleProvider
         initialViewportBox={displayFrame}
-        manualDisplayHeight={displayModel.manualFrameHeight}
-        manualDisplayWidth={displayModel.manualFrameWidth}
-        status={status}
-        previewViewport={previewViewport}
-        viewScale={displayModel.viewScale}
-        onDividerChange={(percent) =>
-          setSlideDividerState({ percent, source: original })
-        }
-        onViewportChange={onViewportChange}
         onViewportBoxChange={handleDisplayFrameChange}
-      />
+      >
+        <SlideComparePreview
+          dividerPercent={slideDividerPercent}
+          original={original}
+          pixelInspectorEnabled={desktopPrecisionEnabled}
+          processed={preview}
+          displayHeight={displayModel.frameHeight}
+          displayWidth={displayModel.frameWidth}
+          manualDisplayHeight={displayModel.manualFrameHeight}
+          manualDisplayWidth={displayModel.manualFrameWidth}
+          status={status}
+          previewViewport={previewViewport}
+          viewScale={displayModel.viewScale}
+          onDividerChange={(percent) =>
+            setSlideDividerState({ percent, source: original })
+          }
+          onViewportChange={onViewportChange}
+        />
+      </PreviewSurfaceLifecycleProvider>
     )
   }
 
@@ -579,22 +587,25 @@ export function PreviewPresentation({
   const label = compareMode === "original" ? "Original" : "Processed"
 
   return (
-    <CanvasPanel
-      buffer={buffer}
-      label={label}
-      expectedHeight={displayModel.frameHeight}
-      expectedWidth={displayModel.frameWidth}
+    <PreviewSurfaceLifecycleProvider
       initialViewportBox={displayFrame}
-      manualExpectedHeight={displayModel.manualFrameHeight}
-      manualExpectedWidth={displayModel.manualFrameWidth}
-      missing={compareMode === "processed" && !preview}
-      pixelInspectorEnabled={desktopPrecisionEnabled}
-      previewViewport={previewViewport}
-      status={status}
-      viewScale={displayModel.viewScale}
       onViewportBoxChange={handleDisplayFrameChange}
-      onViewportChange={onViewportChange}
-    />
+    >
+      <CanvasPanel
+        buffer={buffer}
+        label={label}
+        expectedHeight={displayModel.frameHeight}
+        expectedWidth={displayModel.frameWidth}
+        manualExpectedHeight={displayModel.manualFrameHeight}
+        manualExpectedWidth={displayModel.manualFrameWidth}
+        missing={compareMode === "processed" && !preview}
+        pixelInspectorEnabled={desktopPrecisionEnabled}
+        previewViewport={previewViewport}
+        status={status}
+        viewScale={displayModel.viewScale}
+        onViewportChange={onViewportChange}
+      />
+    </PreviewSurfaceLifecycleProvider>
   )
 }
 
@@ -624,7 +635,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
   buffer,
   expectedHeight,
   expectedWidth,
-  initialViewportBox,
   label,
   manualExpectedHeight,
   manualExpectedWidth,
@@ -633,20 +643,20 @@ const CanvasPanel = React.memo(function CanvasPanel({
   previewViewport,
   status,
   viewScale,
-  onViewportBoxChange,
   onViewportChange,
 }: CanvasPanelProps & {
   onViewportChange: (viewport: Partial<PreviewViewport>) => void
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
 
-  React.useLayoutEffect(() => {
+  const redrawCanvas = React.useCallback(() => {
     if (!buffer || !canvasRef.current) {
       return
     }
 
     drawPixelBuffer(canvasRef.current, buffer)
   }, [buffer])
+  usePreviewCanvasRedrawBoundary(redrawCanvas)
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col p-1">
@@ -659,7 +669,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
         )}
         imageHeight={expectedHeight}
         imageWidth={expectedWidth}
-        initialViewportBox={initialViewportBox}
         manualImageHeight={manualExpectedHeight}
         manualImageWidth={manualExpectedWidth}
         inspectorBuffers={{
@@ -669,7 +678,6 @@ const CanvasPanel = React.memo(function CanvasPanel({
         pixelInspectorEnabled={pixelInspectorEnabled}
         previewViewport={previewViewport}
         viewScale={viewScale}
-        onViewportBoxChange={onViewportBoxChange}
         onViewportChange={onViewportChange}
       >
         {({ frameRef, frameStyle }) => (

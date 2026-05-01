@@ -18,6 +18,10 @@ import {
   areSlideComparePreviewPropsEqual,
   type SlideComparePreviewProps,
 } from "@/components/preview-render-boundaries"
+import {
+  usePreviewCanvasRedrawBoundary,
+  usePreviewSurfaceLifecycle,
+} from "@/components/preview-surface-lifecycle"
 
 export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
@@ -36,6 +40,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   onViewportChange,
   onViewportBoxChange,
 }: SlideComparePreviewProps) {
+  const surfaceLifecycle = usePreviewSurfaceLifecycle()
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const frameRef = React.useRef<HTMLDivElement>(null)
@@ -48,7 +53,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const [viewportBox, setViewportBox] = React.useState<{
     height: number
     width: number
-  } | null>(initialViewportBox ?? null)
+  } | null>(initialViewportBox ?? surfaceLifecycle.initialViewportBox)
   const processedReady = Boolean(processed)
   const frameWidth = displayWidth ?? processed?.width ?? original.width
   const frameHeight = displayHeight ?? processed?.height ?? original.height
@@ -176,32 +181,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     applyDividerVisual(dividerPercentRef.current)
   }, [applyDividerVisual, processed])
 
-  React.useLayoutEffect(() => {
+  const redrawCanvases = React.useCallback(() => {
     drawOriginalCanvas()
-  }, [drawOriginalCanvas])
-
-  React.useLayoutEffect(() => {
     drawProcessedCanvas()
-  }, [drawProcessedCanvas])
-
-  React.useEffect(() => {
-    const restoreCanvasContents = () => {
-      if (document.visibilityState !== "visible") {
-        return
-      }
-
-      drawOriginalCanvas()
-      drawProcessedCanvas()
-    }
-
-    document.addEventListener("visibilitychange", restoreCanvasContents)
-    window.addEventListener("pageshow", restoreCanvasContents)
-
-    return () => {
-      document.removeEventListener("visibilitychange", restoreCanvasContents)
-      window.removeEventListener("pageshow", restoreCanvasContents)
-    }
   }, [drawOriginalCanvas, drawProcessedCanvas])
+  usePreviewCanvasRedrawBoundary(redrawCanvases)
 
   React.useEffect(() => {
     dividerPercentRef.current = clampedDivider
