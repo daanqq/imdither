@@ -1,14 +1,7 @@
 import * as React from "react"
 import {
-  createLookSnapshot,
-  decodeLookPayload,
-  encodeLookPayload,
-  exportPaletteGpl,
-  exportPaletteJson,
   extractLookPayload,
   extractPaletteFromSource,
-  parsePaletteText,
-  safeNormalizeSettings,
   type PaletteExtractionSize,
   type AutoTuneRecommendation,
 } from "@workspace/core"
@@ -21,6 +14,17 @@ import { useTheme } from "@/components/theme-provider"
 
 import brandMarkUrl from "@/assets/brand-mark.svg"
 import { applyAutoTuneLookSettings } from "@/lib/auto-tune-application"
+import {
+  applyLookText as applyLookTextAdapter,
+  copyLookPayload,
+  copyPaletteJson,
+  copySettingsJson,
+  exportPaletteAsset,
+  importPaletteFile,
+  importPaletteFromClipboard,
+  pasteLookPayload,
+  pasteSettingsJson,
+} from "@/lib/clipboard-settings-adapter"
 import {
   encodePixelBuffer,
   getExportFormatOption,
@@ -231,19 +235,15 @@ export function App() {
     }
 
     try {
-      const snapshot = decodeLookPayload(payload)
-      const result = transitionSettings(
-        { type: "apply-settings", settings: snapshot.settings },
-        transitionContext
-      )
-
-      clearAppliedMarker()
-      setError(null)
-      setSourceNotice(
-        result.sourceNotice
-          ? `[LOOK APPLIED FROM URL] ${result.sourceNotice}`
-          : "[LOOK APPLIED FROM URL]"
-      )
+      applyLookTextAdapter({
+        clearAppliedMarker,
+        notice: "[LOOK APPLIED FROM URL]",
+        onErrorChange: setError,
+        onSourceNoticeChange: setSourceNotice,
+        text: window.location.hash,
+        transitionContext,
+        transitionSettings,
+      })
       window.history.replaceState(
         null,
         "",
@@ -313,47 +313,23 @@ export function App() {
   ])
 
   const handleCopySettings = React.useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(settings, null, 2))
-      setError(null)
-      setSourceNotice("[SETTINGS COPIED TO CLIPBOARD]")
-    } catch (settingsError) {
-      setError(
-        settingsError instanceof Error
-          ? settingsError.message
-          : "Settings copy failed"
-      )
-    }
+    await copySettingsJson({
+      clipboard: navigator.clipboard,
+      settings,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+    })
   }, [setError, setSourceNotice, settings])
 
   const handlePasteSettings = React.useCallback(async () => {
-    try {
-      const clipboardText = await navigator.clipboard.readText()
-      const parsed = safeNormalizeSettings(JSON.parse(clipboardText))
-
-      if (!parsed) {
-        setError("Clipboard JSON does not match settings schema v1")
-        return
-      }
-
-      const result = transitionSettings(
-        { type: "apply-settings", settings: parsed },
-        transitionContext
-      )
-      clearAppliedMarker()
-      setError(null)
-      setSourceNotice(
-        result.sourceNotice
-          ? `[SETTINGS PASTED FROM CLIPBOARD] ${result.sourceNotice}`
-          : "[SETTINGS PASTED FROM CLIPBOARD]"
-      )
-    } catch (settingsError) {
-      setError(
-        settingsError instanceof Error
-          ? settingsError.message
-          : "Settings paste failed"
-      )
-    }
+    await pasteSettingsJson({
+      clearAppliedMarker,
+      clipboard: navigator.clipboard,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+      transitionContext,
+      transitionSettings,
+    })
   }, [
     clearAppliedMarker,
     setError,
@@ -362,173 +338,82 @@ export function App() {
     transitionSettings,
   ])
 
-  const applyLookText = React.useCallback(
-    (text: string, notice: string) => {
-      const payload = extractLookPayload(text)
-
-      if (!payload) {
-        throw new Error("Look payload is empty")
-      }
-
-      const snapshot = decodeLookPayload(payload)
-      const result = transitionSettings(
-        { type: "apply-settings", settings: snapshot.settings },
-        transitionContext
-      )
-
-      clearAppliedMarker()
-      setError(null)
-      setSourceNotice(
-        result.sourceNotice ? `${notice} ${result.sourceNotice}` : notice
-      )
-    },
-    [
-      clearAppliedMarker,
-      setError,
-      setSourceNotice,
-      transitionContext,
-      transitionSettings,
-    ]
-  )
-
   const handleCopyLook = React.useCallback(async () => {
-    try {
-      const payload = encodeLookPayload(createLookSnapshot({ settings }))
-      const url = new URL(window.location.href)
-      url.hash = `look=${payload}`
-      await navigator.clipboard.writeText(url.toString())
-      setError(null)
-      setSourceNotice("[LOOK COPIED TO CLIPBOARD]")
-    } catch (lookError) {
-      setError(
-        lookError instanceof Error ? lookError.message : "Look copy failed"
-      )
-    }
+    await copyLookPayload({
+      clipboard: navigator.clipboard,
+      href: window.location.href,
+      settings,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+    })
   }, [setError, setSourceNotice, settings])
 
   const handlePasteLook = React.useCallback(async () => {
-    try {
-      applyLookText(
-        await navigator.clipboard.readText(),
-        "[LOOK PASTED FROM CLIPBOARD]"
-      )
-    } catch (lookError) {
-      setError(
-        lookError instanceof Error ? lookError.message : "Look paste failed"
-      )
-    }
-  }, [applyLookText, setError])
+    await pasteLookPayload({
+      clearAppliedMarker,
+      clipboard: navigator.clipboard,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+      transitionContext,
+      transitionSettings,
+    })
+  }, [
+    clearAppliedMarker,
+    setError,
+    setSourceNotice,
+    transitionContext,
+    transitionSettings,
+  ])
 
-  const applyPaletteText = React.useCallback(
-    (text: string, notice: string) => {
-      const palette = parsePaletteText(text)
-      transitionSettings(
-        { type: "set-custom-palette", colors: palette.colors },
-        transitionContext
-      )
-      setError(null)
-      setSourceNotice(notice)
-    },
+  const handleImportPaletteFile = React.useCallback(
+    (file: File) =>
+      importPaletteFile({
+        file,
+        onErrorChange: setError,
+        onSourceNoticeChange: setSourceNotice,
+        transitionContext,
+        transitionSettings,
+      }),
     [setError, setSourceNotice, transitionContext, transitionSettings]
   )
 
-  const handleImportPaletteFile = React.useCallback(
-    async (file: File) => {
-      try {
-        applyPaletteText(await file.text(), "[PALETTE IMPORTED]")
-      } catch (paletteError) {
-        setError(
-          paletteError instanceof Error
-            ? paletteError.message
-            : "Palette import failed"
-        )
-      }
-    },
-    [applyPaletteText, setError]
-  )
-
   const handleImportPaletteFromClipboard = React.useCallback(async () => {
-    try {
-      applyPaletteText(
-        await navigator.clipboard.readText(),
-        "[PALETTE IMPORTED FROM CLIPBOARD]"
-      )
-    } catch (paletteError) {
-      setError(
-        paletteError instanceof Error
-          ? paletteError.message
-          : "Palette clipboard import failed"
-      )
-    }
-  }, [applyPaletteText, setError])
+    await importPaletteFromClipboard({
+      clipboard: navigator.clipboard,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+      transitionContext,
+      transitionSettings,
+    })
+  }, [setError, setSourceNotice, transitionContext, transitionSettings])
 
   const handleCopyPaletteJson = React.useCallback(async () => {
-    const colors = settings.customPalette
-
-    if (!colors) {
-      setError("Convert the current preset to Custom before copy")
-      return
-    }
-
-    try {
-      await navigator.clipboard.writeText(exportPaletteJson(colors))
-      setError(null)
-      setSourceNotice("[PALETTE JSON COPIED TO CLIPBOARD]")
-    } catch (paletteError) {
-      setError(
-        paletteError instanceof Error
-          ? paletteError.message
-          : "Palette copy failed"
-      )
-    }
+    await copyPaletteJson({
+      clipboard: navigator.clipboard,
+      colors: settings.customPalette,
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+    })
   }, [setError, setSourceNotice, settings.customPalette])
 
   const handleExportPaletteJson = React.useCallback(() => {
-    const colors = settings.customPalette
-
-    if (!colors) {
-      setError("Convert the current preset to Custom before export")
-      return
-    }
-
-    try {
-      downloadBlob(
-        new Blob([exportPaletteJson(colors)], { type: "application/json" }),
-        "imdither-palette.json"
-      )
-      setError(null)
-      setSourceNotice("[PALETTE JSON EXPORTED]")
-    } catch (paletteError) {
-      setError(
-        paletteError instanceof Error
-          ? paletteError.message
-          : "Palette export failed"
-      )
-    }
+    exportPaletteAsset({
+      colors: settings.customPalette,
+      downloadBlob,
+      format: "json",
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+    })
   }, [setError, setSourceNotice, settings.customPalette])
 
   const handleExportPaletteGpl = React.useCallback(() => {
-    const colors = settings.customPalette
-
-    if (!colors) {
-      setError("Convert the current preset to Custom before export")
-      return
-    }
-
-    try {
-      downloadBlob(
-        new Blob([exportPaletteGpl(colors)], { type: "text/plain" }),
-        "imdither-palette.gpl"
-      )
-      setError(null)
-      setSourceNotice("[PALETTE GPL EXPORTED]")
-    } catch (paletteError) {
-      setError(
-        paletteError instanceof Error
-          ? paletteError.message
-          : "Palette export failed"
-      )
-    }
+    exportPaletteAsset({
+      colors: settings.customPalette,
+      downloadBlob,
+      format: "gpl",
+      onErrorChange: setError,
+      onSourceNoticeChange: setSourceNotice,
+    })
   }, [setError, setSourceNotice, settings.customPalette])
 
   const handleExtractPalette = React.useCallback(

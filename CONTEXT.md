@@ -71,6 +71,9 @@ Use these terms consistently:
 - Settings Transition: a user intent that produces one next Editor Settings
   value while preserving domain rules.
 - Settings History: session-local undo and redo stack for Editor Settings.
+- Clipboard Settings Adapter: browser-side seam that owns Settings JSON, Look
+  Payload, and Palette asset clipboard/file import-export side effects while
+  applying results through Settings Transition.
 
 Preserve this distinction: Processing Presets are recipes; Editor Settings are
 the state; Settings JSON and Look Payloads are transport formats.

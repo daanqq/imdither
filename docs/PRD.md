@@ -405,6 +405,9 @@ The editor keeps heavy local image work behind explicit async boundaries:
 - Output Size Policy owns web-facing Output Cap decisions and copy: Source Image
   rejection, accepted-source auto-size recommendations, Output Size clamp
   notices, and source rejection messages. Core still owns the numeric cap math.
+- Clipboard Settings Adapter owns Settings JSON, Look Payload, and Palette asset
+  clipboard/file import-export side effects and applies imported settings or
+  palette text through Settings Transition.
 - Preview Cycle owns Screen Preview target calculation, Preview Job start/cancel
   wiring, reduced/refined Preview updates, and Preview Refinement state.
 - Processing Jobs own preview scheduling, reduced preview, refined preview, cancellation, and export coordination.
@@ -593,6 +596,7 @@ The web app owns browser-specific and React-specific layers:
 - Source Intake
 - Source Intake Application
 - Output Size Policy
+- Clipboard Settings Adapter
 - Editor Settings Transition Module
 - Settings History
 - Processing Jobs
