@@ -71,9 +71,15 @@ Use these terms consistently:
 - Settings Transition: a user intent that produces one next Editor Settings
   value while preserving domain rules.
 - Settings History: session-local undo and redo stack for Editor Settings.
-- Clipboard Settings Adapter: browser-side seam that owns Settings JSON, Look
-  Payload, and Palette asset clipboard/file import-export side effects while
-  applying results through Settings Transition.
+- Editor Settings Command Application: browser-side seam that owns
+  reset-defaults, set-output-width, and generic Settings Transition commands
+  with consistent applied-marker clearing through a runtime adapter.
+- Palette Action Application: browser-side seam that owns palette import,
+  export JSON/GPL, copy JSON, and palette extraction commands through a
+  single runtime adapter and discriminated command interface.
+- Clipboard Settings Application: browser-side seam that owns Settings JSON
+  copy/paste, Look Payload copy/paste, and palette clipboard import through
+  a single runtime adapter and discriminated command interface.
 
 Preserve this distinction: Processing Presets are recipes; Editor Settings are
 the state; Settings JSON and Look Payloads are transport formats.
@@ -212,6 +218,10 @@ Use these terms consistently:
 - Auto-Tune Shortlist: visible 3 to 5 recommendations.
 - Auto-Tune Worker: dedicated browser worker that generates recommendations
   after the first preview is ready.
+- Auto-Tune Apply Application: browser-side seam that applies an Auto-Tune
+  Recommendation through Settings Transition with current output size
+  preservation, mark-applied tracking, notice reporting, and error handling
+  through a runtime adapter.
 
 Do not describe Auto-Tune as AI, inference, or cloud intelligence. It is a
 deterministic local recommendation workflow.

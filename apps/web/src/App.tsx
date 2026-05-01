@@ -1,7 +1,5 @@
 import * as React from "react"
 import {
-  extractLookPayload,
-  extractPaletteFromSource,
   type PaletteExtractionSize,
   type AutoTuneRecommendation,
 } from "@workspace/core"
@@ -13,22 +11,26 @@ import { PreviewStage } from "@/components/preview-stage"
 import { useTheme } from "@/components/theme-provider"
 
 import brandMarkUrl from "@/assets/brand-mark.svg"
-import { applyAutoTuneLookSettings } from "@/lib/auto-tune-application"
 import {
-  applyLookText as applyLookTextAdapter,
-  copyLookPayload,
-  copyPaletteJson,
-  copySettingsJson,
-  exportPaletteAsset,
-  importPaletteFile,
-  importPaletteFromClipboard,
-  pasteLookPayload,
-  pasteSettingsJson,
-} from "@/lib/clipboard-settings-adapter"
+  applyAutoTuneRecommendation,
+  type AutoTuneApplyAdapter,
+} from "@/lib/auto-tune-application"
+import {
+  executeClipboardCommand,
+  type ClipboardSettingsAdapter,
+} from "@/lib/clipboard-settings-application"
 import {
   applyExportAction,
   type ExportActionRuntimeAdapter,
 } from "@/lib/export-action-application"
+import {
+  applyEditorSettingsCommand,
+  type EditorSettingsCommandAdapter,
+} from "@/lib/editor-settings-command-application"
+import {
+  executePaletteCommand,
+  type PaletteActionAdapter,
+} from "@/lib/palette-action-application"
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
@@ -217,6 +219,14 @@ export function App() {
     }
   }, [handleFile])
 
+  const clipboardSettingsAdapter: ClipboardSettingsAdapter = React.useMemo(
+    () => ({
+      setError,
+      setSourceNotice,
+    }),
+    [setError, setSourceNotice]
+  )
+
   React.useEffect(() => {
     if (!source || lookHashAppliedRef.current) {
       return
@@ -224,36 +234,25 @@ export function App() {
 
     lookHashAppliedRef.current = true
 
-    const payload = extractLookPayload(window.location.hash)
-
-    if (!payload) {
-      return
-    }
-
-    try {
-      applyLookTextAdapter({
-        clearAppliedMarker,
-        notice: "[LOOK APPLIED FROM URL]",
-        onErrorChange: setError,
-        onSourceNoticeChange: setSourceNotice,
-        text: window.location.hash,
-        transitionContext,
+    void executeClipboardCommand(
+      { type: "apply-look-from-url", text: window.location.hash },
+      clipboardSettingsAdapter,
+      {
+        clipboard: navigator.clipboard,
         transitionSettings,
-      })
-      window.history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}${window.location.search}`
-      )
-    } catch (lookError) {
-      setError(
-        lookError instanceof Error ? lookError.message : "Look import failed"
-      )
-    }
+        clearAppliedMarker,
+        clearLookHash: () =>
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${window.location.search}`
+          ),
+      },
+      transitionContext
+    )
   }, [
     clearAppliedMarker,
-    setError,
-    setSourceNotice,
+    clipboardSettingsAdapter,
     source,
     transitionContext,
     transitionSettings,
@@ -297,190 +296,190 @@ export function App() {
   ])
 
   const handleCopySettings = React.useCallback(async () => {
-    await copySettingsJson({
-      clipboard: navigator.clipboard,
-      settings,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-    })
-  }, [setError, setSourceNotice, settings])
+    await executeClipboardCommand(
+      { type: "copy-settings", settings },
+      clipboardSettingsAdapter,
+      { clipboard: navigator.clipboard }
+    )
+  }, [clipboardSettingsAdapter, settings])
 
   const handlePasteSettings = React.useCallback(async () => {
-    await pasteSettingsJson({
-      clearAppliedMarker,
-      clipboard: navigator.clipboard,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-      transitionContext,
-      transitionSettings,
-    })
+    await executeClipboardCommand(
+      { type: "paste-settings" },
+      clipboardSettingsAdapter,
+      {
+        clipboard: navigator.clipboard,
+        transitionSettings,
+        clearAppliedMarker,
+      },
+      transitionContext
+    )
   }, [
     clearAppliedMarker,
-    setError,
-    setSourceNotice,
+    clipboardSettingsAdapter,
     transitionContext,
     transitionSettings,
   ])
 
   const handleCopyLook = React.useCallback(async () => {
-    await copyLookPayload({
-      clipboard: navigator.clipboard,
-      href: window.location.href,
-      settings,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-    })
-  }, [setError, setSourceNotice, settings])
+    await executeClipboardCommand(
+      { type: "copy-look", settings, href: window.location.href },
+      clipboardSettingsAdapter,
+      { clipboard: navigator.clipboard }
+    )
+  }, [clipboardSettingsAdapter, settings])
 
   const handlePasteLook = React.useCallback(async () => {
-    await pasteLookPayload({
-      clearAppliedMarker,
-      clipboard: navigator.clipboard,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-      transitionContext,
-      transitionSettings,
-    })
+    await executeClipboardCommand(
+      { type: "paste-look" },
+      clipboardSettingsAdapter,
+      {
+        clipboard: navigator.clipboard,
+        transitionSettings,
+        clearAppliedMarker,
+      },
+      transitionContext
+    )
   }, [
     clearAppliedMarker,
-    setError,
-    setSourceNotice,
+    clipboardSettingsAdapter,
     transitionContext,
     transitionSettings,
   ])
 
+  const paletteActionAdapter: PaletteActionAdapter = React.useMemo(
+    () => ({
+      setError,
+      setSourceNotice,
+      clearAppliedMarker,
+    }),
+    [clearAppliedMarker, setError, setSourceNotice]
+  )
+
   const handleImportPaletteFile = React.useCallback(
     (file: File) =>
-      importPaletteFile({
-        file,
-        onErrorChange: setError,
-        onSourceNoticeChange: setSourceNotice,
-        transitionContext,
-        transitionSettings,
-      }),
-    [setError, setSourceNotice, transitionContext, transitionSettings]
+      executePaletteCommand(
+        { type: "import-file", file },
+        paletteActionAdapter,
+        { transitionSettings }
+      ),
+    [paletteActionAdapter, transitionSettings]
   )
 
   const handleImportPaletteFromClipboard = React.useCallback(async () => {
-    await importPaletteFromClipboard({
-      clipboard: navigator.clipboard,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-      transitionContext,
-      transitionSettings,
-    })
-  }, [setError, setSourceNotice, transitionContext, transitionSettings])
+    await executePaletteCommand(
+      { type: "import-clipboard" },
+      paletteActionAdapter,
+      {
+        clipboard: navigator.clipboard,
+        transitionSettings,
+      },
+      transitionContext
+    )
+  }, [paletteActionAdapter, transitionContext, transitionSettings])
 
   const handleCopyPaletteJson = React.useCallback(async () => {
-    await copyPaletteJson({
-      clipboard: navigator.clipboard,
-      colors: settings.customPalette,
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-    })
-  }, [setError, setSourceNotice, settings.customPalette])
+    await executePaletteCommand(
+      { type: "copy-json", colors: settings.customPalette },
+      paletteActionAdapter,
+      { clipboard: navigator.clipboard }
+    )
+  }, [paletteActionAdapter, settings.customPalette])
 
   const handleExportPaletteJson = React.useCallback(() => {
-    exportPaletteAsset({
-      colors: settings.customPalette,
-      downloadBlob,
-      format: "json",
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-    })
-  }, [setError, setSourceNotice, settings.customPalette])
+    executePaletteCommand(
+      { type: "export-json", colors: settings.customPalette },
+      paletteActionAdapter,
+      { downloadBlob }
+    )
+  }, [paletteActionAdapter, settings.customPalette])
 
   const handleExportPaletteGpl = React.useCallback(() => {
-    exportPaletteAsset({
-      colors: settings.customPalette,
-      downloadBlob,
-      format: "gpl",
-      onErrorChange: setError,
-      onSourceNoticeChange: setSourceNotice,
-    })
-  }, [setError, setSourceNotice, settings.customPalette])
+    executePaletteCommand(
+      { type: "export-gpl", colors: settings.customPalette },
+      paletteActionAdapter,
+      { downloadBlob }
+    )
+  }, [paletteActionAdapter, settings.customPalette])
 
   const handleExtractPalette = React.useCallback(
     (size: PaletteExtractionSize) => {
-      if (!source) {
-        setError("Load a Source Image before extracting a palette")
-        return
-      }
-
-      try {
-        transitionSettings(
-          {
-            type: "set-custom-palette",
-            colors: extractPaletteFromSource(source.buffer, size),
-          },
-          transitionContext
-        )
-        clearAppliedMarker()
-        setError(null)
-        setSourceNotice(`[PALETTE EXTRACTED: ${size} COLORS]`)
-      } catch (paletteError) {
-        setError(
-          paletteError instanceof Error
-            ? paletteError.message
-            : "Palette extraction failed"
-        )
-      }
+      executePaletteCommand(
+        {
+          type: "extract",
+          size,
+          source: source?.buffer ?? null,
+        },
+        paletteActionAdapter,
+        { transitionSettings }
+      )
     },
-    [
-      clearAppliedMarker,
-      setError,
-      setSourceNotice,
-      source,
-      transitionContext,
-      transitionSettings,
-    ]
+    [paletteActionAdapter, source, transitionSettings]
   )
+
+  const editorSettingsCommandAdapter: EditorSettingsCommandAdapter =
+    React.useMemo(
+      () => ({
+        clearAppliedMarker,
+      }),
+      [clearAppliedMarker]
+    )
 
   const handleResolutionWidthChange = React.useCallback(
     (width: number) => {
-      clearAppliedMarker()
-      transitionSettings({ type: "set-output-width", width }, transitionContext)
+      applyEditorSettingsCommand(
+        { type: "set-output-width", width },
+        editorSettingsCommandAdapter,
+        { transitionSettings },
+        transitionContext
+      )
     },
-    [clearAppliedMarker, transitionContext, transitionSettings]
+    [editorSettingsCommandAdapter, transitionContext, transitionSettings]
   )
 
   const handleResetSettings = React.useCallback(() => {
-    clearAppliedMarker()
-    transitionSettings({ type: "reset-defaults" }, transitionContext)
-  }, [clearAppliedMarker, transitionContext, transitionSettings])
+    applyEditorSettingsCommand(
+      { type: "reset-defaults" },
+      editorSettingsCommandAdapter,
+      { transitionSettings },
+      transitionContext
+    )
+  }, [editorSettingsCommandAdapter, transitionContext, transitionSettings])
 
   const handleSettingsTransition = React.useCallback(
     (transition: SettingsTransition) => {
-      clearAppliedMarker()
-      transitionSettings(transition, transitionContext)
+      applyEditorSettingsCommand(
+        { type: "settings-transition", transition },
+        editorSettingsCommandAdapter,
+        { transitionSettings },
+        transitionContext
+      )
     },
-    [clearAppliedMarker, transitionContext, transitionSettings]
+    [editorSettingsCommandAdapter, transitionContext, transitionSettings]
+  )
+
+  const autoTuneApplyAdapter: AutoTuneApplyAdapter = React.useMemo(
+    () => ({
+      markApplied: markAutoTuneApplied,
+      setError,
+      setSourceNotice,
+    }),
+    [markAutoTuneApplied, setError, setSourceNotice]
   )
 
   const handleApplyAutoTuneRecommendation = React.useCallback(
     (recommendation: AutoTuneRecommendation) => {
-      transitionSettings(
+      applyAutoTuneRecommendation(
         {
-          type: "apply-settings",
-          settings: applyAutoTuneLookSettings({
-            current: settings,
-            recommended: recommendation.snapshot.settings,
-          }),
+          recommendation,
+          currentSettings: settings,
         },
+        autoTuneApplyAdapter,
+        { transitionSettings },
         transitionContext
       )
-      markAutoTuneApplied(recommendation.id)
-      setError(null)
-      setSourceNotice(`[AUTO-TUNE APPLIED: ${recommendation.label}]`)
     },
-    [
-      markAutoTuneApplied,
-      setError,
-      setSourceNotice,
-      settings,
-      transitionContext,
-      transitionSettings,
-    ]
+    [autoTuneApplyAdapter, settings, transitionContext, transitionSettings]
   )
 
   const handlePreviewViewportChange = React.useCallback(
