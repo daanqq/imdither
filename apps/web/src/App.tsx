@@ -33,19 +33,17 @@ import {
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
-  applySourceIntakeResult,
-  runDemoSourceIntake,
-  runFileSourceIntake,
+  executeSourceLoadCommand,
+  type SourceIntakeRuntimeAdapter,
 } from "@/lib/source-intake-application"
 import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import { usePreviewCycle } from "@/lib/use-preview-cycle"
-import {
-  pickImageFromClipboard,
-  type LoadedSource,
-  type SourceIntakeResult,
-} from "@/lib/source-intake"
+import { pickImageFromClipboard, type LoadedSource } from "@/lib/source-intake"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import type { PreviewViewport } from "@/lib/preview-viewport"
+import {
+  DEFAULT_PREVIEW_VIEWPORT,
+  type PreviewViewport,
+} from "@/lib/preview-viewport"
 import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
@@ -138,50 +136,49 @@ export function App() {
     recommendations: autoTuneRecommendations,
   } = autoTune
 
-  const applySourceIntake = React.useCallback(
-    (result: SourceIntakeResult) =>
-      applySourceIntakeResult(result, {
-        onErrorChange: setError,
-        onPreviewCycleReset: resetPreviewCycle,
-        onPreviewViewportChange: setPreviewViewport,
-        onSettingsTransition: transitionSettings,
-        onSourceChange: setSource,
-        onSourceNoticeChange: setSourceNotice,
-        onStatusChange: setStatus,
-      }),
+  const sourceIntakeAdapter: SourceIntakeRuntimeAdapter = React.useMemo(
+    () => ({
+      setStatus,
+      setSource,
+      setSourceNotice,
+      setError,
+      resetPreviewCycle,
+      resetPreviewViewport: () => setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT),
+      applyOutputSizeWithoutHistory: (width, height) =>
+        transitionSettings(
+          { type: "set-output-size", width, height },
+          undefined,
+          { recordHistory: false }
+        ),
+    }),
     [
+      resetPreviewCycle,
       setError,
       setPreviewViewport,
+      setSource,
       setSourceNotice,
       setStatus,
-      resetPreviewCycle,
       transitionSettings,
     ]
   )
 
   React.useEffect(() => {
-    let isCurrent = true
+    const isCurrentRef = { current: true }
 
-    void runDemoSourceIntake({
-      isCurrent: () => isCurrent,
-      onErrorChange: setError,
-      onResult: applySourceIntake,
-      onStatusChange: setStatus,
-    })
+    void executeSourceLoadCommand(
+      { kind: "demo" },
+      { ...sourceIntakeAdapter, isCurrent: () => isCurrentRef.current }
+    )
 
     return () => {
-      isCurrent = false
+      isCurrentRef.current = false
     }
-  }, [applySourceIntake, setError, setStatus])
+  }, [sourceIntakeAdapter])
 
   const handleFile = React.useCallback(
     (file: File) =>
-      runFileSourceIntake(file, {
-        onErrorChange: setError,
-        onResult: applySourceIntake,
-        onStatusChange: setStatus,
-      }),
-    [applySourceIntake, setError, setStatus]
+      executeSourceLoadCommand({ kind: "file", file }, sourceIntakeAdapter),
+    [sourceIntakeAdapter]
   )
 
   React.useEffect(() => {

@@ -1,5 +1,3 @@
-import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import { DEFAULT_PREVIEW_VIEWPORT } from "@/lib/preview-viewport"
 import {
   createDemoSourceIntake,
   formatSourceNotices,
@@ -9,107 +7,83 @@ import {
 } from "@/lib/source-intake"
 import type { JobStatus } from "@/store/editor-store"
 
-type SourceIntakeApplicationCallbacks = {
-  onErrorChange: (error: string | null) => void
-  onPreviewCycleReset: () => void
-  onPreviewViewportChange: (viewport: typeof DEFAULT_PREVIEW_VIEWPORT) => void
-  onSettingsTransition: (
-    transition: SettingsTransition,
-    context: undefined,
-    options: { recordHistory: false }
-  ) => void
-  onSourceChange: (source: LoadedSource) => void
-  onSourceNoticeChange: (notice: string | null) => void
-  onStatusChange: (status: JobStatus) => void
+export type SourceLoadCommand = { kind: "file"; file: File } | { kind: "demo" }
+
+export type SourceIntakeRuntimeAdapter = {
+  setStatus: (status: JobStatus) => void
+  setSource: (source: LoadedSource) => void
+  setSourceNotice: (notice: string | null) => void
+  setError: (error: string | null) => void
+  resetPreviewCycle: () => void
+  resetPreviewViewport: () => void
+  applyOutputSizeWithoutHistory: (width: number, height: number) => void
+  isCurrent?: () => boolean
 }
 
-export function applySourceIntakeResult(
-  result: SourceIntakeResult,
-  callbacks: SourceIntakeApplicationCallbacks
-): boolean {
-  if (result.type === "rejected") {
-    callbacks.onErrorChange(result.message)
-    callbacks.onStatusChange("error")
-    return false
-  }
-
-  callbacks.onSourceChange(result.source)
-  callbacks.onPreviewCycleReset()
-  callbacks.onPreviewViewportChange(DEFAULT_PREVIEW_VIEWPORT)
-  callbacks.onErrorChange(null)
-  callbacks.onSourceNoticeChange(formatSourceNotices(result.notices))
-  callbacks.onSettingsTransition(
-    {
-      type: "set-output-size",
-      width: result.outputSize.width,
-      height: result.outputSize.height,
-    },
-    undefined,
-    { recordHistory: false }
-  )
-
-  return true
-}
-
-type FileSourceIntakeCallbacks = {
+type ExecuteSourceLoadCommandOptions = {
   intakeImageFile?: (file: File) => Promise<SourceIntakeResult>
-  onErrorChange: (error: string | null) => void
-  onResult: (result: SourceIntakeResult) => void
-  onStatusChange: (status: JobStatus) => void
-}
-
-export async function runFileSourceIntake(
-  file: File,
-  {
-    intakeImageFile: intakeFile = intakeImageFile,
-    onErrorChange,
-    onResult,
-    onStatusChange,
-  }: FileSourceIntakeCallbacks
-): Promise<void> {
-  try {
-    onStatusChange("processing")
-    onResult(await intakeFile(file))
-  } catch (fileError) {
-    onErrorChange(
-      fileError instanceof Error ? fileError.message : "Image decode failed"
-    )
-    onStatusChange("error")
-  }
-}
-
-type DemoSourceIntakeCallbacks = {
   createDemoSourceIntake?: () => Promise<SourceIntakeResult>
-  isCurrent: () => boolean
-  onErrorChange: (error: string | null) => void
-  onResult: (result: SourceIntakeResult) => void
-  onStatusChange: (status: JobStatus) => void
 }
 
-export async function runDemoSourceIntake({
-  createDemoSourceIntake: createDemoIntake = createDemoSourceIntake,
-  isCurrent,
-  onErrorChange,
-  onResult,
-  onStatusChange,
-}: DemoSourceIntakeCallbacks): Promise<void> {
-  try {
-    onStatusChange("processing")
-    const result = await createDemoIntake()
+export async function executeSourceLoadCommand(
+  command: SourceLoadCommand,
+  adapter: SourceIntakeRuntimeAdapter,
+  options?: ExecuteSourceLoadCommandOptions
+): Promise<void> {
+  const runIntake = options?.intakeImageFile ?? intakeImageFile
 
-    if (isCurrent()) {
-      onResult(result)
-    }
-  } catch (demoError) {
-    if (!isCurrent()) {
-      return
-    }
+  adapter.setStatus("processing")
 
-    onErrorChange(
-      demoError instanceof Error
-        ? demoError.message
-        : "Demo image failed to load"
-    )
-    onStatusChange("error")
+  if (command.kind === "file") {
+    try {
+      const result = await runIntake(command.file)
+      applyIntakeResult(result, adapter)
+    } catch (fileError) {
+      adapter.setError(
+        fileError instanceof Error ? fileError.message : "Image decode failed"
+      )
+      adapter.setStatus("error")
+    }
+  } else {
+    const runDemo = options?.createDemoSourceIntake ?? createDemoSourceIntake
+    const isCurrent = adapter.isCurrent
+
+    try {
+      const result = await runDemo()
+
+      if (isCurrent?.() ?? true) {
+        applyIntakeResult(result, adapter)
+      }
+    } catch (demoError) {
+      if (isCurrent?.() ?? true) {
+        adapter.setError(
+          demoError instanceof Error
+            ? demoError.message
+            : "Demo image failed to load"
+        )
+        adapter.setStatus("error")
+      }
+    }
   }
+}
+
+function applyIntakeResult(
+  result: SourceIntakeResult,
+  adapter: SourceIntakeRuntimeAdapter
+): void {
+  if (result.type === "rejected") {
+    adapter.setError(result.message)
+    adapter.setStatus("error")
+    return
+  }
+
+  adapter.setSource(result.source)
+  adapter.resetPreviewCycle()
+  adapter.resetPreviewViewport()
+  adapter.setError(null)
+  adapter.setSourceNotice(formatSourceNotices(result.notices))
+  adapter.applyOutputSizeWithoutHistory(
+    result.outputSize.width,
+    result.outputSize.height
+  )
 }

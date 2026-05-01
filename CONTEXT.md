@@ -209,9 +209,21 @@ Source Intake accepts or rejects a Source Image before processing.
 Use these terms consistently:
 
 - Source Intake: decision flow that accepts or rejects a Source Image.
+- Source Load Command: user intent to load a Source Image from upload, paste,
+  drop, or the bundled demo before Source Intake applies browser decoding and
+  policy.
+- Source Load Command starts after raw browser events have been normalized to a
+  file or demo intent; DOM events remain owned by the App Shell or Preview
+  Stage.
+- Source Intake Application exposes one Source Load Command interface for demo
+  and file-backed loads; upload, drop, and paste converge before that seam.
 - Source Intake Application: browser-side seam that applies accepted/rejected
-  Source Intake results to source state, Preview Viewport reset, Preview Cycle
-  reset, Output Size transition, Source Notice, status, and error state.
+  Source Load Commands and Source Intake results to source state, Preview
+  Viewport reset, Preview Cycle reset, Output Size transition, Source Notice,
+  status, and error state.
+- Source Intake Runtime Adapter: browser-side adapter that lets Source Intake
+  Application update editor runtime state without exposing individual React or
+  store setters as its interface.
 - Source Notice: short user-facing message about intake or Output Size policy.
 - Output Cap: maximum browser pixel budget for Output Size.
 - Output Size Policy: web-facing seam over core Output Cap math that owns Source
@@ -221,8 +233,18 @@ Use these terms consistently:
   Background before processing.
 - Auto-Tune Analysis Sample: runtime-only bounded Pixel Buffer created during
   Source Intake for recommendations.
+- Auto-Tune applied-marker state belongs to Auto-Tune runtime state, not Source
+  Intake Application; Source Intake only supplies the Source Image and
+  Auto-Tune Analysis Sample.
 
 Source rejection and output-budget limiting are separate policies.
+Rejected Source Intake is non-destructive: it reports an error without clearing
+the current Source Image, Preview Cycle state, Preview Viewport, or Editor
+Settings.
+Accepted Source Intake may apply an Output Size transition as load-time
+baseline state, but that transition is not recorded in Settings History.
+Responsive Preview Viewport enforcement, such as forcing Fit View on mobile,
+is Preview Viewport policy and does not belong to Source Intake Application.
 
 ## Terms To Avoid
 
