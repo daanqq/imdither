@@ -17,7 +17,10 @@ import {
 
 describe("Clipboard Settings Adapter", () => {
   it("copies Settings JSON and reports the clipboard notice", async () => {
-    const clipboard = { writeText: vi.fn(async () => {}) }
+    const clipboard = {
+      readText: vi.fn(async (): Promise<string> => ""),
+      writeText: vi.fn(async () => {}),
+    }
     const onErrorChange = vi.fn()
     const onSourceNoticeChange = vi.fn()
 
@@ -76,7 +79,9 @@ describe("Clipboard Settings Adapter", () => {
       createLookSnapshot({ settings: DEFAULT_SETTINGS })
     )
     const clipboard = {
-      readText: vi.fn(async () => `https://example.test/#look=${payload}`),
+      readText: vi.fn(
+        async (): Promise<string> => `https://example.test/#look=${payload}`
+      ),
       writeText: vi.fn(async () => {}),
     }
     const callbacks = createLookCallbacks()
@@ -97,7 +102,7 @@ describe("Clipboard Settings Adapter", () => {
       transitionSettings: callbacks.transitionSettings,
     })
 
-    expect(clipboard.writeText.mock.calls[0]?.[0]).toContain("#look=")
+    expect(clipboard.writeText.mock.calls.at(0)?.at(0)).toContain("#look=")
     expect(callbacks.transitionSettings).toHaveBeenCalledWith(
       { type: "apply-settings", settings: DEFAULT_SETTINGS },
       {}
@@ -138,7 +143,7 @@ describe("Clipboard Settings Adapter", () => {
       { type: "set-custom-palette", colors: ["#000000", "#ffffff"] },
       {}
     )
-    expect(callbacks.clipboard.writeText.mock.calls[0]?.[0]).toContain(
+    expect(callbacks.clipboard.writeText.mock.calls.at(0)?.at(0)).toContain(
       "#000000"
     )
     expect(downloadBlob.mock.calls[0]?.[1]).toBe("imdither-palette.json")
@@ -159,7 +164,10 @@ function createLookCallbacks() {
 
 function createPaletteCallbacks() {
   return {
-    clipboard: { readText: vi.fn(), writeText: vi.fn(async () => {}) },
+    clipboard: {
+      readText: vi.fn(async (): Promise<string> => ""),
+      writeText: vi.fn(async () => {}),
+    },
     onErrorChange: vi.fn(),
     onSourceNoticeChange: vi.fn(),
     transitionSettings: vi.fn(() => ({ settings: DEFAULT_SETTINGS })),
