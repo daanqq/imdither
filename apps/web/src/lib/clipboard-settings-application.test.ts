@@ -207,13 +207,19 @@ describe("executeClipboardCommand", () => {
 
     it("reports error when look payload is empty", async () => {
       const adapter = createAdapter()
+      const clearAppliedMarker = vi.fn()
       const clearLookHash = vi.fn()
       const transitionSettings = vi.fn()
 
       await executeClipboardCommand(
         { type: "apply-look-from-url", text: "#nothing" },
         adapter,
-        { clipboard: createClipboard(), transitionSettings, clearLookHash }
+        {
+          clipboard: createClipboard(),
+          transitionSettings,
+          clearAppliedMarker,
+          clearLookHash,
+        }
       )
 
       expect(adapter.setError).toHaveBeenCalledWith("Look payload is empty")

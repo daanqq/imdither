@@ -1,4 +1,3 @@
-import * as React from "react"
 import type { DitherAlgorithm } from "@workspace/core"
 
 import type { JobStatus } from "@/store/editor-store"

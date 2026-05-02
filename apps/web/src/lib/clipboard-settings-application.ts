@@ -29,30 +29,43 @@ type TextClipboard = {
   writeText: (text: string) => Promise<void>
 }
 
-type ClipboardSettingsOptions<C extends ClipboardSettingsCommand> = {
+type ClipboardSettingsReadOptions = {
   clipboard: TextClipboard
-} & (C extends {
-  type: "paste-settings" | "paste-look" | "apply-look-from-url"
 }
-  ? {
-      transitionSettings: (
-        transition: SettingsTransition,
-        context?: SettingsTransitionContext
-      ) => { settings: EditorSettings; sourceNotice?: string | null }
-      clearAppliedMarker: () => void
-      clearLookHash?: () => void
-    }
-  : Record<string, never>)
 
-export async function executeClipboardCommand<
-  C extends ClipboardSettingsCommand,
->(
-  command: C,
+type ClipboardSettingsWriteOptions = ClipboardSettingsReadOptions & {
+  transitionSettings: (
+    transition: SettingsTransition,
+    context?: SettingsTransitionContext
+  ) => { settings: EditorSettings; sourceNotice?: string | null }
+  clearAppliedMarker: () => void
+  clearLookHash?: () => void
+}
+
+export async function executeClipboardCommand(
+  command:
+    | { type: "copy-settings"; settings: EditorSettings }
+    | { type: "copy-look"; settings: EditorSettings; href: string },
   adapter: ClipboardSettingsAdapter,
-  options: ClipboardSettingsOptions<C>,
+  options: ClipboardSettingsReadOptions
+): Promise<void>
+export async function executeClipboardCommand(
+  command:
+    | { type: "paste-settings" }
+    | { type: "paste-look" }
+    | { type: "apply-look-from-url"; text: string },
+  adapter: ClipboardSettingsAdapter,
+  options: ClipboardSettingsWriteOptions,
+  transitionContext?: SettingsTransitionContext
+): Promise<void>
+export async function executeClipboardCommand(
+  command: ClipboardSettingsCommand,
+  adapter: ClipboardSettingsAdapter,
+  options: ClipboardSettingsReadOptions | ClipboardSettingsWriteOptions,
   transitionContext?: SettingsTransitionContext
 ): Promise<void> {
   const { setError, setSourceNotice } = adapter
+  const opts = options as ClipboardSettingsWriteOptions
 
   switch (command.type) {
     case "copy-settings":
@@ -65,12 +78,12 @@ export async function executeClipboardCommand<
 
     case "paste-settings":
       return pasteSettingsJson({
-        clearAppliedMarker: options.clearAppliedMarker,
+        clearAppliedMarker: opts.clearAppliedMarker,
         clipboard: options.clipboard,
         onErrorChange: setError,
         onSourceNoticeChange: setSourceNotice,
         transitionContext: transitionContext ?? {},
-        transitionSettings: options.transitionSettings,
+        transitionSettings: opts.transitionSettings,
       })
 
     case "copy-look":
@@ -84,27 +97,27 @@ export async function executeClipboardCommand<
 
     case "paste-look":
       return pasteLookPayload({
-        clearAppliedMarker: options.clearAppliedMarker,
+        clearAppliedMarker: opts.clearAppliedMarker,
         clipboard: options.clipboard,
         onErrorChange: setError,
         onSourceNoticeChange: setSourceNotice,
         transitionContext: transitionContext ?? {},
-        transitionSettings: options.transitionSettings,
+        transitionSettings: opts.transitionSettings,
       })
 
     case "apply-look-from-url":
       try {
         applyLookText({
-          clearAppliedMarker: options.clearAppliedMarker,
+          clearAppliedMarker: opts.clearAppliedMarker,
           notice: "[LOOK APPLIED FROM URL]",
           onErrorChange: setError,
           onSourceNoticeChange: setSourceNotice,
           text: command.text,
           transitionContext: transitionContext ?? {},
-          transitionSettings: options.transitionSettings,
+          transitionSettings: opts.transitionSettings,
         })
 
-        options.clearLookHash?.()
+        opts.clearLookHash?.()
       } catch (lookError) {
         adapter.setError(
           lookError instanceof Error ? lookError.message : "Look import failed"

@@ -704,8 +704,8 @@ const CanvasPanel = React.memo(function CanvasPanel({
         displayModel={{
           frameHeight: expectedHeight,
           frameWidth: expectedWidth,
-          manualFrameHeight: manualExpectedHeight,
-          manualFrameWidth: manualExpectedWidth,
+          manualFrameHeight: manualExpectedHeight ?? 0,
+          manualFrameWidth: manualExpectedWidth ?? 0,
           viewScale,
         }}
         inspectorSource={

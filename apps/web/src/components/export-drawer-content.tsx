@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Button } from "@workspace/ui/components/button"
 import {
   DrawerContent,
