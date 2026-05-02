@@ -26,6 +26,13 @@ import {
   normalizePreviewViewport,
   type PreviewViewport,
 } from "../lib/preview-viewport"
+import {
+  BUILT_IN_LOOK_RECIPES,
+  applyLookRecipe,
+  captureLookRecipeStyle,
+  normalizeUserLookRecipes,
+  type LookRecipe,
+} from "../lib/look-recipes"
 
 export type CompareMode = "processed" | "original" | "slide"
 export type ViewScale = "fit" | "actual"
@@ -47,6 +54,7 @@ type EditorState = {
   exportFormat: ExportFormat
   exportQuality: number
   advancedOpen: boolean
+  lookRecipes: LookRecipe[]
   status: JobStatus
   error: string | null
   sourceNotice: string | null
@@ -63,6 +71,10 @@ type EditorState = {
   setExportFormat: (format: ExportFormat) => void
   setExportQuality: (quality: number) => void
   setAdvancedOpen: (open: boolean) => void
+  saveLookRecipe: (name: string) => LookRecipe
+  renameLookRecipe: (id: string, name: string) => void
+  deleteLookRecipe: (id: string) => void
+  applyLookRecipe: (id: string) => void
   setStatus: (status: JobStatus) => void
   setError: (error: string | null) => void
   setSourceNotice: (notice: string | null) => void
@@ -95,6 +107,7 @@ export const useEditorStore = create<EditorState>()(
       exportFormat: DEFAULT_EXPORT_FORMAT,
       exportQuality: DEFAULT_EXPORT_QUALITY,
       advancedOpen: false,
+      lookRecipes: [],
       status: "idle",
       error: null,
       sourceNotice: null,
@@ -204,6 +217,64 @@ export const useEditorStore = create<EditorState>()(
       setExportQuality: (exportQuality) =>
         set({ exportQuality: clampExportQuality(exportQuality) }),
       setAdvancedOpen: (advancedOpen) => set({ advancedOpen }),
+      saveLookRecipe: (name) => {
+        const recipeRef: { current: LookRecipe | null } = { current: null }
+
+        set((state) => {
+          const recipe = {
+            id: `user-${Date.now().toString(36)}`,
+            name,
+            style: captureLookRecipeStyle(state.settings),
+          }
+          recipeRef.current = recipe
+
+          return {
+            lookRecipes: [...state.lookRecipes, recipe],
+          }
+        })
+
+        if (!recipeRef.current) {
+          throw new Error("Look Recipe save failed")
+        }
+
+        return recipeRef.current
+      },
+      renameLookRecipe: (id, name) =>
+        set((state) => ({
+          lookRecipes: state.lookRecipes.map((recipe) =>
+            recipe.id === id ? { ...recipe, name } : recipe
+          ),
+        })),
+      deleteLookRecipe: (id) =>
+        set((state) => ({
+          lookRecipes: state.lookRecipes.filter((recipe) => recipe.id !== id),
+        })),
+      applyLookRecipe: (id) =>
+        set((state) => {
+          const recipe =
+            [...BUILT_IN_LOOK_RECIPES, ...state.lookRecipes].find(
+              (item) => item.id === id
+            ) ?? null
+
+          if (!recipe) {
+            return state
+          }
+
+          const next = applyLookRecipe(state.settings, recipe)
+          const settingsHistory = areSettingsEqual(state.settings, next)
+            ? state.settingsHistory
+            : {
+                future: [],
+                past: [...state.settingsHistory.past, state.settings],
+              }
+
+          return {
+            canRedoSettingsChange: settingsHistory.future.length > 0,
+            canUndoSettingsChange: settingsHistory.past.length > 0,
+            settings: next,
+            settingsHistory,
+          }
+        }),
       setStatus: (status) => set({ status }),
       setError: (error) => set({ error }),
       setSourceNotice: (sourceNotice) => set({ sourceNotice }),
@@ -219,6 +290,7 @@ export const useEditorStore = create<EditorState>()(
         exportFormat: state.exportFormat,
         exportQuality: state.exportQuality,
         advancedOpen: state.advancedOpen,
+        lookRecipes: state.lookRecipes,
       }),
       migrate: (persistedState) => {
         return normalizePersistedEditorState(persistedState)
@@ -263,6 +335,7 @@ export function normalizePersistedEditorState(
     ),
     exportFormat: normalizeExportFormat(persistedState.exportFormat),
     exportQuality: clampExportQuality(persistedState.exportQuality),
+    lookRecipes: normalizeUserLookRecipes(persistedState.lookRecipes),
     settings: settingsWithoutPersistedDimensions(
       normalizeSettings(persistedState.settings)
     ),
@@ -316,6 +389,7 @@ function isPersistedEditorState(value: unknown): value is {
   settings: unknown
   advancedOpen?: unknown
   compareMode?: unknown
+  lookRecipes?: unknown
   previewViewport?: unknown
   viewScale?: unknown
   exportFormat?: unknown

@@ -77,6 +77,7 @@ import { AutoTunePanel } from "@/components/auto-tune-panel"
 import { CommittedSliderField } from "@/components/committed-slider-field"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
 import { StackTab } from "@/components/stack-tab"
+import type { LookRecipe } from "@/lib/look-recipes"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 import { type ExportFormat } from "@/lib/export-image"
 import { getNextPaletteColor } from "@/lib/palette-add-color"
@@ -92,6 +93,8 @@ type InspectorPanelProps = {
   exportFormat: ExportFormat
   exportQuality: number
   settings: EditorSettings
+  lookRecipeId: string
+  lookRecipes: readonly LookRecipe[]
   sourceAvailable: boolean
   sourceWidth?: number
   onAdvancedOpenChange: (open: boolean) => void
@@ -108,6 +111,10 @@ type InspectorPanelProps = {
   onExtractPalette: (size: 2 | 4 | 8 | 16 | 32) => void
   onImportPaletteFile: (file: File) => void
   onImportPaletteFromClipboard: () => void
+  onDeleteLookRecipe: (id: string) => void
+  onRenameLookRecipe: (id: string, name: string) => void
+  onSaveLookRecipe: (name: string) => void
+  onSelectLookRecipe: (id: string) => void
   onPasteLook: () => void
   onPasteSettings: () => void
   onResolutionWidthChange: (width: number) => void
@@ -123,6 +130,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   autoTuneLoading,
   autoTuneRecommendations,
   settings,
+  lookRecipeId,
+  lookRecipes,
   sourceAvailable,
   sourceWidth,
   onAdvancedOpenChange,
@@ -135,6 +144,10 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   onExtractPalette,
   onImportPaletteFile,
   onImportPaletteFromClipboard,
+  onDeleteLookRecipe,
+  onRenameLookRecipe,
+  onSaveLookRecipe,
+  onSelectLookRecipe,
   onPasteLook,
   onPasteSettings,
   onResolutionWidthChange,
@@ -180,7 +193,21 @@ export const InspectorPanel = React.memo(function InspectorPanel({
             </InspectorTab>
             <InspectorTab value="stack">
               <StackTab
+                activePaletteColors={activePaletteColors}
+                lookRecipeId={lookRecipeId}
+                lookRecipes={lookRecipes}
+                paletteSelectValue={paletteSelectValue}
                 settings={settings}
+                onCopyPaletteJson={onCopyPaletteJson}
+                onDeleteLookRecipe={onDeleteLookRecipe}
+                onExportPaletteGpl={onExportPaletteGpl}
+                onExportPaletteJson={onExportPaletteJson}
+                onExtractPalette={onExtractPalette}
+                onImportPaletteFile={onImportPaletteFile}
+                onImportPaletteFromClipboard={onImportPaletteFromClipboard}
+                onRenameLookRecipe={onRenameLookRecipe}
+                onSaveLookRecipe={onSaveLookRecipe}
+                onSelectLookRecipe={onSelectLookRecipe}
                 onSettingsTransition={onSettingsTransition}
               />
             </InspectorTab>

@@ -6,6 +6,7 @@ Object.defineProperty(globalThis, "localStorage", {
   value: createMemoryStorage(),
 })
 
+const { BUILT_IN_LOOK_RECIPES } = await import("../lib/look-recipes")
 const { normalizeCompareMode, normalizePersistedEditorState, useEditorStore } =
   await import("./editor-store")
 
@@ -115,6 +116,39 @@ describe("editor store settings transitions", () => {
     expect(useEditorStore.getState().settings).not.toHaveProperty(
       "exportQuality"
     )
+  })
+
+  it("saves and applies local Look Recipes without changing output geometry", () => {
+    useEditorStore.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        resize: {
+          ...DEFAULT_SETTINGS.resize,
+          width: 1600,
+          height: 900,
+        },
+      },
+      lookRecipes: [],
+    })
+
+    const saved = useEditorStore.getState().saveLookRecipe("Warm")
+    useEditorStore.getState().applyLookRecipe(BUILT_IN_LOOK_RECIPES[0].id)
+
+    expect(useEditorStore.getState().settings.resize).toMatchObject({
+      width: 1600,
+      height: 900,
+    })
+
+    useEditorStore.getState().applyLookRecipe(saved.id)
+
+    expect(useEditorStore.getState().lookRecipes[0]).toMatchObject({
+      id: saved.id,
+      name: "Warm",
+    })
+    expect(useEditorStore.getState().settings.resize).toMatchObject({
+      width: 1600,
+      height: 900,
+    })
   })
 
   it("migrates old view scale into preview viewport state", () => {
@@ -398,6 +432,7 @@ function resetEditorStore() {
       future: [],
       past: [],
     },
+    lookRecipes: [],
     sourceNotice: null,
     status: "idle",
   })

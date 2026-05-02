@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
-import { DEFAULT_SETTINGS } from "@workspace/core"
+import { DEFAULT_SETTINGS, PRESET_PALETTES } from "@workspace/core"
 
 import { StackTab } from "./stack-tab"
 
@@ -11,6 +11,20 @@ function renderStackTab(
 
   const element = StackTab({
     settings: DEFAULT_SETTINGS,
+    activePaletteColors: PRESET_PALETTES[0].colors.map((color) => color.hex),
+    lookRecipeId: "custom",
+    lookRecipes: [],
+    paletteSelectValue: DEFAULT_SETTINGS.paletteId,
+    onCopyPaletteJson: vi.fn(),
+    onDeleteLookRecipe: vi.fn(),
+    onExportPaletteGpl: vi.fn(),
+    onExportPaletteJson: vi.fn(),
+    onExtractPalette: vi.fn(),
+    onImportPaletteFile: vi.fn(),
+    onImportPaletteFromClipboard: vi.fn(),
+    onRenameLookRecipe: vi.fn(),
+    onSaveLookRecipe: vi.fn(),
+    onSelectLookRecipe: vi.fn(),
     onSettingsTransition: onTransition,
     ...overrides,
   })
@@ -32,6 +46,26 @@ describe("StackTab", () => {
 
     expect(markup).toContain("Palette")
     expect(markup).toContain("Dither")
+  })
+
+  it("renders the Look Recipe bar above grouped stages", () => {
+    const { markup } = renderStackTab()
+
+    expect(markup).toContain("PRESET")
+    expect(markup).toContain("Custom")
+    expect(markup).toContain("Save look recipe")
+    expect(markup).toContain("Look recipe menu")
+  })
+
+  it("mirrors Dither and Palette controls inside Core", () => {
+    const { markup } = renderStackTab()
+
+    expect(markup).toContain("Algorithm")
+    expect(markup).toContain("Bayer Matrix")
+    expect(markup).toContain("Color Depth")
+    expect(markup).toContain("Matching")
+    expect(markup).toContain("Palette Swatches")
+    expect(markup).toContain("Edit colors")
   })
 
   it("shows add-stage affordance in Pre group when empty", () => {
@@ -78,7 +112,7 @@ describe("StackTab", () => {
     expect(markup).toContain("Remove stage")
   })
 
-  it("shows reorder controls when multiple optional stages exist", () => {
+  it("shows handle drag and menu fallback when multiple optional stages exist", () => {
     const settingsWithEffects = {
       ...DEFAULT_SETTINGS,
       effectStack: [
@@ -100,7 +134,7 @@ describe("StackTab", () => {
 
     const { markup } = renderStackTab({ settings: settingsWithEffects })
 
-    expect(markup).toContain("Move stage up")
-    expect(markup).toContain("Move stage down")
+    expect(markup).toContain("Drag stage")
+    expect(markup).toContain("Stage actions")
   })
 })

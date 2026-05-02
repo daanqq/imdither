@@ -135,7 +135,7 @@ Success signal: shipped. Users can explore aggressively, recover quickly, share 
 
 ### Phase 4: Effect Stack MVP
 
-- [x] Write dedicated PRDs for Effect Stack Core, Effect Stack UI, and First Effects.
+- [x] Write dedicated PRDs for Effect Stack Core, Effect Stack UI, First Effects, and Look Recipes.
 - [x] Record the Effect Stack in Editor Settings architecture decision.
 - [ ] Model stages as typed `pre`, `quantize`, `dither`, and `post` stages.
 - [ ] Support stage enable/disable.
@@ -145,6 +145,8 @@ Success signal: shipped. Users can explore aggressively, recover quickly, share 
 - [ ] Add first post-effects: grain, CRT bloom, edge threshold, and paper/noise texture.
 - [ ] Add first pre-effects: blur-before-dither and contrast shaping.
 - [ ] Keep effect stack state out of large pixel buffers and binary data.
+- [x] Add Stack tab composition with handle-only stage drag and editable Core mirrors.
+- [x] Add stack-aware Look Recipes with built-in and browser-local saved recipes.
 
 Success signal: dithering becomes one part of a broader local look-building pipeline.
 
@@ -153,6 +155,7 @@ Planning artifacts:
 - [Phase 4.1 Effect Stack Core](phase-4-effect-stack-core/PRD.md)
 - [Phase 4.2 Effect Stack UI](phase-4-effect-stack-ui/PRD.md)
 - [Phase 4.3 First Effects](phase-4-first-effects/PRD.md)
+- [Phase 4.4 Look Recipes](phase-4-look-recipes/PRD.md)
 - [ADR 0001: Effect Stack in Editor Settings](../adr/0001-effect-stack-in-editor-settings.md)
 
 ### Phase 5: Algorithm and Halftone Breadth

@@ -53,6 +53,7 @@ multiple bounded contexts with one `CONTEXT.md` per context.
 | Settings JSON   | Serialized Editor Settings used for reproducible copy and paste.                         | preset JSON                 |
 | Look Snapshot   | Shareable artifact that wraps normalized Editor Settings with lightweight look metadata. | saved state                 |
 | Look Payload    | Compact compressed transport form of one Look Snapshot.                                  | URL state                   |
+| Look Recipe     | One-shot style recipe that applies selected Editor Settings fields, including stack.      | stack preset                |
 | Effect Stack    | Serializable ordered processing stages stored inside Editor Settings.                    | filter chain, layer stack   |
 | Effect Stage    | One ordered operation inside an Effect Stack.                                            | effect layer                |
 
@@ -70,6 +71,9 @@ Use these terms consistently:
 - Custom Palette: the active user-defined Palette stored in Editor Settings.
 - Processing Preset: a curated starting recipe that applies selected Editor
   Settings fields without becoming separate stored state.
+- Look Recipe: a curated or user-saved style recipe that applies selected
+  Editor Settings fields, including Effect Stack, palette, dither, color, and
+  adjust fields, while preserving output geometry.
 - Effect Stack: an ordered, serializable part of Editor Settings that extends
   processing beyond one dither pass while staying copy/paste and Look Payload
   safe.
@@ -94,8 +98,9 @@ Use these terms consistently:
   copy/paste, Look Payload copy/paste, and palette clipboard import through
   a single runtime adapter and discriminated command interface.
 
-Preserve this distinction: Processing Presets are recipes; Editor Settings are
-the state; Settings JSON and Look Payloads are transport formats.
+Preserve this distinction: Processing Presets are legacy dithering recipes;
+Look Recipes are stack-aware style recipes; Editor Settings are the state;
+Settings JSON and Look Payloads are transport formats.
 
 Effect Stack data must contain Stage Instance Ids, Stage Kinds, stable ordering,
 enabled state, and serializable parameters only. It must not contain Pixel
@@ -117,6 +122,11 @@ Effect Stack UI belongs in an Inspector `Stack` tab between `Looks` and
 `Adjust`. The app remains dithering-first: existing controls stay primary, and
 the Stack tab exposes the workstation model without replacing the preview-first
 editor.
+
+The Stack tab may mirror palette and dither controls as editable Core stages.
+Until the older Adjust and Palette tabs are retired, those mirrored controls
+must use the same Settings Transition commands and must not create duplicate
+settings state.
 
 ## Preview And Comparison Context
 

@@ -53,6 +53,8 @@ function renderInspector(
       autoTuneRecommendations={DEMO_AUTO_TUNE_RECOMMENDATIONS}
       exportFormat="png"
       exportQuality={0.92}
+      lookRecipeId="custom"
+      lookRecipes={[]}
       settings={DEFAULT_SETTINGS}
       sourceAvailable
       resolutionAspectLabel="1:1"
@@ -68,6 +70,10 @@ function renderInspector(
       onExtractPalette={vi.fn()}
       onImportPaletteFile={vi.fn()}
       onImportPaletteFromClipboard={vi.fn()}
+      onDeleteLookRecipe={vi.fn()}
+      onRenameLookRecipe={vi.fn()}
+      onSaveLookRecipe={vi.fn()}
+      onSelectLookRecipe={vi.fn()}
       onPasteLook={vi.fn()}
       onPasteSettings={vi.fn()}
       onResolutionWidthChange={vi.fn()}

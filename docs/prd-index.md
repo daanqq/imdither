@@ -50,6 +50,8 @@ feature shipped; update its status and keep this index current.
 | done   | [Phase 3.1 History Core](market-impact-roadmap/phase-3-history-core/PRD.md)     | Settings History core.                                                    |
 | done   | [Phase 3.2 Look Payloads](market-impact-roadmap/phase-3-look-payloads/PRD.md)   | Look Snapshot and Look Payload sharing.                                   |
 | done   | [Phase 3.3 Auto-Tune](market-impact-roadmap/phase-3-auto-tune/PRD.md)           | Auto-Tune roadmap feature slice.                                          |
+| done   | [Phase 4.2 Effect Stack UI](market-impact-roadmap/phase-4-effect-stack-ui/PRD.md) | Inspector Stack tab and stage editing workflow.                         |
+| done   | [Phase 4.4 Look Recipes](market-impact-roadmap/phase-4-look-recipes/PRD.md)     | Stack-aware built-in and browser-local saved style recipes.               |
 
 ## Planned PRDs
 
@@ -59,7 +61,6 @@ feature shipped; update its status and keep this index current.
 | planned | [Inspector Deep Editors](inspector-deep-editors/PRD.md)               | Deeper inspector editing controls.                    |
 | planned | [Inspector Control Repartition](inspector-control-repartition/PRD.md) | Control ownership repartition across inspector areas. |
 | planned | [Phase 4.1 Effect Stack Core](market-impact-roadmap/phase-4-effect-stack-core/PRD.md) | Serializable Effect Stack in Editor Settings. |
-| planned | [Phase 4.2 Effect Stack UI](market-impact-roadmap/phase-4-effect-stack-ui/PRD.md) | Inspector Stack tab and stage editing workflow. |
 | planned | [Phase 4.3 First Effects](market-impact-roadmap/phase-4-first-effects/PRD.md) | First deterministic pre and post effects. |
 
 ## Local Scratch PRDs

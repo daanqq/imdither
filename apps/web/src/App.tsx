@@ -40,6 +40,7 @@ import {
 import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import { usePreviewCycle } from "@/lib/use-preview-cycle"
 import { pickImageFromClipboard, type LoadedSource } from "@/lib/source-intake"
+import { BUILT_IN_LOOK_RECIPES, matchLookRecipe } from "@/lib/look-recipes"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 import {
   DEFAULT_PREVIEW_VIEWPORT,
@@ -69,6 +70,7 @@ export function App() {
   const exportFormat = useEditorStore((state) => state.exportFormat)
   const exportQuality = useEditorStore((state) => state.exportQuality)
   const advancedOpen = useEditorStore((state) => state.advancedOpen)
+  const lookRecipes = useEditorStore((state) => state.lookRecipes)
   const status = useEditorStore((state) => state.status)
   const error = useEditorStore((state) => state.error)
   const canRedoSettingsChange = useEditorStore(
@@ -85,6 +87,10 @@ export function App() {
   const setExportFormat = useEditorStore((state) => state.setExportFormat)
   const setExportQuality = useEditorStore((state) => state.setExportQuality)
   const setAdvancedOpen = useEditorStore((state) => state.setAdvancedOpen)
+  const saveLookRecipe = useEditorStore((state) => state.saveLookRecipe)
+  const renameLookRecipe = useEditorStore((state) => state.renameLookRecipe)
+  const deleteLookRecipe = useEditorStore((state) => state.deleteLookRecipe)
+  const applyLookRecipe = useEditorStore((state) => state.applyLookRecipe)
   const setStatus = useEditorStore((state) => state.setStatus)
   const setError = useEditorStore((state) => state.setError)
   const setSourceNotice = useEditorStore((state) => state.setSourceNotice)
@@ -97,6 +103,8 @@ export function App() {
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
   const lookHashAppliedRef = React.useRef(false)
+  const [selectedLookRecipeId, setSelectedLookRecipeId] =
+    React.useState("custom")
   const aspectLabel = source
     ? formatAspectRatio(source.buffer.width, source.buffer.height)
     : formatAspectRatio(settings.resize.width, settings.resize.height)
@@ -108,6 +116,19 @@ export function App() {
     }),
     [source]
   )
+  const allLookRecipes = React.useMemo(
+    () => [...BUILT_IN_LOOK_RECIPES, ...lookRecipes],
+    [lookRecipes]
+  )
+  const lookRecipeId =
+    selectedLookRecipeId !== "custom" &&
+    allLookRecipes.some(
+      (recipe) =>
+        recipe.id === selectedLookRecipeId &&
+        matchLookRecipe(settings, [recipe]) !== null
+    )
+      ? selectedLookRecipeId
+      : (matchLookRecipe(settings, allLookRecipes)?.id ?? "custom")
   const {
     preview,
     previewRefiningPending,
@@ -444,7 +465,16 @@ export function App() {
       { transitionSettings },
       transitionContext
     )
+    setSelectedLookRecipeId("custom")
   }, [editorSettingsCommandAdapter, transitionContext, transitionSettings])
+
+  const handleSelectLookRecipe = React.useCallback(
+    (id: string) => {
+      applyLookRecipe(id)
+      setSelectedLookRecipeId(id)
+    },
+    [applyLookRecipe]
+  )
 
   const handleSettingsTransition = React.useCallback(
     (transition: SettingsTransition) => {
@@ -544,6 +574,8 @@ export function App() {
               autoTuneRecommendations={autoTuneRecommendations}
               exportFormat={exportFormat}
               exportQuality={exportQuality}
+              lookRecipeId={lookRecipeId}
+              lookRecipes={allLookRecipes}
               settings={settings}
               sourceAvailable={Boolean(source)}
               sourceWidth={source?.buffer.width}
@@ -559,6 +591,15 @@ export function App() {
               onExtractPalette={handleExtractPalette}
               onImportPaletteFile={handleImportPaletteFile}
               onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
+              onDeleteLookRecipe={(id) => {
+                deleteLookRecipe(id)
+                if (selectedLookRecipeId === id) {
+                  setSelectedLookRecipeId("custom")
+                }
+              }}
+              onRenameLookRecipe={renameLookRecipe}
+              onSaveLookRecipe={saveLookRecipe}
+              onSelectLookRecipe={handleSelectLookRecipe}
               onPasteLook={handlePasteLook}
               onPasteSettings={handlePasteSettings}
               onResolutionWidthChange={handleResolutionWidthChange}
