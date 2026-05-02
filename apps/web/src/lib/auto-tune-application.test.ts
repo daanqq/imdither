@@ -67,6 +67,35 @@ describe("applyAutoTuneLookSettings", () => {
       width: 1280,
     })
   })
+
+  it("preserves the current effect stack when applying a look", () => {
+    const current = {
+      ...DEFAULT_SETTINGS,
+      effectStack: [
+        {
+          instanceId: "pre-1",
+          kind: "pre" as const,
+          enabled: true,
+          params: { effect: "pre.blur", radius: 2 },
+        },
+        ...DEFAULT_SETTINGS.effectStack,
+        {
+          instanceId: "post-1",
+          kind: "post" as const,
+          enabled: true,
+          params: { effect: "post.grain", amount: 0.2, seed: 99 },
+        },
+      ],
+    }
+    const recommended = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "floyd-steinberg" as const,
+    }
+
+    const result = applyAutoTuneLookSettings({ current, recommended })
+
+    expect(result.effectStack).toEqual(current.effectStack)
+  })
 })
 
 describe("applyAutoTuneRecommendation", () => {
@@ -135,6 +164,42 @@ describe("applyAutoTuneRecommendation", () => {
     )
 
     expect(mergeLookSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves current effect stack when applying recommendation", () => {
+    const adapter = createAdapter()
+    const transitionSettings = vi.fn(() => ({
+      settings: DEFAULT_SETTINGS,
+    }))
+    const userPreStage = {
+      instanceId: "pre-grain-1",
+      kind: "pre" as const,
+      enabled: true,
+      params: { effect: "pre.blur", radius: 2 },
+    }
+    const current = {
+      ...DEFAULT_SETTINGS,
+      resize: { ...DEFAULT_SETTINGS.resize, width: 1280, height: 720 },
+      effectStack: [userPreStage, ...DEFAULT_SETTINGS.effectStack],
+    }
+
+    applyAutoTuneRecommendation(
+      { recommendation: createRecommendation(), currentSettings: current },
+      adapter,
+      { transitionSettings }
+    )
+
+    expect(transitionSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "apply-settings",
+        settings: expect.objectContaining({
+          effectStack: expect.arrayContaining([
+            expect.objectContaining({ instanceId: "pre-grain-1" }),
+          ]),
+        }),
+      }),
+      undefined
+    )
   })
 
   it("reports transition source notice in the applied notice", () => {

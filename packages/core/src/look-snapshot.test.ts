@@ -9,10 +9,9 @@ import {
 } from "./index"
 
 describe("Look Snapshot public contract", () => {
-  it("creates an immutable look wrapper around normalized schema version 2 settings", () => {
+  it("creates an immutable look wrapper around normalized schema version 3 settings", () => {
     const snapshot = createLookSnapshot({
       settings: {
-        ...DEFAULT_SETTINGS,
         algorithm: "atkinson",
         colorDepth: { mode: "limit", count: 8 },
         customPalette: ["#ffffff", "#111111"],
@@ -31,35 +30,27 @@ describe("Look Snapshot public contract", () => {
       createdAt: "2026-04-26T00:00:00.000Z",
     })
 
-    expect(snapshot).toEqual({
-      format: "imdither-look",
-      version: 1,
-      kind: "look-snapshot",
-      createdAt: "2026-04-26T00:00:00.000Z",
-      settings: {
-        ...DEFAULT_SETTINGS,
-        algorithm: "atkinson",
-        colorDepth: { mode: "limit", count: 8 },
-        customPalette: ["#ffffff", "#111111"],
-        matchingMode: "perceptual",
-        preprocess: {
-          ...DEFAULT_SETTINGS.preprocess,
-          brightness: 12,
-          colorMode: "color-preserve",
-        },
-        resize: {
-          ...DEFAULT_SETTINGS.resize,
-          height: 360,
-          width: 480,
-        },
-      },
-    })
+    expect(snapshot.format).toBe("imdither-look")
+    expect(snapshot.version).toBe(1)
+    expect(snapshot.kind).toBe("look-snapshot")
+    expect(snapshot.createdAt).toBe("2026-04-26T00:00:00.000Z")
+    expect(snapshot.settings.schemaVersion).toBe(3)
+    expect(snapshot.settings.algorithm).toBe("atkinson")
+    expect(snapshot.settings.colorDepth).toEqual({ mode: "limit", count: 8 })
+    expect(snapshot.settings.customPalette).toEqual(["#ffffff", "#111111"])
+    expect(snapshot.settings.matchingMode).toBe("perceptual")
+    expect(snapshot.settings.preprocess.brightness).toBe(12)
+    expect(snapshot.settings.preprocess.colorMode).toBe("color-preserve")
+    expect(snapshot.settings.resize.height).toBe(360)
+    expect(snapshot.settings.resize.width).toBe(480)
+    expect(snapshot.settings.effectStack).toHaveLength(2)
+    expect(snapshot.settings.effectStack[0].kind).toBe("quantize")
+    expect(snapshot.settings.effectStack[1].kind).toBe("dither")
   })
 
   it("encodes and decodes one URL-safe payload for clipboard and hash flows", () => {
     const snapshot = createLookSnapshot({
       settings: {
-        ...DEFAULT_SETTINGS,
         alphaBackground: "black",
         resize: {
           ...DEFAULT_SETTINGS.resize,
@@ -83,7 +74,6 @@ describe("Look Snapshot public contract", () => {
   it("uses a compact wire payload while decoding back to the public snapshot", () => {
     const snapshot = createLookSnapshot({
       settings: {
-        ...DEFAULT_SETTINGS,
         algorithm: "atkinson",
       },
       createdAt: "2026-04-26T00:00:00.000Z",

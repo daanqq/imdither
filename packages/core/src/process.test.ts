@@ -66,13 +66,13 @@ describe("core pipeline", () => {
     }
   })
 
-  it("normalizes partial settings into schema version 2", () => {
+  it("normalizes partial settings into schema version 3", () => {
     expect(
       normalizeSettings({
         algorithm: "atkinson",
         resize: { width: 32, height: 24 },
       }).schemaVersion
-    ).toBe(2)
+    ).toBe(3)
   })
 
   it("limits processing to the first N palette colors without mutating the active palette", () => {

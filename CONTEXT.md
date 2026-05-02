@@ -53,6 +53,8 @@ multiple bounded contexts with one `CONTEXT.md` per context.
 | Settings JSON   | Serialized Editor Settings used for reproducible copy and paste.                         | preset JSON                 |
 | Look Snapshot   | Shareable artifact that wraps normalized Editor Settings with lightweight look metadata. | saved state                 |
 | Look Payload    | Compact compressed transport form of one Look Snapshot.                                  | URL state                   |
+| Effect Stack    | Serializable ordered processing stages stored inside Editor Settings.                    | filter chain, layer stack   |
+| Effect Stage    | One ordered operation inside an Effect Stack.                                            | effect layer                |
 
 ## Processing Context
 
@@ -68,6 +70,17 @@ Use these terms consistently:
 - Custom Palette: the active user-defined Palette stored in Editor Settings.
 - Processing Preset: a curated starting recipe that applies selected Editor
   Settings fields without becoming separate stored state.
+- Effect Stack: an ordered, serializable part of Editor Settings that extends
+  processing beyond one dither pass while staying copy/paste and Look Payload
+  safe.
+- Effect Stage: one Effect Stack item with a Stage Instance Id, Stage Kind,
+  enabled state, and serializable parameters.
+- Stage Instance Id: a stable per-stage identity used for UI ordering and
+  history, not for processing behavior.
+- Stage Kind: the pipeline group (`pre`, `quantize`, `dither`, `post`) that
+  determines execution order for an Effect Stage. Stage Kind is not the
+  behavior identity; the specific effect (e.g. `pre.blur`, `post.grain`) is
+  stored in `params.effect`.
 - Settings Transition: a user intent that produces one next Editor Settings
   value while preserving domain rules.
 - Settings History: session-local undo and redo stack for Editor Settings.
@@ -83,6 +96,27 @@ Use these terms consistently:
 
 Preserve this distinction: Processing Presets are recipes; Editor Settings are
 the state; Settings JSON and Look Payloads are transport formats.
+
+Effect Stack data must contain Stage Instance Ids, Stage Kinds, stable ordering,
+enabled state, and serializable parameters only. It must not contain Pixel
+Buffers, binary assets, DOM objects, browser-only handles, or runtime job state.
+
+In the Phase 4 core model, the existing palette, matching mode, dither
+algorithm, and Bayer size settings remain the source of truth for palette
+mapping and dithering behavior. Quantize and dither stages wrap the current
+processing path instead of duplicating those settings.
+
+The Phase 4 Effect Stack uses fixed group ordering: built-in source preparation
+first, then `pre` stages, existing preprocessing, quantize/dither core stages,
+and `post` stages. Users may reorder optional stages inside the `pre` group or
+inside the `post` group, but Phase 4 does not allow arbitrary cross-group
+ordering, multiple dither stages, or moving resize and alpha flattening into the
+stack.
+
+Effect Stack UI belongs in an Inspector `Stack` tab between `Looks` and
+`Adjust`. The app remains dithering-first: existing controls stay primary, and
+the Stack tab exposes the workstation model without replacing the preview-first
+editor.
 
 ## Preview And Comparison Context
 

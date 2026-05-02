@@ -11,6 +11,7 @@ export function applyAutoTuneLookSettings({
 }): EditorSettings {
   return {
     ...recommended,
+    effectStack: current.effectStack,
     resize: {
       ...recommended.resize,
       height: current.resize.height,

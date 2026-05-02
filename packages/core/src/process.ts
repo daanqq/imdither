@@ -3,6 +3,7 @@ import {
   getDitherAlgorithmMetadataLabel,
   processWithDitherAlgorithm,
 } from "./algorithm-registry"
+import { applyEffectStages } from "./effect-registry"
 import { getEffectivePalette, resolvePalette } from "./palettes"
 import { normalizeSettings } from "./settings"
 import { applyPreprocess, flattenAlpha, resizeImage } from "./stages"
@@ -34,22 +35,31 @@ export function processImage(
     `flat:${sourceKey}:${settings.alphaBackground}`,
     () => flattenAlpha(input, settings.alphaBackground)
   )
+  const preStages = settings.effectStack.filter((s) => s.kind === "pre")
+  const postStages = settings.effectStack.filter((s) => s.kind === "post")
+  const effectStackKey = JSON.stringify(settings.effectStack)
+
   const resized = getOrSet(
     options.cache,
     `resize:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}`,
     () => resizeImage(flattened, settings.resize, settings.alphaBackground)
   )
+
+  const effected = applyEffectStages(resized, preStages)
+
   const preprocessed = getOrSet(
     options.cache,
-    `pre:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}:${JSON.stringify(settings.preprocess)}`,
-    () => applyPreprocess(resized, settings.preprocess)
+    `pre:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}:${JSON.stringify(settings.preprocess)}:${effectStackKey}`,
+    () => applyPreprocess(effected, settings.preprocess)
   )
 
-  const image = processWithDitherAlgorithm(
+  const dithered = processWithDitherAlgorithm(
     preprocessed,
     settings,
     effectivePalette
   )
+
+  const image = applyEffectStages(dithered, postStages)
 
   return {
     image,

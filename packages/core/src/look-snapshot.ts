@@ -38,7 +38,7 @@ export function createLookSnapshot({
 }: {
   createdAt?: string
   name?: string
-  settings: EditorSettings
+  settings: Partial<EditorSettings>
 }): LookSnapshot {
   return lookSnapshotSchema.parse({
     format: LOOK_FORMAT,
@@ -165,7 +165,22 @@ function toCompactLookPayload(snapshot: LookSnapshot): unknown {
 }
 
 function diffSettings(settings: EditorSettings): Partial<EditorSettings> {
-  return diffValue(DEFAULT_SETTINGS, settings) as Partial<EditorSettings>
+  const diff = diffValue(DEFAULT_SETTINGS, settings) as Partial<EditorSettings>
+
+  if (!Array.isArray(diff.effectStack)) {
+    return diff
+  }
+
+  const filtered = diff.effectStack.filter(
+    (s: { kind: string }) => s.kind !== "quantize" && s.kind !== "dither"
+  )
+
+  if (filtered.length === 0) {
+    const { effectStack: _, ...rest } = diff
+    return rest
+  }
+
+  return { ...diff, effectStack: filtered }
 }
 
 function diffValue(defaultValue: unknown, value: unknown): unknown {

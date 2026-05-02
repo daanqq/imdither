@@ -135,7 +135,8 @@ Success signal: shipped. Users can explore aggressively, recover quickly, share 
 
 ### Phase 4: Effect Stack MVP
 
-- [ ] Write a dedicated PRD for a serializable effect stack.
+- [x] Write dedicated PRDs for Effect Stack Core, Effect Stack UI, and First Effects.
+- [x] Record the Effect Stack in Editor Settings architecture decision.
 - [ ] Model stages as typed `pre`, `quantize`, `dither`, and `post` stages.
 - [ ] Support stage enable/disable.
 - [ ] Support stable stage ordering.
@@ -146,6 +147,13 @@ Success signal: shipped. Users can explore aggressively, recover quickly, share 
 - [ ] Keep effect stack state out of large pixel buffers and binary data.
 
 Success signal: dithering becomes one part of a broader local look-building pipeline.
+
+Planning artifacts:
+
+- [Phase 4.1 Effect Stack Core](phase-4-effect-stack-core/PRD.md)
+- [Phase 4.2 Effect Stack UI](phase-4-effect-stack-ui/PRD.md)
+- [Phase 4.3 First Effects](phase-4-first-effects/PRD.md)
+- [ADR 0001: Effect Stack in Editor Settings](../adr/0001-effect-stack-in-editor-settings.md)
 
 ### Phase 5: Algorithm and Halftone Breadth
 

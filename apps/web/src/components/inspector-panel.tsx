@@ -76,6 +76,7 @@ import {
 import { AutoTunePanel } from "@/components/auto-tune-panel"
 import { CommittedSliderField } from "@/components/committed-slider-field"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
+import { StackTab } from "@/components/stack-tab"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 import { type ExportFormat } from "@/lib/export-image"
 import { getNextPaletteColor } from "@/lib/palette-add-color"
@@ -159,8 +160,9 @@ export const InspectorPanel = React.memo(function InspectorPanel({
       <Card className="flex h-full min-h-0 min-w-0 gap-0 overflow-hidden border-border bg-[var(--surface-inspector)] py-0">
         <Tabs defaultValue="looks" className="h-full min-h-0 min-w-0 gap-0">
           <CardHeader className="shrink-0 px-2 pt-2 pb-0">
-            <TabsList className="grid w-full grid-cols-3" variant="line">
+            <TabsList className="grid w-full grid-cols-4" variant="line">
               <TabsTrigger value="looks">Looks</TabsTrigger>
+              <TabsTrigger value="stack">Stack</TabsTrigger>
               <TabsTrigger value="adjust">Adjust</TabsTrigger>
               <TabsTrigger value="palette">Palette</TabsTrigger>
             </TabsList>
@@ -174,6 +176,12 @@ export const InspectorPanel = React.memo(function InspectorPanel({
                 recommendations={autoTuneRecommendations}
                 sourceAvailable={sourceAvailable}
                 onApplyRecommendation={onApplyAutoTuneRecommendation}
+              />
+            </InspectorTab>
+            <InspectorTab value="stack">
+              <StackTab
+                settings={settings}
+                onSettingsTransition={onSettingsTransition}
               />
             </InspectorTab>
             <InspectorTab value="adjust">

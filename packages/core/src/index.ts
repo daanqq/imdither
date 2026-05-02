@@ -23,6 +23,18 @@ export {
 } from "./algorithm-registry"
 export { createStageCache, hashPixelBuffer } from "./cache"
 export {
+  applyEffectStages,
+  EFFECT_DEFINITIONS,
+  type EffectId,
+} from "./effect-registry"
+export {
+  buildCompatibilityStack,
+  normalizeEffectStack,
+  validateEffectStack,
+  type EffectStage,
+  type StageKind,
+} from "./effect-stack"
+export {
   PRESET_PALETTES,
   getEffectivePalette,
   hexToRgb,

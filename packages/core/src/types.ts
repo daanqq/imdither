@@ -1,4 +1,5 @@
 import type { DitherAlgorithm } from "./algorithm-registry"
+import type { EffectStage } from "./effect-stack"
 
 export type PixelBuffer = {
   width: number
@@ -32,7 +33,7 @@ export type ColorDepth =
 export type MatchingMode = "rgb" | "perceptual"
 
 export type EditorSettings = {
-  schemaVersion: 2
+  schemaVersion: 2 | 3
   algorithm: DitherAlgorithm
   bayerSize: BayerSize
   paletteId: string
@@ -40,6 +41,7 @@ export type EditorSettings = {
   alphaBackground: AlphaBackground
   colorDepth: ColorDepth
   matchingMode: MatchingMode
+  effectStack: EffectStage[]
   resize: {
     mode: ResizeMode
     fit: ResizeFit

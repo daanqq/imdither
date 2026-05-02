@@ -1,6 +1,8 @@
 import {
   DEFAULT_SETTINGS,
   PRESET_PALETTES,
+  buildCompatibilityStack,
+  EFFECT_DEFINITIONS,
   getProcessingPreset,
   getProcessingPresetColorMode,
   normalizePaletteColors,
@@ -10,9 +12,11 @@ import {
   type ColorDepth,
   type DitherAlgorithm,
   type EditorSettings,
+  type EffectStage,
   type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
+  type StageKind,
 } from "@workspace/core"
 
 import {
@@ -85,6 +89,31 @@ export type SettingsTransition =
     }
   | {
       type: "reset-defaults"
+    }
+  | {
+      type: "add-effect-stage"
+      kind: StageKind
+      effect: string
+    }
+  | {
+      type: "remove-effect-stage"
+      instanceId: string
+    }
+  | {
+      type: "set-effect-stage-enabled"
+      instanceId: string
+      enabled: boolean
+    }
+  | {
+      type: "set-effect-stage-params"
+      instanceId: string
+      params: Record<string, number | string | boolean>
+    }
+  | {
+      type: "reorder-effect-stages"
+      group: "pre" | "post"
+      fromIndex: number
+      toIndex: number
     }
 
 export type SettingsTransitionContext = {
@@ -239,6 +268,88 @@ export function applySettingsTransition(
         DEFAULT_SETTINGS.resize.width,
         context
       )
+    case "add-effect-stage": {
+      const id = `es-${Math.random().toString(36).slice(2, 10)}`
+      const def = EFFECT_DEFINITIONS.find((d) => d.id === transition.effect)
+      const defaultParams = def?.defaultParams ?? {}
+      const newStage: EffectStage = {
+        instanceId: id,
+        kind: transition.kind,
+        enabled: true,
+        params: { effect: transition.effect, ...defaultParams },
+      }
+
+      return {
+        settings: withCanonicalEffectStack({
+          ...current,
+          effectStack: [...current.effectStack, newStage],
+        }),
+      }
+    }
+    case "remove-effect-stage":
+      return {
+        settings: withCanonicalEffectStack({
+          ...current,
+          effectStack: current.effectStack.filter(
+            (s) => s.instanceId !== transition.instanceId
+          ),
+        }),
+      }
+    case "set-effect-stage-enabled":
+      return {
+        settings: {
+          ...current,
+          effectStack: current.effectStack.map((s) =>
+            s.instanceId === transition.instanceId
+              ? { ...s, enabled: transition.enabled }
+              : s
+          ),
+        },
+      }
+    case "set-effect-stage-params":
+      return {
+        settings: {
+          ...current,
+          effectStack: current.effectStack.map((s) =>
+            s.instanceId === transition.instanceId
+              ? { ...s, params: transition.params }
+              : s
+          ),
+        },
+      }
+    case "reorder-effect-stages": {
+      const groupStages = current.effectStack
+        .map((s, i) => ({ stage: s, index: i }))
+        .filter(({ stage }) => stage.kind === transition.group)
+
+      if (
+        transition.fromIndex < 0 ||
+        transition.fromIndex >= groupStages.length ||
+        transition.toIndex < 0 ||
+        transition.toIndex >= groupStages.length
+      ) {
+        return { settings: current }
+      }
+
+      const moved = groupStages.splice(transition.fromIndex, 1)[0]
+      groupStages.splice(transition.toIndex, 0, moved)
+
+      const newStack = [...current.effectStack]
+      const groupIndices = current.effectStack
+        .map((s, i) => (s.kind === transition.group ? i : -1))
+        .filter((i) => i >= 0)
+
+      for (let i = 0; i < groupIndices.length; i += 1) {
+        newStack[groupIndices[i]] = groupStages[i].stage
+      }
+
+      return {
+        settings: withCanonicalEffectStack({
+          ...current,
+          effectStack: newStack,
+        }),
+      }
+    }
   }
 }
 
@@ -286,4 +397,15 @@ function getAspectRatio(
   }
 
   return settings.resize.height / settings.resize.width
+}
+
+function withCanonicalEffectStack(current: EditorSettings): EditorSettings {
+  const pre = current.effectStack.filter((s) => s.kind === "pre")
+  const post = current.effectStack.filter((s) => s.kind === "post")
+  const core = buildCompatibilityStack(current)
+
+  return {
+    ...current,
+    effectStack: [...pre, ...core, ...post],
+  }
 }

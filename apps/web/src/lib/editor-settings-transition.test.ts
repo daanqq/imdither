@@ -307,4 +307,158 @@ describe("Editor Settings transitions", () => {
       },
     })
   })
+
+  it("adds a pre effect stage to the effect stack", () => {
+    const result = applySettingsTransition(DEFAULT_SETTINGS, {
+      type: "add-effect-stage",
+      kind: "pre",
+      effect: "pre.blur",
+    })
+
+    const preStages = result.settings.effectStack.filter(
+      (s) => s.kind === "pre"
+    )
+    expect(preStages).toHaveLength(1)
+    expect(preStages[0].kind).toBe("pre")
+    expect(preStages[0].enabled).toBe(true)
+    expect(preStages[0].instanceId).toMatch(/^es-/)
+    expect(preStages[0].params).toMatchObject({
+      effect: "pre.blur",
+      radius: 1.5,
+    })
+    expect(result.settings.effectStack[1].kind).toBe("quantize")
+    expect(result.settings.effectStack[2].kind).toBe("dither")
+  })
+
+  it("adds a post effect stage to the effect stack", () => {
+    const result = applySettingsTransition(DEFAULT_SETTINGS, {
+      type: "add-effect-stage",
+      kind: "post",
+      effect: "post.grain",
+    })
+
+    const postStages = result.settings.effectStack.filter(
+      (s) => s.kind === "post"
+    )
+    expect(postStages).toHaveLength(1)
+    expect(postStages[0].kind).toBe("post")
+    expect(postStages[0].enabled).toBe(true)
+  })
+
+  it("removes a pre effect stage by instanceId", () => {
+    const withPre = applySettingsTransition(
+      applySettingsTransition(DEFAULT_SETTINGS, {
+        type: "add-effect-stage",
+        kind: "pre",
+        effect: "pre.blur",
+      }).settings,
+      { type: "add-effect-stage", kind: "pre", effect: "pre.blur" }
+    )
+
+    const preStages = withPre.settings.effectStack.filter(
+      (s) => s.kind === "pre"
+    )
+    expect(preStages).toHaveLength(2)
+
+    const result = applySettingsTransition(withPre.settings, {
+      type: "remove-effect-stage",
+      instanceId: preStages[0].instanceId,
+    })
+
+    expect(
+      result.settings.effectStack.filter((s) => s.kind === "pre")
+    ).toHaveLength(1)
+    expect(
+      result.settings.effectStack.find(
+        (s) => s.instanceId === preStages[0].instanceId
+      )
+    ).toBeUndefined()
+  })
+
+  it("toggles a pre effect stage enabled state", () => {
+    const added = applySettingsTransition(DEFAULT_SETTINGS, {
+      type: "add-effect-stage",
+      kind: "pre",
+      effect: "pre.blur",
+    })
+    const preId = added.settings.effectStack.find(
+      (s) => s.kind === "pre"
+    )!.instanceId
+
+    const result = applySettingsTransition(added.settings, {
+      type: "set-effect-stage-enabled",
+      instanceId: preId,
+      enabled: false,
+    })
+
+    expect(
+      result.settings.effectStack.find((s) => s.instanceId === preId)!.enabled
+    ).toBe(false)
+  })
+
+  it("sets params on a pre effect stage", () => {
+    const added = applySettingsTransition(DEFAULT_SETTINGS, {
+      type: "add-effect-stage",
+      kind: "pre",
+      effect: "pre.blur",
+    })
+    const preId = added.settings.effectStack.find(
+      (s) => s.kind === "pre"
+    )!.instanceId
+
+    const result = applySettingsTransition(added.settings, {
+      type: "set-effect-stage-params",
+      instanceId: preId,
+      params: { blur: 5, enabled: "true" },
+    })
+
+    expect(
+      result.settings.effectStack.find((s) => s.instanceId === preId)!.params
+    ).toEqual({ blur: 5, enabled: "true" })
+  })
+
+  it("reorders pre stages within the pre group", () => {
+    const withPres = applySettingsTransition(
+      applySettingsTransition(DEFAULT_SETTINGS, {
+        type: "add-effect-stage",
+        kind: "pre",
+        effect: "pre.blur",
+      }).settings,
+      { type: "add-effect-stage", kind: "pre", effect: "pre.blur" }
+    )
+
+    const preIds = withPres.settings.effectStack
+      .filter((s) => s.kind === "pre")
+      .map((s) => s.instanceId)
+
+    const result = applySettingsTransition(withPres.settings, {
+      type: "reorder-effect-stages",
+      group: "pre",
+      fromIndex: 0,
+      toIndex: 1,
+    })
+
+    const newPreIds = result.settings.effectStack
+      .filter((s) => s.kind === "pre")
+      .map((s) => s.instanceId)
+
+    expect(newPreIds).toEqual([preIds[1], preIds[0]])
+    expect(result.settings.effectStack[2].kind).toBe("quantize")
+  })
+
+  it("rebuilds core stages when effect stack transition runs on current settings", () => {
+    const withAtkinson = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "atkinson" as const,
+    }
+
+    const result = applySettingsTransition(withAtkinson, {
+      type: "add-effect-stage",
+      kind: "pre",
+      effect: "pre.blur",
+    })
+
+    const dither = result.settings.effectStack.find((s) => s.kind === "dither")!
+    expect(dither.params.algorithm).toBe("atkinson")
+  })
 })
