@@ -5,6 +5,7 @@ import { visualizer } from "rollup-plugin-visualizer"
 import { defineConfig } from "vite"
 
 const shouldAnalyzeBundle = process.env.ANALYZE === "true"
+const shouldUseReactCompiler = process.env.REACT_COMPILER === "true"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,11 +13,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   plugins: [
-    react({
-      babel: {
-        plugins: ["babel-plugin-react-compiler"],
-      },
-    }),
+    react(
+      shouldUseReactCompiler
+        ? {
+            babel: {
+              plugins: ["babel-plugin-react-compiler"],
+            },
+          }
+        : undefined
+    ),
     tailwindcss(),
     shouldAnalyzeBundle &&
       visualizer({

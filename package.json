@@ -12,13 +12,15 @@
     "format": "oxfmt apps packages --write",
     "format:check": "oxfmt apps packages --check",
     "typecheck": "turbo typecheck",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
-    "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "check": "bun run verify:static",
+    "verify:static": "concurrently --kill-others-on-fail -n format,lint,typecheck,test \"bun run format:check\" \"bun run lint\" \"bun run typecheck\" \"bun run test\"",
+    "verify": "bun run verify:static && bun run build",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },
   "devDependencies": {
     "babel-plugin-react-compiler": "^1.0.0",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "oxfmt": "^0.47.0",

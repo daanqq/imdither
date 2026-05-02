@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
+    "build:checked": "tsc -b && vite build",
     "lint": "oxlint . --disable-nested-config --config ../../.oxlintrc.json",
     "format": "oxfmt . --write --config ../../.oxfmtrc.json",
     "format:check": "oxfmt . --check --config ../../.oxfmtrc.json",
@@ -33,6 +34,6 @@
     "@vitejs/plugin-react": "^5.1.1",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.9.3",
-    "vite": "^7.3.2"
+    "vite": "^8.0.0"
   }
 }
