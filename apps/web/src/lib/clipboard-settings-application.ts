@@ -29,20 +29,27 @@ type TextClipboard = {
   writeText: (text: string) => Promise<void>
 }
 
-type ClipboardSettingsOptions = {
+type ClipboardSettingsOptions<C extends ClipboardSettingsCommand> = {
   clipboard: TextClipboard
-  transitionSettings?: (
-    transition: SettingsTransition,
-    context?: SettingsTransitionContext
-  ) => { settings: EditorSettings; sourceNotice?: string | null }
-  clearAppliedMarker?: () => void
-  clearLookHash?: () => void
+} & (C extends {
+  type: "paste-settings" | "paste-look" | "apply-look-from-url"
 }
+  ? {
+      transitionSettings: (
+        transition: SettingsTransition,
+        context?: SettingsTransitionContext
+      ) => { settings: EditorSettings; sourceNotice?: string | null }
+      clearAppliedMarker: () => void
+      clearLookHash?: () => void
+    }
+  : Record<string, never>)
 
-export async function executeClipboardCommand(
-  command: ClipboardSettingsCommand,
+export async function executeClipboardCommand<
+  C extends ClipboardSettingsCommand,
+>(
+  command: C,
   adapter: ClipboardSettingsAdapter,
-  options: ClipboardSettingsOptions,
+  options: ClipboardSettingsOptions<C>,
   transitionContext?: SettingsTransitionContext
 ): Promise<void> {
   const { setError, setSourceNotice } = adapter
@@ -57,18 +64,13 @@ export async function executeClipboardCommand(
       })
 
     case "paste-settings":
-      if (!options.transitionSettings) {
-        throw new Error("transitionSettings is required for paste-settings")
-      }
       return pasteSettingsJson({
-        clearAppliedMarker: options.clearAppliedMarker ?? (() => {}),
+        clearAppliedMarker: options.clearAppliedMarker,
         clipboard: options.clipboard,
         onErrorChange: setError,
         onSourceNoticeChange: setSourceNotice,
         transitionContext: transitionContext ?? {},
-        transitionSettings: options.transitionSettings as NonNullable<
-          typeof options.transitionSettings
-        >,
+        transitionSettings: options.transitionSettings,
       })
 
     case "copy-look":
@@ -82,32 +84,24 @@ export async function executeClipboardCommand(
 
     case "paste-look":
       return pasteLookPayload({
-        clearAppliedMarker: options.clearAppliedMarker ?? (() => {}),
+        clearAppliedMarker: options.clearAppliedMarker,
         clipboard: options.clipboard,
         onErrorChange: setError,
         onSourceNoticeChange: setSourceNotice,
         transitionContext: transitionContext ?? {},
-        transitionSettings: options.transitionSettings as NonNullable<
-          typeof options.transitionSettings
-        >,
+        transitionSettings: options.transitionSettings,
       })
 
     case "apply-look-from-url":
       try {
-        if (!options.transitionSettings) {
-          throw new Error("transitionSettings is required for URL look apply")
-        }
-
         applyLookText({
-          clearAppliedMarker: options.clearAppliedMarker ?? (() => {}),
+          clearAppliedMarker: options.clearAppliedMarker,
           notice: "[LOOK APPLIED FROM URL]",
           onErrorChange: setError,
           onSourceNoticeChange: setSourceNotice,
           text: command.text,
           transitionContext: transitionContext ?? {},
-          transitionSettings: options.transitionSettings as NonNullable<
-            typeof options.transitionSettings
-          >,
+          transitionSettings: options.transitionSettings,
         })
 
         options.clearLookHash?.()
