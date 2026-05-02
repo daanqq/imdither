@@ -105,6 +105,7 @@ export function App() {
   const lookHashAppliedRef = React.useRef(false)
   const [selectedLookRecipeId, setSelectedLookRecipeId] =
     React.useState("custom")
+  const lookRecipeInitRef = React.useRef(false)
   const aspectLabel = source
     ? formatAspectRatio(source.buffer.width, source.buffer.height)
     : formatAspectRatio(settings.resize.width, settings.resize.height)
@@ -121,14 +122,24 @@ export function App() {
     [lookRecipes]
   )
   const lookRecipeId =
-    selectedLookRecipeId !== "custom" &&
-    allLookRecipes.some(
-      (recipe) =>
-        recipe.id === selectedLookRecipeId &&
-        matchLookRecipe(settings, [recipe]) !== null
-    )
-      ? selectedLookRecipeId
-      : (matchLookRecipe(settings, allLookRecipes)?.id ?? "custom")
+    selectedLookRecipeId === "custom"
+      ? "custom"
+      : allLookRecipes.some(
+            (recipe) =>
+              recipe.id === selectedLookRecipeId &&
+              matchLookRecipe(settings, [recipe]) !== null
+          )
+        ? selectedLookRecipeId
+        : (matchLookRecipe(settings, allLookRecipes)?.id ?? "custom")
+
+  React.useEffect(() => {
+    if (lookRecipeInitRef.current) return
+    lookRecipeInitRef.current = true
+    const matched = matchLookRecipe(settings, allLookRecipes)
+    if (matched) {
+      setSelectedLookRecipeId(matched.id)
+    }
+  }, [])
   const {
     preview,
     previewRefiningPending,
@@ -470,10 +481,20 @@ export function App() {
 
   const handleSelectLookRecipe = React.useCallback(
     (id: string) => {
-      applyLookRecipe(id)
+      if (id !== "custom") {
+        applyLookRecipe(id)
+      }
       setSelectedLookRecipeId(id)
     },
     [applyLookRecipe]
+  )
+
+  const handleSaveLookRecipe = React.useCallback(
+    (name: string) => {
+      const recipe = saveLookRecipe(name)
+      handleSelectLookRecipe(recipe.id)
+    },
+    [saveLookRecipe, handleSelectLookRecipe]
   )
 
   const handleSettingsTransition = React.useCallback(
@@ -598,7 +619,7 @@ export function App() {
                 }
               }}
               onRenameLookRecipe={renameLookRecipe}
-              onSaveLookRecipe={saveLookRecipe}
+              onSaveLookRecipe={handleSaveLookRecipe}
               onSelectLookRecipe={handleSelectLookRecipe}
               onPasteLook={handlePasteLook}
               onPasteSettings={handlePasteSettings}

@@ -82,6 +82,7 @@ const POST_EFFECTS = [
 type LookRecipeOption = {
   id: string
   name: string
+  builtIn?: boolean
 }
 
 type StackTabProps = {
@@ -195,6 +196,7 @@ function LookRecipeBar({
   const [renaming, setRenaming] = React.useState(false)
   const [renameName, setRenameName] = React.useState("")
   const activeRecipe = recipes.find((recipe) => recipe.id === activeId)
+  const isBuiltIn = activeRecipe?.builtIn === true
 
   function handleRenameConfirm() {
     if (!renameName.trim() || !activeRecipe) return
@@ -267,7 +269,12 @@ function LookRecipeBar({
       </Popover>
       <Popover open={moreOpen} onOpenChange={handleMoreOpenChange}>
         <PopoverTrigger asChild>
-          <Button aria-label="Look recipe menu" size="icon" variant="ghost">
+          <Button
+            aria-label="Look recipe menu"
+            size="icon"
+            variant="ghost"
+            disabled={isBuiltIn}
+          >
             <MoreVerticalIcon className="size-4" />
           </Button>
         </PopoverTrigger>
@@ -294,7 +301,7 @@ function LookRecipeBar({
           ) : (
             <div className="grid gap-1">
               <Button
-                disabled={!activeRecipe}
+                disabled={!activeRecipe || isBuiltIn}
                 variant="ghost"
                 className="justify-start"
                 onClick={() => {
@@ -306,7 +313,7 @@ function LookRecipeBar({
                 Rename
               </Button>
               <Button
-                disabled={!activeRecipe}
+                disabled={!activeRecipe || isBuiltIn}
                 variant="ghost"
                 className="justify-start"
                 onClick={() =>
@@ -314,13 +321,6 @@ function LookRecipeBar({
                 }
               >
                 Delete
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() => onSelect("custom")}
-              >
-                Reset
               </Button>
             </div>
           )}
