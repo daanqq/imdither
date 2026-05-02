@@ -12,13 +12,11 @@ describe("InspectorPanel", () => {
     const markup = renderInspector()
 
     expect(markup.indexOf("Looks")).toBeLessThan(markup.indexOf("Adjust"))
-    expect(markup).toContain("Palette")
-    expect(markup).not.toContain("Output")
-    expect(markup).toContain("Recipe")
+    expect(markup).toContain("Output")
     expect(markup).toContain("Auto-Tune")
   })
 
-  it("keeps image output controls in Adjust and palette editing in a Drawer entry", () => {
+  it("keeps image output controls in Stack and palette editing in a Drawer entry", () => {
     const markup = renderInspector()
 
     expect(markup).toContain("Width")

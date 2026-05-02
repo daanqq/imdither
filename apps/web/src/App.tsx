@@ -105,7 +105,7 @@ export function App() {
   const lookHashAppliedRef = React.useRef(false)
   const [selectedLookRecipeId, setSelectedLookRecipeId] =
     React.useState("custom")
-  const lookRecipeInitRef = React.useRef(false)
+  const explicitCustomRef = React.useRef(false)
   const aspectLabel = source
     ? formatAspectRatio(source.buffer.width, source.buffer.height)
     : formatAspectRatio(settings.resize.width, settings.resize.height)
@@ -122,24 +122,16 @@ export function App() {
     [lookRecipes]
   )
   const lookRecipeId =
-    selectedLookRecipeId === "custom"
+    explicitCustomRef.current && selectedLookRecipeId === "custom"
       ? "custom"
-      : allLookRecipes.some(
+      : selectedLookRecipeId !== "custom" &&
+          allLookRecipes.some(
             (recipe) =>
               recipe.id === selectedLookRecipeId &&
               matchLookRecipe(settings, [recipe]) !== null
           )
         ? selectedLookRecipeId
         : (matchLookRecipe(settings, allLookRecipes)?.id ?? "custom")
-
-  React.useEffect(() => {
-    if (lookRecipeInitRef.current) return
-    lookRecipeInitRef.current = true
-    const matched = matchLookRecipe(settings, allLookRecipes)
-    if (matched) {
-      setSelectedLookRecipeId(matched.id)
-    }
-  }, [])
   const {
     preview,
     previewRefiningPending,
@@ -477,14 +469,19 @@ export function App() {
       transitionContext
     )
     setSelectedLookRecipeId("custom")
+    explicitCustomRef.current = true
   }, [editorSettingsCommandAdapter, transitionContext, transitionSettings])
 
   const handleSelectLookRecipe = React.useCallback(
     (id: string) => {
       if (id !== "custom") {
+        explicitCustomRef.current = false
         applyLookRecipe(id)
+        setSelectedLookRecipeId(id)
+      } else {
+        explicitCustomRef.current = true
+        setSelectedLookRecipeId("custom")
       }
-      setSelectedLookRecipeId(id)
     },
     [applyLookRecipe]
   )

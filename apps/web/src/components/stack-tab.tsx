@@ -1,13 +1,17 @@
 import {
+  DEFAULT_SETTINGS,
   DITHER_ALGORITHM_OPTIONS,
   EFFECT_DEFINITIONS,
   PRESET_PALETTES,
   getDitherAlgorithmOption,
+  type AlphaBackground,
   type BayerSize,
   type ColorDepth,
+  type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
   type MatchingMode,
+  type ResizeMode,
 } from "@workspace/core"
 import {
   closestCenter,
@@ -47,6 +51,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@workspace/ui/components/field"
 import { Slider } from "@workspace/ui/components/slider"
 import { Switch } from "@workspace/ui/components/switch"
 import {
@@ -56,15 +68,30 @@ import {
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  CopyIcon,
+  ClipboardIcon,
+  DownloadIcon,
+  FileInputIcon,
   GripVerticalIcon,
   MoreVerticalIcon,
+  PipetteIcon,
   PlusIcon,
+  RotateCcwIcon,
+  ShuffleIcon,
   Trash2Icon,
+  UploadIcon,
 } from "lucide-react"
 import * as React from "react"
 
+import { CommittedSliderField } from "@/components/committed-slider-field"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@workspace/ui/components/collapsible"
+import { getNextPaletteColor } from "@/lib/palette-add-color"
+import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
+import { getRandomDifferentValue } from "@/lib/random-options"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 
 const PRE_EFFECTS = [
@@ -91,14 +118,24 @@ type StackTabProps = {
   lookRecipeId: string
   lookRecipes: readonly LookRecipeOption[]
   paletteSelectValue: string
+  advancedOpen: boolean
+  resolutionAspectLabel: string
+  sourceWidth?: number
+  onAdvancedOpenChange: (open: boolean) => void
+  onCopyLook: () => void
   onCopyPaletteJson: () => void
+  onCopySettings: () => void
   onDeleteLookRecipe: (id: string) => void
   onExportPaletteGpl: () => void
   onExportPaletteJson: () => void
   onExtractPalette: (size: 2 | 4 | 8 | 16 | 32) => void
   onImportPaletteFile: (file: File) => void
   onImportPaletteFromClipboard: () => void
+  onPasteLook: () => void
+  onPasteSettings: () => void
   onRenameLookRecipe: (id: string, name: string) => void
+  onReset: () => void
+  onResolutionWidthChange: (width: number) => void
   onSaveLookRecipe: (name: string) => void
   onSelectLookRecipe: (id: string) => void
   onSettingsTransition: (transition: SettingsTransition) => void
@@ -110,9 +147,24 @@ export function StackTab({
   lookRecipeId,
   lookRecipes,
   paletteSelectValue,
+  advancedOpen,
+  resolutionAspectLabel,
+  sourceWidth,
+  onAdvancedOpenChange,
+  onCopyLook,
+  onCopyPaletteJson,
+  onCopySettings,
   onDeleteLookRecipe,
+  onExportPaletteGpl,
+  onExportPaletteJson,
   onExtractPalette,
+  onImportPaletteFile,
+  onImportPaletteFromClipboard,
+  onPasteLook,
+  onPasteSettings,
   onRenameLookRecipe,
+  onReset,
+  onResolutionWidthChange,
   onSaveLookRecipe,
   onSelectLookRecipe,
   onSettingsTransition,
@@ -121,6 +173,9 @@ export function StackTab({
   const postStages = settings.effectStack.filter((s) => s.kind === "post")
   const quantize = settings.effectStack.find((s) => s.kind === "quantize")
   const dither = settings.effectStack.find((s) => s.kind === "dither")
+  const [expandOutput, setExpandOutput] = React.useState(false)
+  const [expandTone, setExpandTone] = React.useState(false)
+  const [expandUtility, setExpandUtility] = React.useState(false)
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -132,6 +187,96 @@ export function StackTab({
         onSave={onSaveLookRecipe}
         onSelect={onSelectLookRecipe}
       />
+
+      {/* Output: resize, alpha flatten */}
+      <div className="min-w-0 rounded border border-border bg-background/30">
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center gap-1 px-2 py-1.5 text-left"
+          onClick={() => setExpandOutput(!expandOutput)}
+        >
+          {expandOutput ? (
+            <ChevronDownIcon className="size-3 shrink-0" />
+          ) : (
+            <ChevronRightIcon className="size-3 shrink-0" />
+          )}
+          <span className="min-w-0 truncate font-mono text-xs">Output</span>
+        </button>
+        {expandOutput ? (
+          <div className="border-t border-border px-2 py-1.5">
+            <NumberField
+              label="Width"
+              value={settings.resize.width}
+              description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
+              action={
+                sourceWidth ? (
+                  <Button
+                    aria-label="Reset width to source size"
+                    title="Reset width to source size"
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-2 font-mono text-xs"
+                    disabled={settings.resize.width === sourceWidth}
+                    onClick={() => onResolutionWidthChange(sourceWidth)}
+                  >
+                    <RotateCcwIcon data-icon="inline-start" />
+                    1x
+                  </Button>
+                ) : null
+              }
+              onChange={onResolutionWidthChange}
+            />
+            <FieldSet className="mt-1.5">
+              <FieldLegend variant="label">Resize Kernel</FieldLegend>
+              <ToggleGroup
+                type="single"
+                value={settings.resize.mode}
+                variant="outline"
+                className="w-full"
+                onValueChange={(value) => {
+                  if (value) {
+                    onSettingsTransition({
+                      type: "set-resize-mode",
+                      mode: value as ResizeMode,
+                    })
+                  }
+                }}
+              >
+                <ToggleGroupItem value="bilinear" className="flex-1">
+                  Bilinear
+                </ToggleGroupItem>
+                <ToggleGroupItem value="nearest" className="flex-1">
+                  Nearest
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </FieldSet>
+            <FieldSet className="mt-1.5">
+              <FieldLegend variant="label">Alpha Flatten</FieldLegend>
+              <ToggleGroup
+                type="single"
+                value={settings.alphaBackground}
+                variant="outline"
+                className="w-full"
+                onValueChange={(value) => {
+                  if (value) {
+                    onSettingsTransition({
+                      type: "set-alpha-background",
+                      alphaBackground: value as AlphaBackground,
+                    })
+                  }
+                }}
+              >
+                <ToggleGroupItem value="white" className="flex-1">
+                  White
+                </ToggleGroupItem>
+                <ToggleGroupItem value="black" className="flex-1">
+                  Black
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </FieldSet>
+          </div>
+        ) : null}
+      </div>
 
       <StackGroup
         label="Pre"
@@ -146,6 +291,133 @@ export function StackTab({
         onSettingsTransition={onSettingsTransition}
       />
 
+      {/* Tone: brightness, contrast, advanced */}
+      <div className="min-w-0 rounded border border-border bg-background/30">
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center gap-1 px-2 py-1.5 text-left"
+          onClick={() => setExpandTone(!expandTone)}
+        >
+          {expandTone ? (
+            <ChevronDownIcon className="size-3 shrink-0" />
+          ) : (
+            <ChevronRightIcon className="size-3 shrink-0" />
+          )}
+          <span className="min-w-0 truncate font-mono text-xs">Tone</span>
+        </button>
+        {expandTone ? (
+          <div className="border-t border-border px-2 py-1.5">
+            <CommittedSliderField
+              defaultValue={DEFAULT_SETTINGS.preprocess.brightness}
+              label="Brightness"
+              max={100}
+              min={-100}
+              step={1}
+              value={settings.preprocess.brightness}
+              onCommit={(brightness) =>
+                onSettingsTransition({
+                  type: "set-preprocess",
+                  patch: { brightness },
+                })
+              }
+            />
+            <CommittedSliderField
+              defaultValue={DEFAULT_SETTINGS.preprocess.contrast}
+              label="Contrast"
+              max={100}
+              min={-100}
+              step={1}
+              value={settings.preprocess.contrast}
+              onCommit={(contrast) =>
+                onSettingsTransition({
+                  type: "set-preprocess",
+                  patch: { contrast },
+                })
+              }
+            />
+            <Collapsible
+              className="min-w-0 overflow-hidden"
+              open={advancedOpen}
+              onOpenChange={onAdvancedOpenChange}
+            >
+              <div className="flex items-start justify-between gap-3 border-t border-border pt-2">
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Advanced</FieldLabel>
+                  <FieldDescription>
+                    Color mode, gamma, invert.
+                  </FieldDescription>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button size="sm" variant="ghost">
+                    {advancedOpen ? "Close" : "Open"}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="flex min-w-0 flex-col gap-3 overflow-hidden pt-3">
+                <FieldSet>
+                  <FieldLegend variant="label">Color Mode</FieldLegend>
+                  <ToggleGroup
+                    type="single"
+                    value={settings.preprocess.colorMode}
+                    variant="outline"
+                    className="w-full"
+                    onValueChange={(value) => {
+                      if (value) {
+                        onSettingsTransition({
+                          type: "set-color-mode",
+                          colorMode: value as ColorMode,
+                        })
+                      }
+                    }}
+                  >
+                    <ToggleGroupItem value="color-preserve" className="flex-1">
+                      Color
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="grayscale-first" className="flex-1">
+                      Gray
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </FieldSet>
+                <CommittedSliderField
+                  defaultValue={DEFAULT_SETTINGS.preprocess.gamma}
+                  label="Gamma"
+                  max={3}
+                  min={0.2}
+                  step={0.05}
+                  value={settings.preprocess.gamma}
+                  onCommit={(gamma) =>
+                    onSettingsTransition({
+                      type: "set-preprocess",
+                      patch: { gamma },
+                    })
+                  }
+                />
+                <Field orientation="horizontal">
+                  <FieldContent>
+                    <FieldLabel htmlFor="invert">
+                      Invert Before Palette
+                    </FieldLabel>
+                    <FieldDescription>
+                      Applies after tone preprocessing.
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id="invert"
+                    checked={settings.preprocess.invert}
+                    onCheckedChange={(invert) =>
+                      onSettingsTransition({
+                        type: "set-preprocess",
+                        patch: { invert },
+                      })
+                    }
+                  />
+                </Field>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        ) : null}
+      </div>
+
       <StackGroup
         label="Core"
         stages={[
@@ -155,7 +427,12 @@ export function StackTab({
         activePaletteColors={activePaletteColors}
         paletteSelectValue={paletteSelectValue}
         settings={settings}
+        onCopyPaletteJson={onCopyPaletteJson}
+        onExportPaletteGpl={onExportPaletteGpl}
+        onExportPaletteJson={onExportPaletteJson}
         onExtractPalette={onExtractPalette}
+        onImportPaletteFile={onImportPaletteFile}
+        onImportPaletteFromClipboard={onImportPaletteFromClipboard}
         onSettingsTransition={onSettingsTransition}
       />
 
@@ -171,6 +448,72 @@ export function StackTab({
         }
         onSettingsTransition={onSettingsTransition}
       />
+
+      {/* Utility actions */}
+      <div className="min-w-0 rounded border border-border bg-background/30">
+        <button
+          type="button"
+          className="flex w-full min-w-0 items-center gap-1 px-2 py-1.5 text-left"
+          onClick={() => setExpandUtility(!expandUtility)}
+        >
+          {expandUtility ? (
+            <ChevronDownIcon className="size-3 shrink-0" />
+          ) : (
+            <ChevronRightIcon className="size-3 shrink-0" />
+          )}
+          <span className="min-w-0 truncate font-mono text-xs">Utility</span>
+        </button>
+        {expandUtility ? (
+          <div className="border-t border-border px-2 py-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <FieldLabel>Look</FieldLabel>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={onCopyLook}
+              >
+                <ClipboardIcon data-icon="inline-start" />
+                Copy look link
+              </Button>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={onPasteLook}
+              >
+                <UploadIcon data-icon="inline-start" />
+                Paste look link
+              </Button>
+            </div>
+            <div className="mt-1.5 flex min-w-0 flex-col gap-1.5">
+              <FieldLabel>Settings JSON</FieldLabel>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={onCopySettings}
+              >
+                <ClipboardIcon data-icon="inline-start" />
+                Copy settings
+              </Button>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={onPasteSettings}
+              >
+                <UploadIcon data-icon="inline-start" />
+                Paste settings
+              </Button>
+              <Button
+                variant="destructive"
+                className="justify-start"
+                onClick={onReset}
+              >
+                <RotateCcwIcon data-icon="inline-start" />
+                Defaults
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -316,9 +659,11 @@ function LookRecipeBar({
                 disabled={!activeRecipe || isBuiltIn}
                 variant="ghost"
                 className="justify-start"
-                onClick={() =>
-                  activeRecipe ? onDelete(activeRecipe.id) : undefined
-                }
+                onClick={() => {
+                  if (!activeRecipe) return
+                  onDelete(activeRecipe.id)
+                  setMoreOpen(false)
+                }}
               >
                 Delete
               </Button>
@@ -389,6 +734,7 @@ function StackGroup({
   onExportPaletteGpl,
   onExportPaletteJson,
   onExtractPalette,
+  onImportPaletteFile,
   onImportPaletteFromClipboard,
   onSettingsTransition,
 }: {
@@ -402,6 +748,7 @@ function StackGroup({
   onExportPaletteGpl?: () => void
   onExportPaletteJson?: () => void
   onExtractPalette?: (size: 2 | 4 | 8 | 16 | 32) => void
+  onImportPaletteFile?: (file: File) => void
   onImportPaletteFromClipboard?: () => void
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
@@ -449,6 +796,7 @@ function StackGroup({
       onExportPaletteGpl={onExportPaletteGpl}
       onExportPaletteJson={onExportPaletteJson}
       onExtractPalette={onExtractPalette}
+      onImportPaletteFile={onImportPaletteFile}
       onImportPaletteFromClipboard={onImportPaletteFromClipboard}
       onSettingsTransition={onSettingsTransition}
     />
@@ -503,6 +851,7 @@ function StageRow({
   onExportPaletteGpl,
   onExportPaletteJson,
   onExtractPalette,
+  onImportPaletteFile,
   onImportPaletteFromClipboard,
   onSettingsTransition,
 }: {
@@ -518,6 +867,7 @@ function StageRow({
   onExportPaletteGpl?: () => void
   onExportPaletteJson?: () => void
   onExtractPalette?: (size: 2 | 4 | 8 | 16 | 32) => void
+  onImportPaletteFile?: (file: File) => void
   onImportPaletteFromClipboard?: () => void
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
@@ -628,6 +978,7 @@ function StageRow({
               onExportPaletteGpl={onExportPaletteGpl}
               onExportPaletteJson={onExportPaletteJson}
               onExtractPalette={onExtractPalette}
+              onImportPaletteFile={onImportPaletteFile}
               onImportPaletteFromClipboard={onImportPaletteFromClipboard}
               onSettingsTransition={onSettingsTransition}
             />
@@ -723,6 +1074,7 @@ function CoreParamsEditor({
   onExportPaletteGpl,
   onExportPaletteJson,
   onExtractPalette,
+  onImportPaletteFile,
   onImportPaletteFromClipboard,
   onSettingsTransition,
 }: {
@@ -734,33 +1086,55 @@ function CoreParamsEditor({
   onExportPaletteGpl?: () => void
   onExportPaletteJson?: () => void
   onExtractPalette?: (size: 2 | 4 | 8 | 16 | 32) => void
+  onImportPaletteFile?: (file: File) => void
   onImportPaletteFromClipboard?: () => void
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
   if (stageKind === "quantize") {
     return (
       <div className="grid min-w-0 gap-2">
-        <ParamSelect
-          label="Palette"
-          value={paletteSelectValue}
-          options={[
-            { id: "custom", label: "Custom" },
-            ...PRESET_PALETTES.map((palette) => ({
-              id: palette.id,
-              label: palette.name,
-            })),
-          ]}
-          onValueChange={(paletteId) => {
-            if (paletteId === "custom") {
+        <div className="flex min-w-0 items-center gap-1">
+          <ParamSelect
+            label="Palette"
+            value={paletteSelectValue}
+            options={[
+              { id: "custom", label: "Custom" },
+              ...PRESET_PALETTES.map((palette) => ({
+                id: palette.id,
+                label: palette.name,
+              })),
+            ]}
+            onValueChange={(paletteId) => {
+              if (paletteId === "custom") {
+                onSettingsTransition({
+                  type: "set-custom-palette",
+                  colors: activePaletteColors,
+                })
+              } else {
+                onSettingsTransition({ type: "set-palette", paletteId })
+              }
+            }}
+          />
+          <Button
+            aria-label="Random palette"
+            title="Random palette"
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() =>
               onSettingsTransition({
-                type: "set-custom-palette",
-                colors: activePaletteColors,
+                type: "set-palette",
+                paletteId: getRandomDifferentValue(
+                  PRESET_PALETTES.map((preset) => preset.id),
+                  settings.paletteId
+                ),
               })
-            } else {
-              onSettingsTransition({ type: "set-palette", paletteId })
             }
-          }}
-        />
+          >
+            <ShuffleIcon className="size-3" />
+          </Button>
+        </div>
         <ColorDepthControl
           value={settings.colorDepth}
           onChange={(colorDepth) =>
@@ -789,16 +1163,58 @@ function CoreParamsEditor({
             {activePaletteColors.slice(0, 32).map((color, index) => (
               <span
                 key={`${color}-${index}`}
-                className="aspect-square border border-border"
+                className="relative aspect-square min-w-0 overflow-hidden border border-border"
                 style={{ backgroundColor: color }}
-              />
+              >
+                <PaletteColorInput
+                  aria-label={`Pick palette swatch color ${index + 1}`}
+                  className="palette-color-input absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  color={color}
+                  onCommit={(nextColor) =>
+                    onSettingsTransition({
+                      type: "set-custom-palette",
+                      colors: activePaletteColors.map(
+                        (currentColor, colorIndex) =>
+                          colorIndex === index ? nextColor : currentColor
+                      ),
+                    })
+                  }
+                />
+              </span>
             ))}
           </div>
-          <StackPaletteEditorDrawer
+          <PaletteEditorDrawer
+            colors={activePaletteColors}
+            onAddColor={() =>
+              onSettingsTransition({
+                type: "set-custom-palette",
+                colors: [
+                  getNextPaletteColor(activePaletteColors),
+                  ...activePaletteColors,
+                ],
+              })
+            }
+            onColorChange={(index, color) =>
+              onSettingsTransition({
+                type: "set-custom-palette",
+                colors: activePaletteColors.map((currentColor, colorIndex) =>
+                  colorIndex === index ? color : currentColor
+                ),
+              })
+            }
+            onDeleteColor={(index) =>
+              onSettingsTransition({
+                type: "set-custom-palette",
+                colors: activePaletteColors.filter(
+                  (_color, colorIndex) => colorIndex !== index
+                ),
+              })
+            }
             onCopyPaletteJson={onCopyPaletteJson}
             onExportPaletteGpl={onExportPaletteGpl}
             onExportPaletteJson={onExportPaletteJson}
             onExtractPalette={onExtractPalette}
+            onImportPaletteFile={onImportPaletteFile}
             onImportPaletteFromClipboard={onImportPaletteFromClipboard}
           />
         </div>
@@ -810,20 +1226,41 @@ function CoreParamsEditor({
 
   return (
     <div className="grid min-w-0 gap-2">
-      <ParamSelect
-        label="Algorithm"
-        value={settings.algorithm}
-        options={DITHER_ALGORITHM_OPTIONS.map((algorithm) => ({
-          id: algorithm.id,
-          label: algorithm.label,
-        }))}
-        onValueChange={(algorithm) =>
-          onSettingsTransition({
-            type: "set-algorithm",
-            algorithm: algorithm as DitherAlgorithm,
-          })
-        }
-      />
+      <div className="flex min-w-0 items-center gap-1">
+        <ParamSelect
+          label="Algorithm"
+          value={settings.algorithm}
+          options={DITHER_ALGORITHM_OPTIONS.map((algorithm) => ({
+            id: algorithm.id,
+            label: algorithm.label,
+          }))}
+          onValueChange={(algorithm) =>
+            onSettingsTransition({
+              type: "set-algorithm",
+              algorithm: algorithm as DitherAlgorithm,
+            })
+          }
+        />
+        <Button
+          aria-label="Random algorithm"
+          title="Random algorithm"
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={() =>
+            onSettingsTransition({
+              type: "set-algorithm",
+              algorithm: getRandomDifferentValue(
+                DITHER_ALGORITHM_OPTIONS.map((algorithm) => algorithm.id),
+                settings.algorithm
+              ),
+            })
+          }
+        >
+          <ShuffleIcon className="size-3" />
+        </Button>
+      </div>
       {selectedAlgorithm.capabilities.bayerSize ? (
         <div className="grid gap-1">
           <span className="font-mono text-[10px] text-muted-foreground">
@@ -860,23 +1297,41 @@ function CoreParamsEditor({
   )
 }
 
-function StackPaletteEditorDrawer({
+function PaletteEditorDrawer({
+  colors,
+  onAddColor,
+  onColorChange,
+  onDeleteColor,
   onCopyPaletteJson,
   onExportPaletteGpl,
   onExportPaletteJson,
   onExtractPalette,
+  onImportPaletteFile,
   onImportPaletteFromClipboard,
 }: {
+  colors: string[]
+  onAddColor: () => void
+  onColorChange: (index: number, color: string) => void
+  onDeleteColor: (index: number) => void
   onCopyPaletteJson?: () => void
   onExportPaletteGpl?: () => void
   onExportPaletteJson?: () => void
   onExtractPalette?: (size: 2 | 4 | 8 | 16 | 32) => void
+  onImportPaletteFile?: (file: File) => void
   onImportPaletteFromClipboard?: () => void
 }) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const canAddColor = colors.length < 32
+  const canDeleteColor = colors.length > 2
+  const extractionSizeValue = [2, 4, 8, 16, 32].includes(colors.length)
+    ? String(colors.length)
+    : "8"
+
   return (
     <ResponsiveDrawer>
       <DrawerTrigger asChild>
         <Button type="button" variant="outline" className="justify-start">
+          <PipetteIcon data-icon="inline-start" />
           Edit colors
         </Button>
       </DrawerTrigger>
@@ -884,29 +1339,212 @@ function StackPaletteEditorDrawer({
         <DrawerHeader>
           <DrawerTitle>Custom Palette Editor</DrawerTitle>
           <DrawerDescription>
-            Add, extract, copy, import, or export custom palette colors.
+            Add, edit, copy, or export custom palette colors.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="grid gap-2 p-3">
-          <Button variant="outline" onClick={() => onExtractPalette?.(8)}>
-            Extract palette
-          </Button>
-          <Button variant="outline" onClick={onImportPaletteFromClipboard}>
-            Paste palette
-          </Button>
-          <Button variant="outline" onClick={onCopyPaletteJson}>
-            <CopyIcon data-icon="inline-start" />
-            Copy palette JSON
-          </Button>
-          <Button variant="outline" onClick={onExportPaletteJson}>
-            Export JSON
-          </Button>
-          <Button variant="outline" onClick={onExportPaletteGpl}>
-            Export GPL
-          </Button>
+        <div className="min-h-0 overflow-y-auto p-3">
+          <FieldSet className="gap-2">
+            <FieldLegend variant="label">Custom Palette</FieldLegend>
+            <div className="-mt-1 flex min-w-0 flex-col gap-1.5">
+              <Select
+                value={extractionSizeValue}
+                onValueChange={(size) =>
+                  onExtractPalette?.(Number(size) as 2 | 4 | 8 | 16 | 32)
+                }
+              >
+                <SelectTrigger
+                  aria-label="Extract palette size"
+                  className="h-8 w-full min-w-0 justify-between overflow-hidden rounded-lg border-border bg-background py-0 pr-2 pl-2.5 font-sans text-sm font-medium hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+                >
+                  <PipetteIcon className="size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-left">
+                    Extract palette
+                  </span>
+                  <span className="flex h-full shrink-0 items-center gap-2 border-l border-border px-3 font-sans text-sm font-medium text-foreground dark:border-input">
+                    <SelectValue />
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {[2, 4, 8, 16, 32].map((size) => (
+                      <SelectItem
+                        key={size}
+                        value={String(size)}
+                        onPointerUp={() => {
+                          if (String(size) === extractionSizeValue) {
+                            onExtractPalette?.(size as 2 | 4 | 8 | 16 | 32)
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (
+                            (event.key === "Enter" || event.key === " ") &&
+                            String(size) === extractionSizeValue
+                          ) {
+                            onExtractPalette?.(size as 2 | 4 | 8 | 16 | 32)
+                          }
+                        }}
+                      >
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button
+                disabled={!canAddColor}
+                variant="outline"
+                onClick={onAddColor}
+              >
+                <PlusIcon data-icon="inline-start" />
+                Add color
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FileInputIcon data-icon="inline-start" />
+                Import file
+              </Button>
+              <Button variant="outline" onClick={() => onCopyPaletteJson?.()}>
+                <ClipboardIcon data-icon="inline-start" />
+                Copy palette JSON
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => onImportPaletteFromClipboard?.()}
+              >
+                <UploadIcon data-icon="inline-start" />
+                Paste palette
+              </Button>
+              <Button variant="outline" onClick={() => onExportPaletteJson?.()}>
+                <DownloadIcon data-icon="inline-start" />
+                Export JSON
+              </Button>
+              <Button variant="outline" onClick={() => onExportPaletteGpl?.()}>
+                <DownloadIcon data-icon="inline-start" />
+                Export GPL
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {colors.map((color, index) => (
+                <div
+                  key={`${color}-${index}`}
+                  className="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)_2rem] overflow-hidden border border-input"
+                >
+                  <PaletteColorInput
+                    aria-label={`Pick palette swatch color ${index + 1}`}
+                    className="palette-color-input h-8 rounded-none border-0 p-0"
+                    color={color}
+                    onCommit={(nextColor) => onColorChange(index, nextColor)}
+                  />
+                  <PaletteHexInput
+                    color={color}
+                    index={index}
+                    className="h-8 rounded-none border-y-0 border-l border-input font-mono"
+                    onColorChange={onColorChange}
+                  />
+                  <Button
+                    aria-label={`Delete palette swatch color ${index + 1}`}
+                    className="h-8 rounded-none border-0 border-input p-0"
+                    disabled={!canDeleteColor}
+                    size="icon"
+                    type="button"
+                    variant="outline"
+                    onClick={() => onDeleteColor(index)}
+                  >
+                    <Trash2Icon />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <input
+              ref={fileInputRef}
+              accept=".hex,.gpl,.json,text/plain,application/json"
+              className="sr-only"
+              type="file"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0]
+
+                if (file) {
+                  onImportPaletteFile?.(file)
+                }
+
+                event.currentTarget.value = ""
+              }}
+            />
+          </FieldSet>
         </div>
       </DrawerContent>
     </ResponsiveDrawer>
+  )
+}
+
+function PaletteColorInput({
+  color,
+  onCommit,
+  ...props
+}: Omit<React.ComponentProps<typeof Input>, "defaultValue" | "type"> & {
+  color: string
+  onCommit: (color: string) => void
+}) {
+  return (
+    <Input
+      type="color"
+      defaultValue={color}
+      onBlur={(event) => {
+        if (event.currentTarget.value !== color) {
+          onCommit(event.currentTarget.value)
+        }
+      }}
+      {...props}
+    />
+  )
+}
+
+function PaletteHexInput({
+  className,
+  color,
+  index,
+  onColorChange,
+}: {
+  className?: string
+  color: string
+  index: number
+  onColorChange: (index: number, color: string) => void
+}) {
+  function commitDraft(input: HTMLInputElement) {
+    const draft = input.value.trim()
+    const normalizedDraft = normalizeHexColorDraft(draft)
+
+    if (!draft || !normalizedDraft) {
+      input.value = color
+      return
+    }
+
+    input.value = normalizedDraft
+
+    if (normalizedDraft !== color) {
+      onColorChange(index, normalizedDraft)
+    }
+  }
+
+  return (
+    <Input
+      key={color}
+      aria-label={`Hex color ${index + 1}`}
+      className={className}
+      defaultValue={color}
+      spellCheck={false}
+      onBlur={(event) => commitDraft(event.currentTarget)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault()
+          event.currentTarget.blur()
+        }
+      }}
+    />
   )
 }
 
@@ -1181,5 +1819,65 @@ function ParamField({
         }}
       />
     </div>
+  )
+}
+
+function NumberField({
+  action,
+  description,
+  label,
+  onChange,
+  value,
+}: {
+  action?: React.ReactNode
+  description?: React.ReactNode
+  label: string
+  value: number
+  onChange: (value: number) => void
+}) {
+  const id = React.useId()
+
+  function commitDraft(input: HTMLInputElement) {
+    const nextValue = Number(input.value)
+
+    if (!Number.isFinite(nextValue) || nextValue < 1) {
+      input.value = String(value)
+      return
+    }
+
+    const roundedValue = Math.round(nextValue)
+    input.value = String(roundedValue)
+
+    if (roundedValue !== value) {
+      onChange(roundedValue)
+    }
+  }
+
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div
+        className={action ? "grid grid-cols-[minmax(0,1fr)_auto] gap-2" : ""}
+      >
+        <Input
+          key={value}
+          id={id}
+          defaultValue={value}
+          inputMode="numeric"
+          max={4096}
+          min={1}
+          type="number"
+          onBlur={(event) => commitDraft(event.currentTarget)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              event.currentTarget.blur()
+            }
+          }}
+        />
+        {action}
+      </div>
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
+    </Field>
   )
 }

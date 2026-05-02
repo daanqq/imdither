@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
+import * as React from "react"
 import { DEFAULT_SETTINGS, PRESET_PALETTES } from "@workspace/core"
 
 import { StackTab } from "./stack-tab"
@@ -8,28 +9,40 @@ function renderStackTab(
   overrides: Partial<Parameters<typeof StackTab>[0]> = {}
 ) {
   const onTransition = vi.fn()
-
-  const element = StackTab({
+  const props = {
+    advancedOpen: false,
     settings: DEFAULT_SETTINGS,
     activePaletteColors: PRESET_PALETTES[0].colors.map((color) => color.hex),
     lookRecipeId: "custom",
     lookRecipes: [],
     paletteSelectValue: DEFAULT_SETTINGS.paletteId,
+    resolutionAspectLabel: "1:1",
+    onAdvancedOpenChange: vi.fn(),
+    onCopyLook: vi.fn(),
     onCopyPaletteJson: vi.fn(),
+    onCopySettings: vi.fn(),
     onDeleteLookRecipe: vi.fn(),
     onExportPaletteGpl: vi.fn(),
     onExportPaletteJson: vi.fn(),
     onExtractPalette: vi.fn(),
     onImportPaletteFile: vi.fn(),
     onImportPaletteFromClipboard: vi.fn(),
+    onPasteLook: vi.fn(),
+    onPasteSettings: vi.fn(),
     onRenameLookRecipe: vi.fn(),
+    onReset: vi.fn(),
+    onResolutionWidthChange: vi.fn(),
     onSaveLookRecipe: vi.fn(),
     onSelectLookRecipe: vi.fn(),
     onSettingsTransition: onTransition,
     ...overrides,
-  })
+  }
 
-  return { element, markup: renderToStaticMarkup(element), onTransition }
+  return {
+    element: React.createElement(StackTab, props),
+    markup: renderToStaticMarkup(React.createElement(StackTab, props)),
+    onTransition,
+  }
 }
 
 describe("StackTab", () => {
