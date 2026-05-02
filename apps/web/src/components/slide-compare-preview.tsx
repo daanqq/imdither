@@ -148,7 +148,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         )
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- viewport read via viewportRef
+    // oxlint-disable-next-line react/exhaustive-deps -- viewport read via viewportRef
     [frameHeight, frameWidth, viewportBox]
   )
 

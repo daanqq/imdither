@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "lint": "eslint",
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx}\"",
+    "lint": "oxlint . --disable-nested-config --config ../../.oxlintrc.json",
+    "format": "oxfmt . --write --config ../../.oxfmtrc.json",
+    "format:check": "oxfmt . --check --config ../../.oxfmtrc.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -30,12 +30,6 @@
     "@types/node": "^25.1.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "@eslint/js": "^9.39.2",
-    "eslint": "^9.39.2",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^17.2.0",
-    "typescript-eslint": "^8.54.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
   },

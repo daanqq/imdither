@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx}\"",
+    "format": "oxfmt . --write --config ../../.oxfmtrc.json",
+    "format:check": "oxfmt . --check --config ../../.oxfmtrc.json",
     "perf:baseline": "bun scripts/performance-baseline.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
