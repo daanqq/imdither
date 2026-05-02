@@ -61,10 +61,16 @@ feature shipped; update its status and keep this index current.
 
 ## Local Scratch PRDs
 
-| Status     | PRD                                                                                   | Scope                                                             |
-| ---------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| done       | [Preview Viewport Interaction](../.scratch/preview-viewport-interaction/PRD.md)       | Session-style outcome module for Preview Viewport gesture policy. |
-| superseded | [Viewport Interaction Controller](../.scratch/viewport-interaction-controller/PRD.md) | Replaced by Preview Viewport Interaction.                         |
+| Status     | PRD                                                                                       | Scope                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| done       | [Export Action Application](../.scratch/export-action-application/PRD.md)                 | Browser-side seam for applying an Export Action to editor runtime.    |
+| done       | [Export Action Dependency Hardening](../.scratch/export-action-dependency-hardening/PRD.md) | Required Export Job dependency for loaded-source Export Actions.     |
+| done       | [Source Intake Application Command](../.scratch/source-intake-application-command/PRD.md)   | Source Load Command and Runtime Adapter deepening.                   |
+| done       | [App Shell Command Seams](../.scratch/app-shell-command-seams/PRD.md)                     | Clipboard Settings, Palette Action, Editor Settings Command, and Auto-Tune Apply applications. |
+| done       | [Preview Viewport Interaction](../.scratch/preview-viewport-interaction/PRD.md)           | Session-style outcome module for Preview Viewport gesture policy.     |
+| done       | [Preview Presentation Surface Interface](../.scratch/preview-presentation-surface-interface/PRD.md) | Narrower semantic surface interface for preview adapters.        |
+| done       | [Preview Stage Shell Modules](../.scratch/preview-stage-shell-modules/PRD.md)             | Deep submodules for Preview Stage controls, drawer, action strip, overlays, and display measurement. |
+| superseded | [Viewport Interaction Controller](../.scratch/viewport-interaction-controller/PRD.md)     | Replaced by Preview Viewport Interaction.                             |
 
 ## Maintenance Rules
 

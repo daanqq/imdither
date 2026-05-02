@@ -401,7 +401,8 @@ The editor keeps heavy local image work behind explicit async boundaries:
 - Source Intake handles source loading, rejection, and the Auto-Tune analysis sample.
 - Source Intake Application owns applying accepted/rejected intake results to
   React source state, Preview Cycle reset, Preview Viewport reset, Output Size
-  transition, Source Notice, status, and error state.
+  transition, Source Notice, status, and error state through a Source Intake
+  Runtime Adapter behind a single Source Load Command interface.
 - Output Size Policy owns web-facing Output Cap decisions and copy: Source Image
   rejection, accepted-source auto-size recommendations, Output Size clamp
   notices, and source rejection messages. Core still owns the numeric cap math.
@@ -450,6 +451,13 @@ Rules:
 - filenames use the selected format extension.
 
 The visible export action is format-neutral: `Export`.
+
+Export orchestration is owned by the Export Action Application: the browser-side
+seam that applies an Export Action through a small command interface and runtime
+adapter. The Export Layer remains focused on Browser Encoder behavior (Pixel
+Buffer to Blob). An Export Action without a current Source Image is a safe no-op.
+The App Shell no longer owns Export Job ordering, Browser Encoder calls,
+filename generation, metadata updates, status changes, or error handling.
 
 ### 8.13 Metadata
 
@@ -594,29 +602,49 @@ Requirements:
 The web app owns browser-specific and React-specific layers:
 
 - Source Intake
-- Source Intake Application
+- Source Intake Application (deepened with Source Load Command and Runtime Adapter)
 - Output Size Policy
 - Clipboard Settings Adapter
+- Clipboard Settings Application
 - Editor Settings Transition Module
+- Editor Settings Command Application
 - Settings History
+- Palette Action Application
 - Processing Jobs
 - Preview Cycle
 - Worker Client
+- Auto-Tune Worker Client
 - Preview Stage
+- Preview Surface Controls
+- Export Drawer Content
+- Preview Action Strip
+- Preview Status Overlays
+- Preview Display Measurement
 - Preview Presentation Module
+- Preview Presentation Surface Interface
+- Preview Presentation Core
+- Preview Presentation Shell
+- Preview Viewport Interaction
 - Auto-Tune Panel
+- Auto-Tune Apply Application
 - Auto-Tune recommendation hook and bundled demo recommendation seed
 - Slide Compare Preview Module
 - Preview Viewport geometry
 - Pixel Inspector
 - Preview Frame and Screen Preview sizing
-- Export Image layer
+- Export Layer
+- Export Action Application
 - editor store persistence
 
 These modules should expose small contracts and avoid pushing domain policy into
 broad React components. Preview Stage passes product state into Preview
 Presentation instead of choosing preview surface implementations or precomputing
 per-mode display geometry.
+
+The App Shell composes command applications (Clipboard Settings, Palette Action,
+Editor Settings Command, Auto-Tune Apply, Source Intake, Export Action) rather
+than owning their workflow ordering, side effects, error handling, or notice
+reporting directly.
 
 ### 10.6 State Management
 
@@ -785,7 +813,29 @@ Explicitly out:
 ## 14. Implemented PRD Modules
 
 The current product contract is informed by the implemented feature PRDs listed
-in [PRD Index](prd-index.md).
+in [PRD Index](prd-index.md) and the local scratch PRDs that have reached
+done status.
+
+Key architecture PRDs that deepened browser-side seams:
+
+- **Export Action Application** — browser-side seam that owns Export Action
+  orchestration: Export Job, Browser Encoder, Export File download, metadata,
+  status, and error handling through a runtime adapter.
+- **Source Intake Application Command** — deepened Source Intake Application
+  around a single Source Load Command interface and Source Intake Runtime
+  Adapter so the App Shell no longer owns source-load ordering.
+- **App Shell Command Seams** — extracted Clipboard Settings Application,
+  Palette Action Application, Editor Settings Command Application, and
+  Auto-Tune Apply Application from App Shell orchestration.
+- **Preview Viewport Interaction** — session-style outcome module that owns
+  Preview Viewport gesture policy: wheel zoom, Manual View pan, Touch Pinch
+  Zoom, pointer capture, live viewport updates, and commit-on-release.
+- **Preview Presentation Surface Interface** — narrowed the surface interface
+  around semantic inputs so surface adapters provide product inputs instead
+  of implementation wiring.
+- **Preview Stage Shell Modules** — extracted Preview Surface Controls, Export
+  Drawer Content, Preview Action Strip, Preview Status Overlays, and Preview
+  Display Measurement into dedicated modules.
 
 Feature PRDs are subordinate detail documents. This root PRD should stay aligned
 with their implemented contracts, [CONTEXT.md](../CONTEXT.md), and the current
