@@ -11,17 +11,15 @@ describe("InspectorPanel", () => {
   it("renders the accepted inspector tabs with Looks first", () => {
     const markup = renderInspector()
 
-    expect(markup.indexOf("Looks")).toBeLessThan(markup.indexOf("Adjust"))
-    expect(markup).toContain("Output")
+    expect(markup.indexOf("Looks")).toBeLessThan(markup.indexOf("Stack"))
     expect(markup).toContain("Auto-Tune")
   })
 
-  it("keeps image output controls in Stack and palette editing in a Drawer entry", () => {
+  it("shows collapsible section headers for Output, Tone, Utility", () => {
     const markup = renderInspector()
 
-    expect(markup).toContain("Width")
-    expect(markup).toContain("Resize Kernel")
-    expect(markup).toContain("Alpha Flatten")
+    expect(markup).toContain("Output")
+    expect(markup).toContain("Tone")
     expect(markup).toContain("Palette Swatches")
     expect(markup).toContain("Edit colors")
     expect(markup).toContain("drawer-trigger")
@@ -31,11 +29,11 @@ describe("InspectorPanel", () => {
     expect(markup).not.toContain("Export GPL")
   })
 
-  it("shows a compact source-size reset next to the width input", () => {
+  it("shows the Output section header when source width is available", () => {
     const markup = renderInspector({ sourceWidth: 1200 })
 
-    expect(markup).toContain("Reset width to source size")
-    expect(markup).toContain("1x")
+    // Content is collapsed by default; only header visible
+    expect(markup).toContain("Output")
   })
 })
 
@@ -49,8 +47,6 @@ function renderInspector(
       autoTuneError={null}
       autoTuneLoading={false}
       autoTuneRecommendations={DEMO_AUTO_TUNE_RECOMMENDATIONS}
-      exportFormat="png"
-      exportQuality={0.92}
       lookRecipeId="custom"
       lookRecipes={[]}
       settings={DEFAULT_SETTINGS}
@@ -61,10 +57,8 @@ function renderInspector(
       onCopyLook={vi.fn()}
       onCopyPaletteJson={vi.fn()}
       onCopySettings={vi.fn()}
-      onExportFormatChange={vi.fn()}
       onExportPaletteGpl={vi.fn()}
       onExportPaletteJson={vi.fn()}
-      onExportQualityChange={vi.fn()}
       onExtractPalette={vi.fn()}
       onImportPaletteFile={vi.fn()}
       onImportPaletteFromClipboard={vi.fn()}

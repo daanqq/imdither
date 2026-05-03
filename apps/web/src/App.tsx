@@ -590,8 +590,6 @@ export function App() {
               autoTuneError={autoTuneError}
               autoTuneLoading={isAutoTuneLoading}
               autoTuneRecommendations={autoTuneRecommendations}
-              exportFormat={exportFormat}
-              exportQuality={exportQuality}
               lookRecipeId={lookRecipeId}
               lookRecipes={allLookRecipes}
               settings={settings}
@@ -602,10 +600,8 @@ export function App() {
               onCopyLook={handleCopyLook}
               onCopySettings={handleCopySettings}
               onCopyPaletteJson={handleCopyPaletteJson}
-              onExportFormatChange={setExportFormat}
               onExportPaletteGpl={handleExportPaletteGpl}
               onExportPaletteJson={handleExportPaletteJson}
-              onExportQualityChange={setExportQuality}
               onExtractPalette={handleExtractPalette}
               onImportPaletteFile={handleImportPaletteFile}
               onImportPaletteFromClipboard={handleImportPaletteFromClipboard}
