@@ -12,9 +12,9 @@ controls.
 
 ## Outcome
 
-Add an Inspector `Stack` tab between `Looks` and `Adjust`.
+Add an Inspector `Manual` tab after `Looks`.
 
-The Stack tab shows grouped Effect Stages with compact enable controls, editable
+The Manual tab shows grouped Effect Stages with compact enable controls, editable
 Core stage mirrors for palette and dither controls, handle-only drag reorder
 inside `pre` and `post`, and inline parameter controls for expanded optional
 stages. The Preview remains the primary surface and existing controls remain
@@ -22,8 +22,8 @@ available for compatibility until a later tab-retirement slice.
 
 ## Requirements
 
-1. Inspector tabs include `Stack` between `Looks` and `Adjust`.
-2. Stack tab renders fixed groups: `Pre`, `Core`, and `Post`.
+1. Inspector tabs include `Manual` after `Looks`.
+2. Manual tab renders fixed groups: `Pre`, `Core`, and `Post`.
 3. Core group shows palette/quantize and dither stages as editable mirrors of
    existing settings.
 4. Optional stages show enable/disable controls.
@@ -32,7 +32,7 @@ available for compatibility until a later tab-retirement slice.
 6. Optional `post` stages can be reordered only inside `Post` using handle-only
    drag-and-drop with menu fallback actions.
 7. Add-stage controls live inside `Pre` and `Post` groups.
-8. Multiple expanded optional stages can show params inline inside the Stack
+8. Multiple expanded optional stages can show params inline inside the Manual
    tab.
 9. Params use existing control patterns: toggles for boolean state, sliders or
    numeric fields for bounded numbers, menus for fixed options.
@@ -51,7 +51,7 @@ available for compatibility until a later tab-retirement slice.
 
 ## Acceptance Criteria
 
-- Users can open `Stack`, see canonical Pre/Core/Post groups, and understand the
+- Users can open `Manual`, see canonical Pre/Core/Post groups, and understand the
   current processing order.
 - Users can enable/disable optional stages once first effects exist.
 - Users can reorder optional stages within their group and cannot drag them
@@ -65,7 +65,7 @@ available for compatibility until a later tab-retirement slice.
 ## Allowed Side Effects
 
 - Inspector tab labels and tab order change.
-- Store persistence may gain selected Stack tab or expanded-stage UI state if
+- Store persistence may gain selected Manual tab or expanded-stage UI state if
   kept separate from Editor Settings.
 - Component tests for Inspector and control wiring expand.
 - Settings transition command vocabulary may gain stack-specific transitions.
@@ -74,7 +74,7 @@ available for compatibility until a later tab-retirement slice.
 
 Implementation should provide:
 
-- component tests for Stack tab rendering and locked groups;
+- component tests for Manual tab rendering and locked groups;
 - transition tests for add, remove, enable, disable, param change, and reorder;
 - store/history tests for undo and redo of stack transitions;
 - responsive inspection through existing component/browser test coverage where

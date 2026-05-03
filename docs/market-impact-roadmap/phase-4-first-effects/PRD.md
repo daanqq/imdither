@@ -1,7 +1,7 @@
 # Phase 4.3 PRD: First Effects
 
-Status: planned
-Last updated: 2026-05-02
+Status: implemented
+Last updated: 2026-05-03
 
 ## Problem Statement
 
@@ -87,4 +87,3 @@ Implementation should provide:
 - No physical CRT emulation.
 - No stack-aware Auto-Tune ranking.
 - No stack-aware Processing Presets.
-

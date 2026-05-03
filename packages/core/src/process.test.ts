@@ -66,13 +66,13 @@ describe("core pipeline", () => {
     }
   })
 
-  it("normalizes partial settings into schema version 3", () => {
+  it("normalizes partial settings into schema version 4", () => {
     expect(
       normalizeSettings({
         algorithm: "atkinson",
         resize: { width: 32, height: 24 },
       }).schemaVersion
-    ).toBe(3)
+    ).toBe(4)
   })
 
   it("limits processing to the first N palette colors without mutating the active palette", () => {
@@ -249,6 +249,120 @@ describe("core pipeline", () => {
 
     expect(Array.from(halftone)).not.toEqual(Array.from(blueNoise))
     expect(Array.from(halftone)).not.toEqual(Array.from(bayer))
+  })
+
+  it("changes halftone output when dot shape changes", () => {
+    const input = grayscaleGradientBuffer(16, 16)
+    const baseSettings = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "halftone-dot" as const,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const roundResult = processImage(input, baseSettings)
+    const squareResult = processImage(input, {
+      ...baseSettings,
+      halftoneScreen: {
+        ...DEFAULT_SETTINGS.halftoneScreen,
+        dotShape: "square",
+      },
+    })
+
+    expect(Array.from(roundResult.image.data)).not.toEqual(
+      Array.from(squareResult.image.data)
+    )
+  })
+
+  it("changes halftone output when angle changes", () => {
+    const input = grayscaleGradientBuffer(16, 16)
+    const baseSettings = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "halftone-dot" as const,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const zeroDeg = processImage(input, baseSettings)
+    const fortyFiveDeg = processImage(input, {
+      ...baseSettings,
+      halftoneScreen: {
+        ...DEFAULT_SETTINGS.halftoneScreen,
+        angle: 45,
+      },
+    })
+
+    expect(Array.from(zeroDeg.image.data)).not.toEqual(
+      Array.from(fortyFiveDeg.image.data)
+    )
+  })
+
+  it("changes halftone output when pattern size changes", () => {
+    const input = grayscaleGradientBuffer(16, 16)
+    const baseSettings = {
+      ...DEFAULT_SETTINGS,
+      algorithm: "halftone-dot" as const,
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: input.width,
+        height: input.height,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const size8 = processImage(input, baseSettings)
+    const size4 = processImage(input, {
+      ...baseSettings,
+      halftoneScreen: {
+        ...DEFAULT_SETTINGS.halftoneScreen,
+        patternSize: 4,
+      },
+    })
+
+    expect(Array.from(size8.image.data)).not.toEqual(
+      Array.from(size4.image.data)
+    )
+  })
+
+  it("applies halftoneScreen settings from normalized settings", () => {
+    const normalized = normalizeSettings({
+      algorithm: "halftone-dot",
+      halftoneScreen: {
+        dotShape: "square",
+        angle: 30,
+        frequency: 60,
+        patternSize: 4,
+      },
+    })
+
+    expect(normalized.halftoneScreen.dotShape).toBe("square")
+    expect(normalized.halftoneScreen.angle).toBe(30)
+    expect(normalized.halftoneScreen.frequency).toBe(60)
+    expect(normalized.halftoneScreen.patternSize).toBe(4)
+  })
+
+  it("fills default halftoneScreen for settings without it", () => {
+    const normalized = normalizeSettings({
+      algorithm: "bayer",
+    })
+
+    expect(normalized.halftoneScreen).toEqual({
+      dotShape: "round",
+      angle: 0,
+      frequency: 50,
+      patternSize: 8,
+    })
   })
 })
 

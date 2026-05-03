@@ -1,7 +1,8 @@
 import * as React from "react"
 import {
-  DITHER_ALGORITHM_OPTIONS,
+  ALGORITHMS_BY_FAMILY,
   DEFAULT_SETTINGS,
+  DITHER_ALGORITHM_OPTIONS,
   PRESET_PALETTES,
   PROCESSING_PRESET_OPTIONS,
   getDitherAlgorithmOption,
@@ -12,6 +13,8 @@ import {
   type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
+  type HalftoneDotShape,
+  type HalftonePatternSize,
   type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
@@ -44,6 +47,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
@@ -214,13 +218,21 @@ export const ControlPanel = React.memo(function ControlPanel({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectGroup>
-                        {DITHER_ALGORITHM_OPTIONS.map((algorithm) => (
-                          <SelectItem key={algorithm.id} value={algorithm.id}>
-                            {algorithm.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
+                      {Array.from(ALGORITHMS_BY_FAMILY).map(
+                        ([family, algorithms]) => (
+                          <SelectGroup key={family}>
+                            <SelectLabel>{family}</SelectLabel>
+                            {algorithms.map((algorithm) => (
+                              <SelectItem
+                                key={algorithm.id}
+                                value={algorithm.id}
+                              >
+                                {algorithm.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                   <RandomizeButton
@@ -269,6 +281,102 @@ export const ControlPanel = React.memo(function ControlPanel({
                     ))}
                   </ToggleGroup>
                 </Field>
+              )}
+
+              {selectedAlgorithmOption.family === "Halftone" && (
+                <FieldSet className="gap-2">
+                  <FieldLegend>Halftone Screen</FieldLegend>
+                  <Field>
+                    <FieldLabel htmlFor="halftone-dot-shape">
+                      Dot Shape
+                    </FieldLabel>
+                    <Select
+                      value={settings.halftoneScreen.dotShape}
+                      onValueChange={(dotShape) =>
+                        onSettingsTransition({
+                          type: "set-halftone-screen",
+                          dotShape: dotShape as HalftoneDotShape,
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        id="halftone-dot-shape"
+                        className="min-w-0 flex-1"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="round">Round</SelectItem>
+                          <SelectItem value="square">Square</SelectItem>
+                          <SelectItem value="line">Line</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="halftone-angle">Angle</FieldLabel>
+                    <CommittedSliderField
+                      id="halftone-angle"
+                      min={0}
+                      max={360}
+                      step={1}
+                      value={settings.halftoneScreen.angle}
+                      onCommit={(angle) =>
+                        onSettingsTransition({
+                          type: "set-halftone-screen",
+                          angle,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="halftone-frequency">
+                      Frequency
+                    </FieldLabel>
+                    <CommittedSliderField
+                      id="halftone-frequency"
+                      min={1}
+                      max={100}
+                      step={1}
+                      value={settings.halftoneScreen.frequency}
+                      onCommit={(frequency) =>
+                        onSettingsTransition({
+                          type: "set-halftone-screen",
+                          frequency,
+                        })
+                      }
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Pattern Size</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={String(settings.halftoneScreen.patternSize)}
+                      variant="outline"
+                      className="w-full"
+                      onValueChange={(value) => {
+                        if (value) {
+                          onSettingsTransition({
+                            type: "set-halftone-screen",
+                            patternSize: Number(value) as HalftonePatternSize,
+                          })
+                        }
+                      }}
+                    >
+                      {[4, 6, 8].map((size) => (
+                        <ToggleGroupItem
+                          key={size}
+                          value={String(size)}
+                          aria-label={`${size} by ${size}`}
+                          className="flex-1"
+                        >
+                          {size}x{size}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </Field>
+                </FieldSet>
               )}
 
               <Field>

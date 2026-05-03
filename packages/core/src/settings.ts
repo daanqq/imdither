@@ -22,6 +22,20 @@ const effectStageParamsSchema = z.record(
   z.union([z.string(), z.number(), z.boolean()])
 )
 
+const halftoneDotShapeSchema = z.enum(["round", "square", "line"])
+const halftonePatternSizeSchema = z.union([
+  z.literal(4),
+  z.literal(6),
+  z.literal(8),
+])
+
+const halftoneScreenSchema = z.object({
+  dotShape: halftoneDotShapeSchema,
+  angle: z.number().min(0).max(360),
+  frequency: z.number().min(1).max(100),
+  patternSize: halftonePatternSizeSchema,
+})
+
 const effectStageSchema = z.object({
   instanceId: z.string().min(1),
   kind: z.enum(["pre", "quantize", "dither", "post"]),
@@ -30,7 +44,7 @@ const effectStageSchema = z.object({
 })
 
 export const editorSettingsSchema = z.object({
-  schemaVersion: z.union([z.literal(2), z.literal(3)]),
+  schemaVersion: z.union([z.literal(2), z.literal(3), z.literal(4)]),
   algorithm: z.enum(DITHER_ALGORITHM_IDS),
   bayerSize: z.union([z.literal(2), z.literal(4), z.literal(8)]),
   paletteId: z.string().min(1),
@@ -52,10 +66,18 @@ export const editorSettingsSchema = z.object({
     invert: z.boolean(),
     colorMode: z.enum(["grayscale-first", "color-preserve"]),
   }),
+  halftoneScreen: halftoneScreenSchema,
 })
 
+export const DEFAULT_HALFTONE_SCREEN = {
+  dotShape: "round" as const,
+  angle: 0,
+  frequency: 50,
+  patternSize: 8 as const,
+}
+
 export const DEFAULT_SETTINGS: EditorSettings = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   algorithm: "bayer",
   bayerSize: 8,
   paletteId: "gray-4",
@@ -82,6 +104,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
     invert: false,
     colorMode: "grayscale-first",
   },
+  halftoneScreen: DEFAULT_HALFTONE_SCREEN,
 }
 
 export function normalizeSettings(value: unknown): EditorSettings {
@@ -98,7 +121,7 @@ export function normalizeSettings(value: unknown): EditorSettings {
 
   return {
     ...parsed,
-    schemaVersion: 3,
+    schemaVersion: 4,
     effectStack: resolveEffectStack(parsed),
   }
 }
@@ -124,7 +147,7 @@ export function safeNormalizeSettings(value: unknown): EditorSettings | null {
 
   return {
     ...result.data,
-    schemaVersion: 3,
+    schemaVersion: 4,
     effectStack: resolveEffectStack(result.data),
   }
 }
@@ -219,7 +242,7 @@ function mergeSettings(defaults: EditorSettings, value: unknown): unknown {
   return {
     ...defaults,
     ...value,
-    schemaVersion: 3,
+    schemaVersion: 4,
     colorDepth: isRecord(value.colorDepth)
       ? value.colorDepth
       : defaults.colorDepth,
@@ -237,6 +260,10 @@ function mergeSettings(defaults: EditorSettings, value: unknown): unknown {
     preprocess: {
       ...defaults.preprocess,
       ...(isRecord(value.preprocess) ? value.preprocess : {}),
+    },
+    halftoneScreen: {
+      ...defaults.halftoneScreen,
+      ...(isRecord(value.halftoneScreen) ? value.halftoneScreen : {}),
     },
   }
 }

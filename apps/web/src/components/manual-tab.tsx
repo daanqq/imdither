@@ -1,4 +1,5 @@
 import {
+  ALGORITHMS_BY_FAMILY,
   DEFAULT_SETTINGS,
   DITHER_ALGORITHM_OPTIONS,
   EFFECT_DEFINITIONS,
@@ -10,6 +11,8 @@ import {
   type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
+  type HalftoneDotShape,
+  type HalftonePatternSize,
   type MatchingMode,
   type ResizeMode,
 } from "@workspace/core"
@@ -48,6 +51,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
@@ -141,7 +145,7 @@ type StackTabProps = {
   onSettingsTransition: (transition: SettingsTransition) => void
 }
 
-export function StackTab({
+export function ManualTab({
   settings,
   activePaletteColors,
   lookRecipeId,
@@ -1227,20 +1231,36 @@ function CoreParamsEditor({
   return (
     <div className="grid min-w-0 gap-2">
       <div className="flex min-w-0 items-center gap-1">
-        <ParamSelect
-          label="Algorithm"
-          value={settings.algorithm}
-          options={DITHER_ALGORITHM_OPTIONS.map((algorithm) => ({
-            id: algorithm.id,
-            label: algorithm.label,
-          }))}
-          onValueChange={(algorithm) =>
-            onSettingsTransition({
-              type: "set-algorithm",
-              algorithm: algorithm as DitherAlgorithm,
-            })
-          }
-        />
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+            Algorithm
+          </span>
+          <Select
+            value={settings.algorithm}
+            onValueChange={(algorithm) =>
+              onSettingsTransition({
+                type: "set-algorithm",
+                algorithm: algorithm as DitherAlgorithm,
+              })
+            }
+          >
+            <SelectTrigger className="h-7 min-w-0 flex-1 justify-between font-mono text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from(ALGORITHMS_BY_FAMILY).map(([family, algorithms]) => (
+                <SelectGroup key={family}>
+                  <SelectLabel>{family}</SelectLabel>
+                  {algorithms.map((algorithm) => (
+                    <SelectItem key={algorithm.id} value={algorithm.id}>
+                      {algorithm.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           aria-label="Random algorithm"
           title="Random algorithm"
@@ -1291,6 +1311,104 @@ function CoreParamsEditor({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+        </div>
+      ) : null}
+      {selectedAlgorithm.family === "Halftone" ? (
+        <div className="grid gap-2">
+          <span className="font-mono text-[10px] text-muted-foreground">
+            Halftone Screen
+          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+              Dot Shape
+            </span>
+            <Select
+              value={settings.halftoneScreen.dotShape}
+              onValueChange={(dotShape) =>
+                onSettingsTransition({
+                  type: "set-halftone-screen",
+                  dotShape: dotShape as HalftoneDotShape,
+                })
+              }
+            >
+              <SelectTrigger className="h-7 min-w-0 flex-1 justify-between font-mono text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="round">Round</SelectItem>
+                  <SelectItem value="square">Square</SelectItem>
+                  <SelectItem value="line">Line</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              Angle
+            </span>
+            <Slider
+              value={[settings.halftoneScreen.angle]}
+              min={0}
+              max={360}
+              step={1}
+              onValueChange={([angle]) =>
+                angle !== undefined &&
+                onSettingsTransition({
+                  type: "set-halftone-screen",
+                  angle,
+                })
+              }
+            />
+          </div>
+          <div className="grid gap-1">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              Frequency
+            </span>
+            <Slider
+              value={[settings.halftoneScreen.frequency]}
+              min={1}
+              max={100}
+              step={1}
+              onValueChange={([frequency]) =>
+                frequency !== undefined &&
+                onSettingsTransition({
+                  type: "set-halftone-screen",
+                  frequency,
+                })
+              }
+            />
+          </div>
+          <div className="grid gap-1">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              Pattern Size
+            </span>
+            <ToggleGroup
+              type="single"
+              value={String(settings.halftoneScreen.patternSize)}
+              variant="outline"
+              className="w-full"
+              onValueChange={(value) => {
+                if (value) {
+                  onSettingsTransition({
+                    type: "set-halftone-screen",
+                    patternSize: Number(value) as HalftonePatternSize,
+                  })
+                }
+              }}
+            >
+              {[4, 6, 8].map((size) => (
+                <ToggleGroupItem
+                  key={size}
+                  value={String(size)}
+                  aria-label={`${size} by ${size}`}
+                  className="flex-1"
+                >
+                  {size}x{size}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
         </div>
       ) : null}
     </div>

@@ -11,13 +11,13 @@ settings model.
 
 ## Outcome
 
-Add Look Recipes to the Stack tab. A Look Recipe is a one-shot style recipe
+Add Look Recipes to the Manual tab. A Look Recipe is a one-shot style recipe
 that applies selected Editor Settings fields, including Effect Stack, palette,
 dither, color, and adjust fields, while preserving output geometry.
 
 ## Requirements
 
-1. The Stack tab includes a compact recipe bar with `Custom`, built-in recipes,
+1. The Manual tab includes a compact recipe bar with `Custom`, built-in recipes,
    saved local recipes, save action, and recipe menu action.
 2. The app ships eight immutable built-in Look Recipes.
 3. Users can save the current look as a named browser-local Look Recipe.
@@ -41,7 +41,7 @@ dither, color, and adjust fields, while preserving output geometry.
 ## Allowed Side Effects
 
 - Web persisted state gains a local Look Recipe library.
-- Stack tab top bar gains recipe controls.
+- Manual tab top bar gains recipe controls.
 - Tests cover recipe capture, apply, matching, normalization, and store actions.
 
 ## Verification Evidence

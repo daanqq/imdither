@@ -9,7 +9,7 @@ import {
 } from "./index"
 
 describe("Look Snapshot public contract", () => {
-  it("creates an immutable look wrapper around normalized schema version 3 settings", () => {
+  it("creates an immutable look wrapper around normalized schema version 4 settings", () => {
     const snapshot = createLookSnapshot({
       settings: {
         algorithm: "atkinson",
@@ -34,7 +34,7 @@ describe("Look Snapshot public contract", () => {
     expect(snapshot.version).toBe(1)
     expect(snapshot.kind).toBe("look-snapshot")
     expect(snapshot.createdAt).toBe("2026-04-26T00:00:00.000Z")
-    expect(snapshot.settings.schemaVersion).toBe(3)
+    expect(snapshot.settings.schemaVersion).toBe(4)
     expect(snapshot.settings.algorithm).toBe("atkinson")
     expect(snapshot.settings.colorDepth).toEqual({ mode: "limit", count: 8 })
     expect(snapshot.settings.customPalette).toEqual(["#ffffff", "#111111"])

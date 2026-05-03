@@ -1,4 +1,11 @@
 import type { DitherAlgorithm } from "./algorithm-registry"
+
+export type DitherAlgorithmFamily =
+  | "Direct Mapping"
+  | "Ordered"
+  | "Error Diffusion"
+  | "Blue Noise"
+  | "Halftone"
 import type { EffectStage } from "./effect-stack"
 
 export type PixelBuffer = {
@@ -32,8 +39,18 @@ export type ColorDepth =
   | { mode: "limit"; count: 2 | 4 | 8 | 16 }
 export type MatchingMode = "rgb" | "perceptual"
 
+export type HalftoneDotShape = "round" | "square" | "line"
+export type HalftonePatternSize = 4 | 6 | 8
+
+export type HalftoneScreenSettings = {
+  dotShape: HalftoneDotShape
+  angle: number
+  frequency: number
+  patternSize: HalftonePatternSize
+}
+
 export type EditorSettings = {
-  schemaVersion: 2 | 3
+  schemaVersion: 2 | 3 | 4
   algorithm: DitherAlgorithm
   bayerSize: BayerSize
   paletteId: string
@@ -55,6 +72,7 @@ export type EditorSettings = {
     invert: boolean
     colorMode: ColorMode
   }
+  halftoneScreen: HalftoneScreenSettings
 }
 
 export type ProcessingMetadata = {

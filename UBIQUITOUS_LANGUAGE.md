@@ -52,9 +52,11 @@ when deeper historical vocabulary is needed.
 | Term                          | Definition                                                                                                           | Aliases to avoid                       |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | **Product Contract**          | The maintained description of current IMDITHER product behavior and boundaries.                                      | Product docs, app description          |
-| **Settings Schema Reference** | The public reference for **Editor Settings** schema version 2 and **Settings JSON** normalization rules.             | Settings docs, JSON docs               |
+| **Settings Schema Reference** | The public reference for **Editor Settings** schema version 4 and **Settings JSON** normalization rules.             | Settings docs, JSON docs               |
 | **Schema Version 1**          | The legacy **Editor Settings** compatibility shape accepted by normalization.                                        | Current settings version               |
-| **Schema Version 2**          | The current **Editor Settings** compatibility baseline with **Color Depth** and **Matching Mode**.                   | v2 settings, settings version          |
+| **Schema Version 2**          | A legacy **Editor Settings** compatibility baseline with **Color Depth** and **Matching Mode**.                      | Current settings version               |
+| **Schema Version 3**          | A legacy **Editor Settings** compatibility baseline with **Effect Stack**.                                           | Current settings version               |
+| **Schema Version 4**          | The current **Editor Settings** compatibility baseline with **Halftone Screen** settings.                            | v4 settings, settings version          |
 | **Public Hardening Baseline** | The Phase 0 baseline of license, docs, tests, fixtures, and performance reports that future roadmap work builds on.  | Cleanup, docs pass, prep work          |
 | **Visual Contract**           | Deterministic test coverage that protects preview, processing, compare, and export behavior without screenshot diff. | Visual tests, screenshot baseline      |
 | **Core Pixel Golden**         | A compact expected pixel fixture for public core processing output.                                                  | Golden image, snapshot image           |
@@ -86,12 +88,14 @@ when deeper historical vocabulary is needed.
 | **Default Settings**           | The initial **Editor Settings** used before user changes or persisted state are applied.                                                      | Factory settings, initial config             |
 | **Dither Algorithm**           | The selected method for producing spatial tone or color patterns from a **Palette**.                                                          | Filter, effect                               |
 | **Dither Algorithm Id**        | The stable settings value that identifies a **Dither Algorithm** across sessions and JSON.                                                    | Algorithm name, label                        |
+| **Algorithm Family**           | A UI grouping for related **Dither Algorithms**, currently Direct Mapping, Ordered, Error Diffusion, Blue Noise, and Halftone.                | Algorithm category, algorithm type           |
 | **No Dither**                  | Direct palette mapping without spatial patterning or error diffusion.                                                                         | Plain quantize, none algorithm               |
 | **Bayer Dithering**            | Ordered dithering using a 2x2, 4x4, or 8x8 Bayer matrix.                                                                                      | Bayer, ordered                               |
 | **Matt Parker Dithering**      | Palette-aware pattern dithering based on a Parker-style threshold matrix.                                                                     | Matt Parker, Parker                          |
 | **Floyd-Steinberg Dithering**  | Error diffusion using the Floyd-Steinberg kernel.                                                                                             | Floyd, FS                                    |
 | **Atkinson Dithering**         | Error diffusion using the Atkinson kernel.                                                                                                    | Atkinson                                     |
 | **Bayer Size**                 | The selected Bayer matrix dimension: 2, 4, or 8.                                                                                              | Matrix size, Bayer matrix                    |
+| **Halftone Screen**            | Print-like screening controls for `halftone-dot`: dot shape, angle, frequency, and pattern size.                                              | Halftone algorithm variant, screen effect    |
 | **Palette**                    | A named set of colors available to palette mapping and dithering.                                                                             | Color set, swatches                          |
 | **Palette Preset**             | A built-in **Palette** shipped with the app.                                                                                                  | Default palette, built-in palette            |
 | **Custom Palette**             | The one active user-defined **Palette** stored in **Editor Settings** and shown as `Custom` in the Palette control.                           | User palette, manual palette                 |
@@ -352,7 +356,7 @@ when deeper historical vocabulary is needed.
   recover from a **Worker Cache Miss** by resending the sample once.
 - **Palette Fit**, rendered scores, candidate ids, and hidden variant ids must
   not be stored in **Editor Settings**, **Settings JSON**, or **Look Snapshot**.
-- **Schema Version 1** payloads normalize into **Schema Version 2** **Editor Settings**.
+- **Schema Version 1**, **Schema Version 2**, and **Schema Version 3** payloads normalize into **Schema Version 4** **Editor Settings**.
 - **Color Depth** determines the **Effective Palette** without mutating the active **Palette**.
 - **Full Palette Depth** preserves the active **Palette** size in the **Effective Palette**.
 - **Limited Palette Depth** uses the first N colors of the active **Palette** for the **Effective Palette**.
@@ -398,7 +402,7 @@ when deeper historical vocabulary is needed.
 - A **Native Range Slider** may replace a **Slider Primitive** when **Direct Slider Movement** is the primary requirement.
 - **Quality Control** may use a **Slider Primitive** because changing **Export Quality** does not start **Preview Jobs**.
 - **Product Contract** links to the current **Settings Schema Reference** when Settings JSON behavior is part of the shipped product.
-- **Schema Version 2** is the compatibility baseline for **Settings JSON**.
+- **Schema Version 4** is the compatibility baseline for **Settings JSON**.
 - **Settings Schema Reference** defines which **Editor Settings** fields are included and which **Export Preferences** and **View-local State** are excluded.
 - A **Public Hardening Baseline** must not add product features or change the local-only processing model.
 - A **Core Pixel Golden** protects public `processImage` behavior, not private processing stages.
@@ -482,7 +486,7 @@ when deeper historical vocabulary is needed.
 - "Benchmark" can imply a gate. Use **Performance Baseline** for the current non-gating report and **Performance Threshold** only for a future calibrated pass/fail limit.
 - "Visual drift" should not imply screenshot diffs in Phase 0. Use **Visual Contract** for deterministic unit and component coverage unless screenshot-diff infrastructure is explicitly added later.
 - "Settings docs" is vague. Use **Settings Schema Reference** when describing the versioned **Settings JSON** contract.
-- "Schema version" is now ambiguous between legacy and current payloads. Use **Schema Version 1** for accepted legacy payloads and **Schema Version 2** for the current **Settings JSON** baseline.
+- "Schema version" is now ambiguous between legacy and current payloads. Use **Schema Version 1**, **Schema Version 2**, or **Schema Version 3** for accepted legacy payloads and **Schema Version 4** for the current **Settings JSON** baseline.
 - "Color depth", "palette size", and **Extraction Size** can be confused. Use **Color Depth** for processing limits, **Extraction Size** for palette extraction, and **Palette** size for the stored color count.
 - "Limited palette" can imply destructive editing. Use **Limited Palette Depth** for the setting and **Effective Palette** for the derived processing palette.
 - "Perceptual" should mean **Perceptual Matching** backed by Oklab distance, not a generic quality mode.

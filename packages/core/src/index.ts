@@ -15,8 +15,10 @@ export {
   type AutoTuneRecommendation,
 } from "./auto-tune"
 export {
+  ALGORITHMS_BY_FAMILY,
   DITHER_ALGORITHM_IDS,
   DITHER_ALGORITHM_OPTIONS,
+  getAlgorithmsByFamily,
   getDitherAlgorithmMetadataLabel,
   getDitherAlgorithmOption,
   processWithDitherAlgorithm,
@@ -69,6 +71,7 @@ export {
 } from "./processing-presets"
 export { processImage, type ProcessImageOptions } from "./process"
 export {
+  DEFAULT_HALFTONE_SCREEN,
   DEFAULT_OUTPUT_HEIGHT,
   DEFAULT_OUTPUT_WIDTH,
   DEFAULT_SETTINGS,
@@ -87,10 +90,14 @@ export {
   ditherBurkes,
   ditherFloydSteinberg,
   ditherHalftoneDot,
+  ditherJarvisJudiceNinke,
   ditherMattParker,
   ditherOrdered,
+  ditherOstromoukhov,
+  ditherSierra,
   ditherSierraLite,
   ditherStucki,
+  ditherTwoRowSierra,
   flattenAlpha,
   mapToPalette,
   nearestPaletteColor,
@@ -101,6 +108,12 @@ export type {
   DitherAlgorithmCapabilities,
   DitherAlgorithmOption,
 } from "./algorithm-registry"
+export type {
+  DitherAlgorithmFamily,
+  HalftoneDotShape,
+  HalftonePatternSize,
+  HalftoneScreenSettings,
+} from "./types"
 export type {
   ProcessingPresetId,
   ProcessingPresetOption,

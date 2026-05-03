@@ -1,7 +1,7 @@
 # Phase 4.1 PRD: Effect Stack Core
 
-Status: planned
-Last updated: 2026-05-02
+Status: implemented
+Last updated: 2026-05-03
 
 ## Problem Statement
 
@@ -100,4 +100,3 @@ Implementation should provide:
 - No stack-aware Processing Presets.
 - No stack-aware Auto-Tune ranking.
 - No GPU, WASM, or tile-cache rewrite.
-

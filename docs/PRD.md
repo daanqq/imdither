@@ -1,7 +1,7 @@
 # IMDITHER PRD
 
 Status: in progress
-Last updated: 2026-04-29
+Last updated: 2026-05-03
 
 ## 1. Product Summary
 
@@ -11,7 +11,8 @@ Primary value:
 
 - load an image by upload, drag-and-drop, clipboard paste, or bundled demo
 - resize and prepare tones locally
-- apply a processing recipe or choose palette, color mode, and dithering algorithm directly
+- apply a processing recipe or choose palette, color mode, dithering algorithm,
+  and halftone screen parameters directly
 - limit palette depth and choose RGB or perceptual nearest-color matching
 - compare original and processed output in a stable preview surface
 - copy, paste, and URL-apply repeatable processing looks without sharing source image data
@@ -90,8 +91,13 @@ Supported dithering families:
 
 - Direct quantization: `none`
 - Ordered dithering: `bayer`
-- Palette-aware special algorithms: `matt-parker`, `blue-noise`, `halftone-dot`
-- Error diffusion: `floyd-steinberg`, `atkinson`, `burkes`, `stucki`, `sierra-lite`
+- Direct Mapping: `none`
+- Ordered: `bayer`, `matt-parker`
+- Error Diffusion: `floyd-steinberg`, `atkinson`, `burkes`, `stucki`,
+  `sierra-lite`, `jarvis-judice-ninke`, `sierra`, `two-row-sierra`,
+  `ostromoukhov`
+- Blue Noise: `blue-noise`
+- Halftone: `halftone-dot`
 
 ## 8. Functional Requirements
 
@@ -234,7 +240,9 @@ remains limited to `2`, `4`, `8`, or `16` when using limited depth.
 
 ### 8.7 Algorithms
 
-The Dither Algorithm Registry is the source of truth for algorithm ids, labels, capabilities, metadata labels, option ordering, and execution dispatch.
+The Dither Algorithm Registry is the source of truth for algorithm ids, labels,
+Algorithm Family metadata, capabilities, metadata labels, option ordering, and
+execution dispatch.
 
 Current algorithms:
 
@@ -246,6 +254,10 @@ Current algorithms:
 - `burkes`
 - `stucki`
 - `sierra-lite`
+- `jarvis-judice-ninke`
+- `sierra`
+- `two-row-sierra`
+- `ostromoukhov`
 - `blue-noise`
 - `halftone-dot`
 
@@ -254,8 +266,11 @@ Rules:
 - Bayer supports matrix sizes `2x2`, `4x4`, and `8x8`.
 - The default settings use Bayer with `8x8`.
 - Error diffusion algorithms remain deterministic.
-- Algorithm options in the UI are derived from registry metadata.
+- Algorithm options in the UI are grouped by Algorithm Family and derived from
+  registry metadata.
 - Algorithm-specific controls are driven by registry capabilities where practical.
+- Halftone Screen controls appear for Halftone family algorithms and are stored
+  as settings parameters, not separate algorithm ids.
 
 ### 8.8 Palettes
 
@@ -499,10 +514,11 @@ High-level layout:
 The preview stage owns upload/drop affordances, preview surfaces, processing
 overlays, compare presentation, floating view controls, and the export entry
 point. Export format, quality, and final download live in a responsive Export
-Drawer. The inspector places generated Auto-Tune looks in the `Looks` tab
-above manual controls. Auto-Tune owns image-aware recommendations; the
-inspector owns recipe, palette, algorithm, output size, color, resize, and
-preprocessing controls across `Looks`, `Adjust`, and `Palette`.
+Drawer. The inspector places generated Auto-Tune looks in the `Looks` tab and
+direct editing controls in the `Manual` tab. Auto-Tune owns image-aware
+recommendations; the inspector owns recipe, palette, algorithm, halftone
+screen, output size, color, resize, and preprocessing controls across `Looks`
+and `Manual`.
 
 ### 9.2 Visual Direction
 
@@ -553,10 +569,10 @@ Core buffer format:
 
 ```ts
 type PixelBuffer = {
-  width: number
-  height: number
-  data: Uint8ClampedArray
-}
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+};
 ```
 
 Boundary adapters may convert to and from browser APIs such as `ImageData`, but internal processing operates on `PixelBuffer`.
@@ -687,7 +703,7 @@ Current shape:
 
 ```ts
 type EditorSettings = {
-  schemaVersion: 2
+  schemaVersion: 4;
   algorithm:
     | "none"
     | "bayer"
@@ -697,28 +713,39 @@ type EditorSettings = {
     | "burkes"
     | "stucki"
     | "sierra-lite"
+    | "jarvis-judice-ninke"
+    | "sierra"
+    | "two-row-sierra"
+    | "ostromoukhov"
     | "blue-noise"
-    | "halftone-dot"
-  bayerSize: 2 | 4 | 8
-  paletteId: string
-  customPalette?: string[]
-  alphaBackground: "black" | "white"
-  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 }
-  matchingMode: "rgb" | "perceptual"
+    | "halftone-dot";
+  bayerSize: 2 | 4 | 8;
+  paletteId: string;
+  customPalette?: string[];
+  alphaBackground: "black" | "white";
+  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 };
+  matchingMode: "rgb" | "perceptual";
+  effectStack: EffectStage[];
   resize: {
-    mode: "bilinear" | "nearest"
-    fit: "contain" | "cover" | "stretch"
-    width: number
-    height: number
-  }
+    mode: "bilinear" | "nearest";
+    fit: "contain" | "cover" | "stretch";
+    width: number;
+    height: number;
+  };
   preprocess: {
-    brightness: number
-    contrast: number
-    gamma: number
-    invert: boolean
-    colorMode: "grayscale-first" | "color-preserve"
-  }
-}
+    brightness: number;
+    contrast: number;
+    gamma: number;
+    invert: boolean;
+    colorMode: "grayscale-first" | "color-preserve";
+  };
+  halftoneScreen: {
+    dotShape: "round" | "square" | "line";
+    angle: number;
+    frequency: number;
+    patternSize: 4 | 6 | 8;
+  };
+};
 ```
 
 Editor Settings do not include:

@@ -45,6 +45,9 @@ vi.mock("@workspace/ui/components/select", () => ({
   SelectGroup: ({ children }: { children: React.ReactNode }) => (
     <div data-slot="select-group">{children}</div>
   ),
+  SelectLabel: ({ children }: { children: React.ReactNode }) => (
+    <div data-slot="select-label">{children}</div>
+  ),
   SelectItem: ({
     children,
     onKeyDown,

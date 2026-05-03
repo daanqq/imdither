@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from "vitest"
 import * as React from "react"
 import { DEFAULT_SETTINGS, PRESET_PALETTES } from "@workspace/core"
 
-import { StackTab } from "./stack-tab"
+import { ManualTab } from "./manual-tab"
 
-function renderStackTab(
-  overrides: Partial<Parameters<typeof StackTab>[0]> = {}
+function renderManualTab(
+  overrides: Partial<Parameters<typeof ManualTab>[0]> = {}
 ) {
   const onTransition = vi.fn()
   const props = {
@@ -39,15 +39,15 @@ function renderStackTab(
   }
 
   return {
-    element: React.createElement(StackTab, props),
-    markup: renderToStaticMarkup(React.createElement(StackTab, props)),
+    element: React.createElement(ManualTab, props),
+    markup: renderToStaticMarkup(React.createElement(ManualTab, props)),
     onTransition,
   }
 }
 
-describe("StackTab", () => {
+describe("ManualTab", () => {
   it("renders Pre, Core, and Post groups", () => {
-    const { markup } = renderStackTab()
+    const { markup } = renderManualTab()
 
     expect(markup).toContain("Pre")
     expect(markup).toContain("Core")
@@ -55,14 +55,14 @@ describe("StackTab", () => {
   })
 
   it("shows Palette and Dither labels in Core group", () => {
-    const { markup } = renderStackTab()
+    const { markup } = renderManualTab()
 
     expect(markup).toContain("Palette")
     expect(markup).toContain("Dither")
   })
 
   it("renders the Look Recipe bar above grouped stages", () => {
-    const { markup } = renderStackTab()
+    const { markup } = renderManualTab()
 
     expect(markup).toContain("PRESET")
     expect(markup).toContain("Custom")
@@ -71,7 +71,7 @@ describe("StackTab", () => {
   })
 
   it("mirrors Dither and Palette controls inside Core", () => {
-    const { markup } = renderStackTab()
+    const { markup } = renderManualTab()
 
     expect(markup).toContain("Algorithm")
     expect(markup).toContain("Bayer Matrix")
@@ -82,7 +82,7 @@ describe("StackTab", () => {
   })
 
   it("shows add-stage affordance in Pre group when empty", () => {
-    const { markup } = renderStackTab()
+    const { markup } = renderManualTab()
 
     expect(markup).toContain("Add pre-stage")
   })
@@ -101,7 +101,7 @@ describe("StackTab", () => {
       ],
     }
 
-    const { markup } = renderStackTab({ settings: settingsWithEffect })
+    const { markup } = renderManualTab({ settings: settingsWithEffect })
 
     expect(markup).toContain("blur")
   })
@@ -120,7 +120,7 @@ describe("StackTab", () => {
       ],
     }
 
-    const { markup } = renderStackTab({ settings: settingsWithEffect })
+    const { markup } = renderManualTab({ settings: settingsWithEffect })
 
     expect(markup).toContain("Remove stage")
   })
@@ -145,7 +145,7 @@ describe("StackTab", () => {
       ],
     }
 
-    const { markup } = renderStackTab({ settings: settingsWithEffects })
+    const { markup } = renderManualTab({ settings: settingsWithEffects })
 
     expect(markup).toContain("Drag stage")
     expect(markup).toContain("Stage actions")

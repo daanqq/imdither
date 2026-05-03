@@ -137,15 +137,15 @@ Success signal: shipped. Users can explore aggressively, recover quickly, share 
 
 - [x] Write dedicated PRDs for Effect Stack Core, Effect Stack UI, First Effects, and Look Recipes.
 - [x] Record the Effect Stack in Editor Settings architecture decision.
-- [ ] Model stages as typed `pre`, `quantize`, `dither`, and `post` stages.
-- [ ] Support stage enable/disable.
-- [ ] Support stable stage ordering.
-- [ ] Keep stage parameters serializable.
-- [ ] Keep the existing deterministic processing path as the compatibility baseline.
-- [ ] Add first post-effects: grain, CRT bloom, edge threshold, and paper/noise texture.
-- [ ] Add first pre-effects: blur-before-dither and contrast shaping.
-- [ ] Keep effect stack state out of large pixel buffers and binary data.
-- [x] Add Stack tab composition with handle-only stage drag and editable Core mirrors.
+- [x] Model stages as typed `pre`, `quantize`, `dither`, and `post` stages.
+- [x] Support stage enable/disable.
+- [x] Support stable stage ordering.
+- [x] Keep stage parameters serializable.
+- [x] Keep the existing deterministic processing path as the compatibility baseline.
+- [x] Add first post-effects: grain, CRT bloom, edge threshold, and paper/noise texture.
+- [x] Add first pre-effects: blur-before-dither and contrast shaping.
+- [x] Keep effect stack state out of large pixel buffers and binary data.
+- [x] Add Manual tab composition with handle-only stage drag and editable Core mirrors.
 - [x] Add stack-aware Look Recipes with built-in and browser-local saved recipes.
 
 Success signal: dithering becomes one part of a broader local look-building pipeline.
@@ -160,18 +160,24 @@ Planning artifacts:
 
 ### Phase 5: Algorithm and Halftone Breadth
 
-- [ ] Group algorithms by family in the UI.
-- [ ] Add Jarvis-Judice-Ninke error diffusion.
-- [ ] Add full Sierra.
-- [ ] Add Two-Row Sierra.
-- [ ] Add Ostromoukhov adaptive error diffusion as a high-quality still mode.
-- [ ] Evaluate void-and-cluster blue-noise mask generation.
-- [ ] Evaluate Joel Yliluoma-style arbitrary-palette positional dithering.
-- [ ] Evaluate dot diffusion for future parallel-friendly execution.
-- [ ] Expand halftone controls with dot shape, angle, frequency, and pattern size.
+- [x] Group algorithms by family in the UI.
+- [x] Add Jarvis-Judice-Ninke error diffusion.
+- [x] Add full Sierra.
+- [x] Add Two-Row Sierra.
+- [x] Add Ostromoukhov adaptive error diffusion as a high-quality still mode.
+- [x] Evaluate void-and-cluster blue-noise mask generation.
+- [x] Evaluate Joel Yliluoma-style arbitrary-palette positional dithering.
+- [x] Evaluate dot diffusion for future parallel-friendly execution.
+- [x] Expand halftone controls with dot shape, angle, frequency, and pattern size.
 - [ ] Explore pseudo-CMYK or channel-separated screening as an advanced print mode.
 
 Success signal: IMDITHER has enough breadth to compete with serious dithering tools without turning the algorithm selector into a flat, noisy list.
+
+Planning artifacts:
+
+- [Phase 5.1 Algorithm Families and Diffusion Breadth](phase-5-algorithm-families-diffusion/PRD.md)
+- [Phase 5.2 Experimental Algorithm Evaluation](phase-5-experimental-algorithms/PRD.md)
+- [Phase 5.3 Halftone Screen Controls](phase-5-halftone-screen/PRD.md)
 
 ### Phase 6: Motion and Export Surfaces
 

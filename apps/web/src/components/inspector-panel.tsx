@@ -14,7 +14,7 @@ import {
 } from "@workspace/ui/components/tabs"
 
 import { AutoTunePanel } from "@/components/auto-tune-panel"
-import { StackTab } from "@/components/stack-tab"
+import { ManualTab } from "@/components/manual-tab"
 import type { LookRecipe } from "@/lib/look-recipes"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 
@@ -102,7 +102,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
           <CardHeader className="shrink-0 px-2 pt-2 pb-0">
             <TabsList className="grid w-full grid-cols-2" variant="line">
               <TabsTrigger value="looks">Looks</TabsTrigger>
-              <TabsTrigger value="stack">Stack</TabsTrigger>
+              <TabsTrigger value="manual">Manual</TabsTrigger>
             </TabsList>
           </CardHeader>
           <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0 py-0">
@@ -116,8 +116,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
                 onApplyRecommendation={onApplyAutoTuneRecommendation}
               />
             </InspectorTab>
-            <InspectorTab value="stack">
-              <StackTab
+            <InspectorTab value="manual">
+              <ManualTab
                 activePaletteColors={activePaletteColors}
                 advancedOpen={advancedOpen}
                 lookRecipeId={lookRecipeId}

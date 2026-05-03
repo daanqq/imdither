@@ -68,6 +68,96 @@ const GOLDEN_CASES: GoldenCase[] = [
       [170, 85, 85, 0],
     ],
   },
+  {
+    name: "Jarvis-Judice-Ninke diffusion",
+    settings: {
+      algorithm: "jarvis-judice-ninke",
+      paletteId: "gray-4",
+    },
+    expected: [
+      [170, 170, 170, 85],
+      [170, 170, 85, 85],
+      [170, 170, 85, 85],
+      [170, 85, 85, 85],
+    ],
+  },
+  {
+    name: "full Sierra diffusion",
+    settings: {
+      algorithm: "sierra",
+      paletteId: "gray-4",
+    },
+    expected: [
+      [170, 170, 170, 85],
+      [170, 170, 85, 85],
+      [170, 170, 85, 85],
+      [170, 85, 85, 85],
+    ],
+  },
+  {
+    name: "Two-Row Sierra diffusion",
+    settings: {
+      algorithm: "two-row-sierra",
+      paletteId: "gray-4",
+    },
+    expected: [
+      [170, 170, 170, 85],
+      [170, 170, 85, 85],
+      [170, 170, 85, 85],
+      [170, 85, 85, 85],
+    ],
+  },
+  {
+    name: "Ostromoukhov adaptive diffusion",
+    settings: {
+      algorithm: "ostromoukhov",
+      paletteId: "gray-4",
+    },
+    expected: [
+      [170, 170, 85, 85],
+      [170, 170, 170, 85],
+      [170, 85, 85, 85],
+      [170, 170, 85, 85],
+    ],
+  },
+  {
+    name: "halftone square 4x4",
+    settings: {
+      algorithm: "halftone-dot",
+      paletteId: "gray-4",
+      halftoneScreen: {
+        dotShape: "square",
+        angle: 0,
+        frequency: 50,
+        patternSize: 4,
+      },
+    },
+    expected: [
+      [170, 170, 85, 85],
+      [170, 85, 85, 85],
+      [170, 85, 85, 85],
+      [170, 170, 85, 85],
+    ],
+  },
+  {
+    name: "halftone line 8x8",
+    settings: {
+      algorithm: "halftone-dot",
+      paletteId: "gray-4",
+      halftoneScreen: {
+        dotShape: "line",
+        angle: 0,
+        frequency: 50,
+        patternSize: 8,
+      },
+    },
+    expected: [
+      [170, 170, 85, 85],
+      [170, 85, 85, 85],
+      [170, 85, 85, 85],
+      [170, 85, 85, 85],
+    ],
+  },
 ]
 
 describe("core pixel goldens", () => {

@@ -1,7 +1,7 @@
 # Editor Settings Schema
 
 Status: current
-Last updated: 2026-04-26
+Last updated: 2026-05-03
 
 This document is the public reference for IMDITHER Settings JSON. The root PRD
 remains the product contract; this file defines the versioned JSON shape that
@@ -13,11 +13,11 @@ Editor Settings describe deterministic image processing only. They do not
 include source image bytes, preview state, export preferences, runtime job
 status, or UI-only controls.
 
-Current schema version: `2`
+Current schema version: `4`
 
 ```ts
 type EditorSettings = {
-  schemaVersion: 2
+  schemaVersion: 4;
   algorithm:
     | "none"
     | "bayer"
@@ -27,33 +27,49 @@ type EditorSettings = {
     | "burkes"
     | "stucki"
     | "sierra-lite"
+    | "jarvis-judice-ninke"
+    | "sierra"
+    | "two-row-sierra"
+    | "ostromoukhov"
     | "blue-noise"
-    | "halftone-dot"
-  bayerSize: 2 | 4 | 8
-  paletteId: string
-  customPalette?: string[]
-  alphaBackground: "black" | "white"
-  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 }
-  matchingMode: "rgb" | "perceptual"
+    | "halftone-dot";
+  bayerSize: 2 | 4 | 8;
+  paletteId: string;
+  customPalette?: string[];
+  alphaBackground: "black" | "white";
+  colorDepth: { mode: "full" } | { mode: "limit"; count: 2 | 4 | 8 | 16 };
+  matchingMode: "rgb" | "perceptual";
+  effectStack: Array<{
+    instanceId: string;
+    kind: "pre" | "quantize" | "dither" | "post";
+    enabled: boolean;
+    params: Record<string, string | number | boolean>;
+  }>;
   resize: {
-    mode: "bilinear" | "nearest"
-    fit: "contain" | "cover" | "stretch"
-    width: number
-    height: number
-  }
+    mode: "bilinear" | "nearest";
+    fit: "contain" | "cover" | "stretch";
+    width: number;
+    height: number;
+  };
   preprocess: {
-    brightness: number
-    contrast: number
-    gamma: number
-    invert: boolean
-    colorMode: "grayscale-first" | "color-preserve"
-  }
-}
+    brightness: number;
+    contrast: number;
+    gamma: number;
+    invert: boolean;
+    colorMode: "grayscale-first" | "color-preserve";
+  };
+  halftoneScreen: {
+    dotShape: "round" | "square" | "line";
+    angle: number;
+    frequency: number;
+    patternSize: 4 | 6 | 8;
+  };
+};
 ```
 
 ## Included
 
-- `schemaVersion`: literal `2`.
+- `schemaVersion`: literal `4`.
 - `algorithm`: one registry-backed dithering algorithm id.
 - `bayerSize`: Bayer matrix size used when the selected algorithm supports it.
 - `paletteId`: preset palette id, or `custom` when the active settings use a
@@ -67,8 +83,15 @@ type EditorSettings = {
 - `matchingMode`: nearest-color distance mode. `rgb` uses squared distance in
   encoded sRGB channels; `perceptual` uses squared distance in Oklab
   coordinates.
+- `effectStack`: serializable ordered processing stages. It includes stable
+  Stage Instance Ids, Stage Kinds, enabled state, and plain scalar params. It
+  must not include Pixel Buffers, binary data, DOM handles, worker handles, or
+  runtime job state.
 - `resize`: output dimensions, resize kernel, and fit mode.
 - `preprocess`: brightness, contrast, gamma, invert, and color mode.
+- `halftoneScreen`: print-like screen parameters used when `algorithm` is
+  `halftone-dot`. `angle` is bounded from `0` to `360`; `frequency` is bounded
+  from `1` to `100`; `patternSize` is `4`, `6`, or `8`.
 
 ## Excluded
 
@@ -115,9 +138,17 @@ by normalization and must not be relied on for persistence.
 
 ## Compatibility
 
-Schema version `1` payloads remain accepted and normalize to schema version `2`
-with `colorDepth: { mode: "full" }` and `matchingMode: "rgb"`.
+Schema version `1` payloads remain accepted and normalize to schema version `4`
+with `colorDepth: { mode: "full" }`, `matchingMode: "rgb"`, a compatibility
+Effect Stack, and default Halftone Screen settings.
 
-Schema version `2` is the current compatibility baseline. Future additive fields
-should keep old version `2` payloads valid through default merging when possible.
-Any breaking change must introduce a new schema version and a migration path.
+Schema version `2` payloads remain accepted and normalize to schema version `4`
+with a compatibility Effect Stack and default Halftone Screen settings.
+
+Schema version `3` payloads remain accepted and normalize to schema version `4`
+with default Halftone Screen settings.
+
+Schema version `4` is the current compatibility baseline. Future additive
+fields should keep old version `4` payloads valid through default merging when
+possible. Any breaking change must introduce a new schema version and a
+migration path.

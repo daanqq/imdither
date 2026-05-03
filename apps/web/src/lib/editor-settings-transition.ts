@@ -6,13 +6,15 @@ import {
   getProcessingPreset,
   getProcessingPresetColorMode,
   normalizePaletteColors,
-  type ColorMode,
   type AlphaBackground,
   type BayerSize,
   type ColorDepth,
+  type ColorMode,
   type DitherAlgorithm,
   type EditorSettings,
   type EffectStage,
+  type HalftoneDotShape,
+  type HalftonePatternSize,
   type MatchingMode,
   type ProcessingPresetId,
   type ResizeMode,
@@ -114,6 +116,13 @@ export type SettingsTransition =
       group: "pre" | "post"
       fromIndex: number
       toIndex: number
+    }
+  | {
+      type: "set-halftone-screen"
+      dotShape?: HalftoneDotShape
+      angle?: number
+      frequency?: number
+      patternSize?: HalftonePatternSize
     }
 
 export type SettingsTransitionContext = {
@@ -315,6 +324,27 @@ export function applySettingsTransition(
               ? { ...s, params: transition.params }
               : s
           ),
+        },
+      }
+    case "set-halftone-screen":
+      return {
+        settings: {
+          ...current,
+          halftoneScreen: {
+            ...current.halftoneScreen,
+            ...(transition.dotShape !== undefined
+              ? { dotShape: transition.dotShape }
+              : {}),
+            ...(transition.angle !== undefined
+              ? { angle: transition.angle }
+              : {}),
+            ...(transition.frequency !== undefined
+              ? { frequency: transition.frequency }
+              : {}),
+            ...(transition.patternSize !== undefined
+              ? { patternSize: transition.patternSize }
+              : {}),
+          },
         },
       }
     case "reorder-effect-stages": {

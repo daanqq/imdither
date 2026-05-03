@@ -53,7 +53,7 @@ multiple bounded contexts with one `CONTEXT.md` per context.
 | Settings JSON   | Serialized Editor Settings used for reproducible copy and paste.                         | preset JSON                 |
 | Look Snapshot   | Shareable artifact that wraps normalized Editor Settings with lightweight look metadata. | saved state                 |
 | Look Payload    | Compact compressed transport form of one Look Snapshot.                                  | URL state                   |
-| Look Recipe     | One-shot style recipe that applies selected Editor Settings fields, including stack.      | stack preset                |
+| Look Recipe     | One-shot style recipe that applies selected Editor Settings fields, including stack.     | stack preset                |
 | Effect Stack    | Serializable ordered processing stages stored inside Editor Settings.                    | filter chain, layer stack   |
 | Effect Stage    | One ordered operation inside an Effect Stack.                                            | effect layer                |
 
@@ -66,6 +66,17 @@ Use these terms consistently:
 
 - Dither Algorithm: the selected method for spatial tone or color patterning.
 - Dither Algorithm Id: the stable settings value for an algorithm.
+- Algorithm Family: a UI grouping for related Dither Algorithms, such as direct
+  mapping, ordered dithering, error diffusion, blue-noise style masks, and
+  halftone screening. It helps users choose without changing the stable Dither
+  Algorithm Id contract.
+  Canonical families are Direct Mapping, Ordered, Error Diffusion, Blue Noise,
+  and Halftone.
+- Halftone Screen: print-like screening controls that shape dots or channels
+  through angle, frequency, pattern size, and related screen parameters.
+  Halftone Screen parameters are not separate Dither Algorithm identities; the
+  `halftone-dot` Dither Algorithm Id stays stable while screen controls evolve
+  through settings.
 - Palette: a named set of colors used by mapping and dithering.
 - Palette Preset: a built-in Palette shipped with the app.
 - Custom Palette: the active user-defined Palette stored in Editor Settings.
@@ -118,15 +129,13 @@ inside the `post` group, but Phase 4 does not allow arbitrary cross-group
 ordering, multiple dither stages, or moving resize and alpha flattening into the
 stack.
 
-Effect Stack UI belongs in an Inspector `Stack` tab between `Looks` and
-`Adjust`. The app remains dithering-first: existing controls stay primary, and
-the Stack tab exposes the workstation model without replacing the preview-first
-editor.
+Effect Stack UI belongs in the Inspector `Manual` tab after `Looks`. The app
+remains dithering-first: existing controls stay primary, and the Manual tab
+exposes the workstation model without replacing the preview-first editor.
 
-The Stack tab may mirror palette and dither controls as editable Core stages.
-Until the older Adjust and Palette tabs are retired, those mirrored controls
-must use the same Settings Transition commands and must not create duplicate
-settings state.
+The Manual tab mirrors palette and dither controls as editable Core stages.
+Those mirrored controls must use the same Settings Transition commands and must
+not create duplicate settings state.
 
 ## Preview And Comparison Context
 

@@ -2,6 +2,8 @@ import type {
   AlphaBackground,
   BayerSize,
   EditorSettings,
+  HalftoneDotShape,
+  HalftoneScreenSettings,
   Palette,
   MatchingMode,
   PixelBuffer,
@@ -60,6 +62,104 @@ const HALFTONE_DOT_MATRIX = [
   [50, 34, 19, 12, 17, 32, 49, 56],
   [61, 55, 33, 18, 57, 58, 59, 60],
 ]
+
+function generateRoundHalftoneMatrix(size: number): number[][] {
+  const positions: Array<{ x: number; y: number; dist: number }> = []
+  const center = (size - 1) / 2
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const dx = x - center
+      const dy = y - center
+      positions.push({ x, y, dist: dx * dx + dy * dy })
+    }
+  }
+
+  positions.sort((a, b) => a.dist - b.dist)
+
+  const matrix: number[][] = Array.from({ length: size }, () =>
+    new Array(size).fill(0)
+  )
+
+  for (let index = 0; index < positions.length; index += 1) {
+    const { x, y } = positions[index]
+    matrix[y][x] = index
+  }
+
+  return matrix
+}
+
+function generateSquareHalftoneMatrix(size: number): number[][] {
+  const positions: Array<{ x: number; y: number; dist: number }> = []
+  const center = (size - 1) / 2
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const dx = Math.abs(x - center)
+      const dy = Math.abs(y - center)
+      positions.push({ x, y, dist: Math.max(dx, dy) })
+    }
+  }
+
+  positions.sort((a, b) => a.dist - b.dist)
+
+  const matrix: number[][] = Array.from({ length: size }, () =>
+    new Array(size).fill(0)
+  )
+
+  for (let index = 0; index < positions.length; index += 1) {
+    const { x, y } = positions[index]
+    matrix[y][x] = index
+  }
+
+  return matrix
+}
+
+function generateLineHalftoneMatrix(size: number): number[][] {
+  const positions: Array<{ x: number; y: number }> = []
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      positions.push({ x, y })
+    }
+  }
+
+  positions.sort((a, b) => a.y - b.y || a.x - b.x)
+
+  const matrix: number[][] = Array.from({ length: size }, () =>
+    new Array(size).fill(0)
+  )
+
+  for (let index = 0; index < positions.length; index += 1) {
+    const { x, y } = positions[index]
+    matrix[y][x] = index
+  }
+
+  return matrix
+}
+
+function getHalftoneMatrix(
+  dotShape: HalftoneDotShape,
+  patternSize: number
+): number[][] {
+  if (dotShape === "round" && patternSize === 8) {
+    return HALFTONE_DOT_MATRIX
+  }
+
+  if (dotShape === "round") {
+    return generateRoundHalftoneMatrix(patternSize)
+  }
+
+  if (dotShape === "square") {
+    return generateSquareHalftoneMatrix(patternSize)
+  }
+
+  if (dotShape === "line") {
+    return generateLineHalftoneMatrix(patternSize)
+  }
+
+  return HALFTONE_DOT_MATRIX
+}
 
 export function clonePixelBuffer(buffer: PixelBuffer): PixelBuffer {
   return {
@@ -232,15 +332,52 @@ export function ditherBlueNoise(
 export function ditherHalftoneDot(
   input: PixelBuffer,
   palette: Palette,
-  matchingMode: MatchingMode = "rgb"
+  matchingMode: MatchingMode,
+  halftoneScreen: HalftoneScreenSettings
 ): PixelBuffer {
-  return ditherWithThresholdMatrix(
-    input,
-    palette,
-    HALFTONE_DOT_MATRIX,
-    8,
-    matchingMode
-  )
+  const { dotShape, angle, frequency, patternSize } = halftoneScreen
+  const matrix = getHalftoneMatrix(dotShape, patternSize)
+  const size = matrix.length
+  const divisor = size * size
+  const strength = palette.colors.length <= 2 ? 96 : 56
+
+  if (angle === 0 && frequency === 50) {
+    return ditherWithThresholdMatrix(input, palette, matrix, size, matchingMode)
+  }
+
+  const angleRad = (angle * Math.PI) / 180
+  const cosA = Math.cos(angleRad)
+  const sinA = Math.sin(angleRad)
+  const periodScale = 50 / Math.max(1, frequency)
+
+  const output = createBuffer(input.width, input.height)
+  const matcher = createPaletteMatcher(palette, matchingMode)
+
+  for (let y = 0; y < input.height; y += 1) {
+    for (let x = 0; x < input.width; x += 1) {
+      const cx = x - input.width / 2
+      const cy = y - input.height / 2
+      const rx = cx * cosA - cy * sinA
+      const ry = cx * sinA + cy * cosA
+      const sx = ((Math.floor(rx / periodScale) % size) + size) % size
+      const sy = ((Math.floor(ry / periodScale) % size) + size) % size
+
+      const index = (y * input.width + x) * 4
+      const threshold = ((matrix[sy][sx] + 0.5) / divisor - 0.5) * strength
+      const nearest = matcher.nearest([
+        clampByte(input.data[index] + threshold),
+        clampByte(input.data[index + 1] + threshold),
+        clampByte(input.data[index + 2] + threshold),
+      ])
+
+      output.data[index] = nearest[0]
+      output.data[index + 1] = nearest[1]
+      output.data[index + 2] = nearest[2]
+      output.data[index + 3] = 255
+    }
+  }
+
+  return output
 }
 
 function ditherWithThresholdMatrix(
@@ -399,6 +536,221 @@ export function ditherSierraLite(
     ],
     matchingMode
   )
+}
+
+export function ditherJarvisJudiceNinke(
+  input: PixelBuffer,
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
+): PixelBuffer {
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 7 / 48],
+      [2, 0, 5 / 48],
+      [-2, 1, 3 / 48],
+      [-1, 1, 5 / 48],
+      [0, 1, 7 / 48],
+      [1, 1, 5 / 48],
+      [2, 1, 3 / 48],
+      [-2, 2, 1 / 48],
+      [-1, 2, 3 / 48],
+      [0, 2, 5 / 48],
+      [1, 2, 3 / 48],
+      [2, 2, 1 / 48],
+    ],
+    matchingMode
+  )
+}
+
+export function ditherSierra(
+  input: PixelBuffer,
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
+): PixelBuffer {
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 5 / 32],
+      [2, 0, 3 / 32],
+      [-2, 1, 2 / 32],
+      [-1, 1, 4 / 32],
+      [0, 1, 5 / 32],
+      [1, 1, 4 / 32],
+      [2, 1, 2 / 32],
+      [-1, 2, 2 / 32],
+      [0, 2, 3 / 32],
+      [1, 2, 2 / 32],
+    ],
+    matchingMode
+  )
+}
+
+export function ditherTwoRowSierra(
+  input: PixelBuffer,
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
+): PixelBuffer {
+  return diffuseError(
+    input,
+    palette,
+    [
+      [1, 0, 4 / 16],
+      [2, 0, 3 / 16],
+      [-2, 1, 1 / 16],
+      [-1, 1, 2 / 16],
+      [0, 1, 3 / 16],
+      [1, 1, 2 / 16],
+      [2, 1, 1 / 16],
+    ],
+    matchingMode
+  )
+}
+
+const OSTROMOUKHOV_REGIONS: Array<{
+  maxLuma: number
+  kernel: Array<readonly [number, number, number]>
+}> = [
+  {
+    maxLuma: 42,
+    kernel: [
+      [1, 0, 10 / 16],
+      [-1, 1, 2 / 16],
+      [0, 1, 2 / 16],
+      [1, 1, 2 / 16],
+    ],
+  },
+  {
+    maxLuma: 85,
+    kernel: [
+      [1, 0, 8 / 16],
+      [-1, 1, 2 / 16],
+      [0, 1, 4 / 16],
+      [1, 1, 2 / 16],
+    ],
+  },
+  {
+    maxLuma: 127,
+    kernel: [
+      [1, 0, 7 / 16],
+      [-1, 1, 3 / 16],
+      [0, 1, 5 / 16],
+      [1, 1, 1 / 16],
+    ],
+  },
+  {
+    maxLuma: 170,
+    kernel: [
+      [1, 0, 5 / 16],
+      [-1, 1, 3 / 16],
+      [0, 1, 5 / 16],
+      [1, 1, 3 / 16],
+    ],
+  },
+  {
+    maxLuma: 212,
+    kernel: [
+      [1, 0, 4 / 16],
+      [-2, 1, 1 / 16],
+      [-1, 1, 2 / 16],
+      [0, 1, 4 / 16],
+      [1, 1, 3 / 16],
+      [2, 1, 2 / 16],
+    ],
+  },
+  {
+    maxLuma: 255,
+    kernel: [
+      [1, 0, 3 / 16],
+      [-2, 1, 2 / 16],
+      [-1, 1, 3 / 16],
+      [0, 1, 4 / 16],
+      [1, 1, 3 / 16],
+      [2, 1, 1 / 16],
+    ],
+  },
+]
+
+function getOstromoukhovKernel(
+  luma: number
+): Array<readonly [number, number, number]> {
+  for (const region of OSTROMOUKHOV_REGIONS) {
+    if (luma <= region.maxLuma) {
+      return region.kernel
+    }
+  }
+
+  return OSTROMOUKHOV_REGIONS[OSTROMOUKHOV_REGIONS.length - 1].kernel
+}
+
+export function ditherOstromoukhov(
+  input: PixelBuffer,
+  palette: Palette,
+  matchingMode: MatchingMode = "rgb"
+): PixelBuffer {
+  const output = createBuffer(input.width, input.height)
+  const work = new Float32Array(input.data.length)
+  const matcher = createPaletteMatcher(palette, matchingMode)
+
+  for (let index = 0; index < input.data.length; index += 1) {
+    work[index] = input.data[index]
+  }
+
+  for (let y = 0; y < input.height; y += 1) {
+    const reverse = y % 2 === 1
+    const start = reverse ? input.width - 1 : 0
+    const end = reverse ? -1 : input.width
+    const step = reverse ? -1 : 1
+
+    for (let x = start; x !== end; x += step) {
+      const index = (y * input.width + x) * 4
+      const oldColor: Rgb = [
+        clampByte(work[index]),
+        clampByte(work[index + 1]),
+        clampByte(work[index + 2]),
+      ]
+
+      const inputLuma =
+        input.data[index] * 0.2126 +
+        input.data[index + 1] * 0.7152 +
+        input.data[index + 2] * 0.0722
+      const kernel = getOstromoukhovKernel(inputLuma)
+      const nextColor = matcher.nearest(oldColor)
+      const error: Rgb = [
+        oldColor[0] - nextColor[0],
+        oldColor[1] - nextColor[1],
+        oldColor[2] - nextColor[2],
+      ]
+
+      output.data[index] = nextColor[0]
+      output.data[index + 1] = nextColor[1]
+      output.data[index + 2] = nextColor[2]
+      output.data[index + 3] = 255
+
+      for (const [kernelX, kernelY, factor] of kernel) {
+        const targetX = x + (reverse ? -kernelX : kernelX)
+        const targetY = y + kernelY
+
+        if (
+          targetX < 0 ||
+          targetX >= input.width ||
+          targetY < 0 ||
+          targetY >= input.height
+        ) {
+          continue
+        }
+
+        const targetIndex = (targetY * input.width + targetX) * 4
+        work[targetIndex] += error[0] * factor
+        work[targetIndex + 1] += error[1] * factor
+        work[targetIndex + 2] += error[2] * factor
+      }
+    }
+  }
+
+  return output
 }
 
 export function ditherAtkinson(

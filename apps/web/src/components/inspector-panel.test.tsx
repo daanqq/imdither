@@ -11,7 +11,7 @@ describe("InspectorPanel", () => {
   it("renders the accepted inspector tabs with Looks first", () => {
     const markup = renderInspector()
 
-    expect(markup.indexOf("Looks")).toBeLessThan(markup.indexOf("Stack"))
+    expect(markup.indexOf("Looks")).toBeLessThan(markup.indexOf("Manual"))
     expect(markup).toContain("Auto-Tune")
   })
 
