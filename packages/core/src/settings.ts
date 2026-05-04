@@ -44,7 +44,12 @@ const effectStageSchema = z.object({
 })
 
 export const editorSettingsSchema = z.object({
-  schemaVersion: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+  schemaVersion: z.union([
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+    z.literal(5),
+  ]),
   algorithm: z.enum(DITHER_ALGORITHM_IDS),
   bayerSize: z.union([z.literal(2), z.literal(4), z.literal(8)]),
   paletteId: z.string().min(1),
@@ -67,6 +72,7 @@ export const editorSettingsSchema = z.object({
     colorMode: z.enum(["grayscale-first", "color-preserve"]),
   }),
   halftoneScreen: halftoneScreenSchema,
+  temporalStability: z.enum(["none", "global-palette"]),
 })
 
 export const DEFAULT_HALFTONE_SCREEN = {
@@ -77,7 +83,7 @@ export const DEFAULT_HALFTONE_SCREEN = {
 }
 
 export const DEFAULT_SETTINGS: EditorSettings = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   algorithm: "bayer",
   bayerSize: 8,
   paletteId: "gray-4",
@@ -105,6 +111,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
     colorMode: "grayscale-first",
   },
   halftoneScreen: DEFAULT_HALFTONE_SCREEN,
+  temporalStability: "none" as const,
 }
 
 export function normalizeSettings(value: unknown): EditorSettings {
@@ -121,7 +128,7 @@ export function normalizeSettings(value: unknown): EditorSettings {
 
   return {
     ...parsed,
-    schemaVersion: 4,
+    schemaVersion: 5,
     effectStack: resolveEffectStack(parsed),
   }
 }
@@ -147,7 +154,7 @@ export function safeNormalizeSettings(value: unknown): EditorSettings | null {
 
   return {
     ...result.data,
-    schemaVersion: 4,
+    schemaVersion: 5,
     effectStack: resolveEffectStack(result.data),
   }
 }
@@ -242,7 +249,7 @@ function mergeSettings(defaults: EditorSettings, value: unknown): unknown {
   return {
     ...defaults,
     ...value,
-    schemaVersion: 4,
+    schemaVersion: 5,
     colorDepth: isRecord(value.colorDepth)
       ? value.colorDepth
       : defaults.colorDepth,

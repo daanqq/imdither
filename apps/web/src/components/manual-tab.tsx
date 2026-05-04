@@ -1411,6 +1411,34 @@ function CoreParamsEditor({
           </div>
         </div>
       ) : null}
+      <div className="grid gap-1">
+        <span className="font-mono text-[10px] text-muted-foreground">
+          Temporal Stability
+        </span>
+        <Select
+          value={settings.temporalStability}
+          onValueChange={(value) =>
+            onSettingsTransition({
+              type: "set-temporal-stability",
+              temporalStability: value as "none" | "global-palette",
+            })
+          }
+        >
+          <SelectTrigger className="h-7 min-w-0 flex-1 justify-between font-mono text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            <SelectItem value="global-palette">Global Palette</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="font-sans text-[11px] text-muted-foreground">
+          {settings.temporalStability === "none" &&
+            "Each frame dithered independently."}
+          {settings.temporalStability === "global-palette" &&
+            "Single palette extracted from all frames. Reduces GIF flicker."}
+        </span>
+      </div>
     </div>
   )
 }

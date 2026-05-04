@@ -265,9 +265,15 @@ export class PreviewViewportInteraction {
   }
 
   syncViewport(viewport: PreviewViewport): void {
-    if (this.gesture.type === "idle") {
-      this.viewport = viewport
+    if (this.gesture.type !== "idle") {
+      return
     }
+
+    // When switching to fit mode, reset zoom/center to prevent stale values
+    this.viewport =
+      viewport.mode === "fit"
+        ? { ...viewport, zoom: 1, center: { x: 0, y: 0 } }
+        : viewport
   }
 
   private startPinchGesture() {

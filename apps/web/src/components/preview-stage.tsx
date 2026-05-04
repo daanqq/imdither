@@ -19,6 +19,7 @@ import {
 import { PreviewSurfaceControls } from "@/components/preview-surface-controls"
 import { ExportDrawerContent } from "@/components/export-drawer-content"
 import { PreviewActionStrip } from "@/components/preview-action-strip"
+import { FrameStrip } from "@/components/frame-strip"
 import { type ExportFormat } from "@/lib/export-image"
 import { type PreviewViewport } from "@/lib/preview-viewport"
 import { usePreviewDisplayMeasurement } from "@/lib/use-preview-display-measurement"
@@ -47,11 +48,24 @@ export type PreviewStageProps = {
   onExportQualityChange: (quality: number) => void
   onCompareModeChange?: (mode: CompareMode) => void
   onFileSelected: (file: File) => void | Promise<void>
+  motionExportSettings?: { frameDurationMs: number; loopCount: number }
+  onMotionExportSettingsChange?: (settings: {
+    frameDurationMs?: number
+    loopCount?: number
+  }) => void
   onInvalidDrop: (message: string) => void
   onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
   onPreviewViewportChange: (viewport: Partial<PreviewViewport>) => void
   onRedoSettingsChange?: () => void
   onUndoSettingsChange?: () => void
+  isAnimated?: boolean
+  frameCount?: number
+  currentFrame?: number
+  isPlaying?: boolean
+  onPlayPause?: () => void
+  onFrameChange?: (frame: number) => void
+  onPrevFrame?: () => void
+  onNextFrame?: () => void
 }
 
 export const PreviewStage = React.memo(function PreviewStage({
@@ -75,6 +89,8 @@ export const PreviewStage = React.memo(function PreviewStage({
   onExport,
   onExportFormatChange,
   onExportQualityChange,
+  motionExportSettings,
+  onMotionExportSettingsChange,
   onCompareModeChange = () => {},
   onFileSelected,
   onInvalidDrop,
@@ -82,6 +98,14 @@ export const PreviewStage = React.memo(function PreviewStage({
   onPreviewViewportChange,
   onRedoSettingsChange,
   onUndoSettingsChange,
+  isAnimated = false,
+  frameCount = 0,
+  currentFrame = 0,
+  isPlaying = false,
+  onPlayPause,
+  onFrameChange,
+  onPrevFrame,
+  onNextFrame,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -177,24 +201,43 @@ export const PreviewStage = React.memo(function PreviewStage({
                 </EmptyHeader>
               </Empty>
             ) : (
-              <div className="grid h-full min-h-0 w-full items-stretch gap-3">
-                <PreviewPresentation
-                  compareMode={compareMode}
-                  desktopPrecisionEnabled={isDesktopViewScale}
-                  fullOutputHeight={fullOutputHeight}
-                  fullOutputWidth={fullOutputWidth}
-                  original={original}
-                  preview={preview}
-                  previewTargetHeight={previewTargetHeight}
-                  previewTargetWidth={previewTargetWidth}
-                  previewViewport={previewViewport}
-                  status={status}
-                  onDisplayFrameChange={onPreviewDisplaySizeChange}
-                  onViewportChange={onPreviewViewportChange}
-                />
+              <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2">
+                <div className="min-h-0 min-w-0 flex-1">
+                  <PreviewPresentation
+                    compareMode={compareMode}
+                    desktopPrecisionEnabled={isDesktopViewScale}
+                    fullOutputHeight={fullOutputHeight}
+                    fullOutputWidth={fullOutputWidth}
+                    original={original}
+                    preview={preview}
+                    previewTargetHeight={previewTargetHeight}
+                    previewTargetWidth={previewTargetWidth}
+                    previewViewport={previewViewport}
+                    status={status}
+                    onDisplayFrameChange={onPreviewDisplaySizeChange}
+                    onViewportChange={onPreviewViewportChange}
+                  />
+                </div>
               </div>
             )}
           </div>
+          {frameCount > 0 &&
+          onPlayPause &&
+          onFrameChange &&
+          onPrevFrame &&
+          onNextFrame ? (
+            <div className="mx-2 shrink-0">
+              <FrameStrip
+                frameCount={frameCount}
+                currentFrame={currentFrame}
+                isPlaying={isPlaying}
+                onPlayPause={onPlayPause}
+                onFrameChange={onFrameChange}
+                onPrevFrame={onPrevFrame}
+                onNextFrame={onNextFrame}
+              />
+            </div>
+          ) : null}
           <div className="mx-2 grid shrink-0 grid-cols-1 gap-3 px-1">
             <div className="grid w-full min-w-0 items-center gap-2 md:relative md:flex md:h-full md:min-h-9">
               <Input
@@ -215,12 +258,15 @@ export const PreviewStage = React.memo(function PreviewStage({
                   onUndoSettingsChange={onUndoSettingsChange}
                 />
                 <ExportDrawerContent
+                  isAnimated={isAnimated}
                   exportFormat={exportFormat}
                   exportQuality={exportQuality}
                   status={status}
+                  motionExportSettings={motionExportSettings}
                   onExport={onExport}
                   onExportFormatChange={onExportFormatChange}
                   onExportQualityChange={onExportQualityChange}
+                  onMotionExportSettingsChange={onMotionExportSettingsChange}
                 />
               </ResponsiveDrawer>
             </div>

@@ -124,6 +124,10 @@ export type SettingsTransition =
       frequency?: number
       patternSize?: HalftonePatternSize
     }
+  | {
+      type: "set-temporal-stability"
+      temporalStability: "none" | "global-palette"
+    }
 
 export type SettingsTransitionContext = {
   sourceDimensions?: SourceDimensions | null
@@ -345,6 +349,13 @@ export function applySettingsTransition(
               ? { patternSize: transition.patternSize }
               : {}),
           },
+        },
+      }
+    case "set-temporal-stability":
+      return {
+        settings: {
+          ...current,
+          temporalStability: transition.temporalStability,
         },
       }
     case "reorder-effect-stages": {

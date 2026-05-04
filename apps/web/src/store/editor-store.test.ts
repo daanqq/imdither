@@ -48,7 +48,7 @@ describe("editor store settings transitions", () => {
       exportFormat: "jpeg",
       exportQuality: 0.5,
       settings: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         algorithm: "atkinson",
         colorDepth: { mode: "full" },
         matchingMode: "rgb",

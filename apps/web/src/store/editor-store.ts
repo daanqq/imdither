@@ -3,6 +3,9 @@ import {
   PRESET_PALETTES,
   normalizeSettings,
   type EditorSettings,
+  type MotionExportSettings,
+  type FrameSequence,
+  type PixelBuffer,
   type ProcessingMetadata,
 } from "@workspace/core"
 import { create } from "zustand"
@@ -79,6 +82,21 @@ type EditorState = {
   setError: (error: string | null) => void
   setSourceNotice: (notice: string | null) => void
   setMetadata: (metadata: ProcessingMetadata | null) => void
+  frameSequence: FrameSequence | null
+  processedFrames: (PixelBuffer | null)[]
+  currentFrameIndex: number
+  isPlaying: boolean
+  setFrameSequence: (
+    frameSequence: FrameSequence | null,
+    sourceName?: string
+  ) => void
+  setProcessedFrame: (index: number, frame: PixelBuffer) => void
+  clearProcessedFrames: () => void
+  animatedSourceName: string | null
+  setCurrentFrameIndex: (index: number) => void
+  setIsPlaying: (playing: boolean) => void
+  motionExportSettings: MotionExportSettings
+  setMotionExportSettings: (settings: Partial<MotionExportSettings>) => void
 }
 
 type SettingsHistoryOptions = {
@@ -88,6 +106,11 @@ type SettingsHistoryOptions = {
 type SettingsHistory = {
   future: EditorSettings[]
   past: EditorSettings[]
+}
+
+const DEFAULT_MOTION_EXPORT_SETTINGS: MotionExportSettings = {
+  frameDurationMs: 100,
+  loopCount: 0,
 }
 
 const EMPTY_SETTINGS_HISTORY: SettingsHistory = {
@@ -279,6 +302,36 @@ export const useEditorStore = create<EditorState>()(
       setError: (error) => set({ error }),
       setSourceNotice: (sourceNotice) => set({ sourceNotice }),
       setMetadata: (metadata) => set({ metadata }),
+      frameSequence: null,
+      animatedSourceName: null,
+      processedFrames: [],
+      currentFrameIndex: 0,
+      isPlaying: false,
+      setFrameSequence: (frameSequence, sourceName) =>
+        set({
+          frameSequence,
+          processedFrames: [],
+          currentFrameIndex: 0,
+          animatedSourceName: sourceName ?? null,
+        }),
+      setProcessedFrame: (index, frame) =>
+        set((state) => {
+          const next = [...state.processedFrames]
+          next[index] = frame
+
+          return { processedFrames: next }
+        }),
+      clearProcessedFrames: () => set({ processedFrames: [] }),
+      setCurrentFrameIndex: (currentFrameIndex) => set({ currentFrameIndex }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      motionExportSettings: DEFAULT_MOTION_EXPORT_SETTINGS,
+      setMotionExportSettings: (motion) =>
+        set((state) => ({
+          motionExportSettings: {
+            ...state.motionExportSettings,
+            ...motion,
+          },
+        })),
     }),
     {
       name: "imdither-editor",
@@ -299,7 +352,7 @@ export const useEditorStore = create<EditorState>()(
         ...currentState,
         ...normalizePersistedEditorState(persistedState),
       }),
-      version: 4,
+      version: 5,
     }
   )
 )

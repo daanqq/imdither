@@ -36,5 +36,9 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "gifuct-js": "^2.1.2"
+  }
 }

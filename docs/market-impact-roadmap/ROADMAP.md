@@ -191,6 +191,10 @@ Planning artifacts:
 
 Success signal: IMDITHER differentiates from still-only dithering tools while preserving local-first processing.
 
+Planning artifacts:
+
+- [Phase 6 Motion Pipeline Contract](phase-6-motion-pipeline/PRD.md)
+
 ### Phase 7: Automation and Pro Workflows
 
 - [ ] Define a publishable `@imdither/core` package contract.

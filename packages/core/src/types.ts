@@ -50,7 +50,7 @@ export type HalftoneScreenSettings = {
 }
 
 export type EditorSettings = {
-  schemaVersion: 2 | 3 | 4
+  schemaVersion: 2 | 3 | 4 | 5
   algorithm: DitherAlgorithm
   bayerSize: BayerSize
   paletteId: string
@@ -73,6 +73,7 @@ export type EditorSettings = {
     colorMode: ColorMode
   }
   halftoneScreen: HalftoneScreenSettings
+  temporalStability: "none" | "global-palette"
 }
 
 export type ProcessingMetadata = {
@@ -97,4 +98,17 @@ export type StageCache = {
   get: (key: string) => PixelBuffer | undefined
   set: (key: string, value: PixelBuffer) => void
   clear: () => void
+}
+
+export type FrameSequence = {
+  frames: PixelBuffer[]
+  durationsMs: number[]
+  loopCount: number
+  sourceWidth: number
+  sourceHeight: number
+}
+
+export type MotionExportSettings = {
+  frameDurationMs: number
+  loopCount: number
 }

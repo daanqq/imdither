@@ -188,8 +188,12 @@ export function PreviewPresentationSurface({
 
     controller.syncViewport(viewport)
 
-    if (viewport.mode === "manual") {
-      applyManualFrameViewport(viewport)
+    // Use controller's internal viewport — it may differ from the prop
+    // during active drag (uncommitted). This prevents snap-back.
+    const effectiveViewport = controller.getViewport()
+
+    if (effectiveViewport.mode === "manual") {
+      applyManualFrameViewport(effectiveViewport)
     }
   }, [
     controller,
@@ -556,17 +560,12 @@ export function PreviewPresentation({
   onDisplayFrameChange,
   onViewportChange,
 }: PreviewPresentationProps) {
-  const [slideDividerState, setSlideDividerState] = React.useState<{
-    percent: number
-    source: PixelBuffer
-  } | null>(null)
+  const [slideDividerPercent, setSlideDividerPercent] = React.useState(
+    SLIDE_COMPARE_DEFAULT
+  )
   const [displayFrame, setDisplayFrame] = React.useState<ViewportBox | null>(
     null
   )
-  const slideDividerPercent =
-    slideDividerState?.source === original
-      ? slideDividerState.percent
-      : SLIDE_COMPARE_DEFAULT
   const displayModel = getPreviewPresentationDisplayModel({
     fullOutputHeight,
     fullOutputWidth,
@@ -586,8 +585,8 @@ export function PreviewPresentation({
     [onDisplayFrameChange]
   )
   const handleDividerChange = React.useCallback(
-    (percent: number) => setSlideDividerState({ percent, source: original }),
-    [original]
+    (percent: number) => setSlideDividerPercent(percent),
+    []
   )
 
   if (compareMode === "slide") {

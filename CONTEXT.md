@@ -215,6 +215,35 @@ Use these terms consistently:
 Do not write Committed Settings or Preview Viewport state on every pointer move
 unless a PRD explicitly accepts the responsiveness tradeoff.
 
+## Performance And Motion Context
+
+Performance acceleration must preserve the local-first still-image pipeline while
+leaving room for future motion workflows.
+
+Use these terms consistently:
+
+- Frame Sequence: an ordered set of decoded image frames plus timing metadata
+  that can be processed and exported as animated or video output in a future
+  motion pipeline.
+- Acceleration Layer: a measured optimization path, such as pooling, caching,
+  OffscreenCanvas, WASM, WebGL, or WebGPU, that improves processing throughput
+  without changing Editor Settings semantics.
+- Acceleration Adapter: a narrow boundary around a browser API or third-party
+  library candidate used for profiling or optional execution before it becomes
+  part of the supported processing contract.
+
+Phase 8 acceleration may optimize still-image processing first, but its cache,
+tiling, worker, WASM, and GPU decisions must stay compatible with a future Frame
+Sequence Processing Contract from Phase 6.
+
+Third-party acceleration libraries must enter through Acceleration Adapters
+first. Do not make a library the core processing foundation until benchmarks,
+browser support, determinism, bundle impact, and fallback behavior justify it.
+
+If a Phase 8 slice cannot be implemented without assuming motion semantics,
+write the Phase 6 motion contract first instead of baking those assumptions into
+the acceleration work.
+
 ## Export Context
 
 Export is format-neutral until the Export Layer encodes a Full Output.

@@ -46,6 +46,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const dividerPercentRef = React.useRef(clampSlideDivider(dividerPercent))
   const pendingDividerPercentRef = React.useRef(dividerPercentRef.current)
   const dividerAnimationFrameRef = React.useRef<number | null>(null)
+  const isDividerDraggingRef = React.useRef(false)
   const [viewportBox, setViewportBox] = React.useState<{
     height: number
     width: number
@@ -91,6 +92,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
       onPointerDown={(event) => {
         event.stopPropagation()
         event.currentTarget.setPointerCapture(event.pointerId)
+        isDividerDraggingRef.current = true
         updateDividerFromPointer(event.clientX)
       }}
       onPointerMove={(event) => {
@@ -103,12 +105,15 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
           event.currentTarget.releasePointerCapture(event.pointerId)
         }
 
+        isDividerDraggingRef.current = false
         commitDividerFromPointer(event.clientX)
       }}
       onPointerCancel={(event) => {
         if (event.currentTarget.hasPointerCapture(event.pointerId)) {
           event.currentTarget.releasePointerCapture(event.pointerId)
         }
+
+        isDividerDraggingRef.current = false
       }}
     >
       ||
@@ -184,6 +189,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   usePreviewCanvasRedrawBoundary(redrawCanvases)
 
   React.useEffect(() => {
+    // Skip prop sync while dragging — visual is managed by pointer events
+    if (isDividerDraggingRef.current) {
+      return
+    }
+
     dividerPercentRef.current = clampedDivider
     pendingDividerPercentRef.current = clampedDivider
     applyDividerVisual(clampedDivider)
@@ -202,7 +212,10 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   }, [previewViewport])
 
   function scheduleDividerVisual(percent: number) {
-    pendingDividerPercentRef.current = clampSlideDivider(percent)
+    const clamped = clampSlideDivider(percent)
+    pendingDividerPercentRef.current = clamped
+    // Keep dividerPercentRef in sync during drag so canvas redraws use current position
+    dividerPercentRef.current = clamped
 
     if (dividerAnimationFrameRef.current !== null) {
       return

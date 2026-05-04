@@ -67,11 +67,23 @@ export function normalizePreviewViewport(value: unknown): PreviewViewport {
 
   return {
     mode: value.mode === "manual" ? "manual" : "fit",
-    zoom: clampZoom(typeof value.zoom === "number" ? value.zoom : 1),
-    center: {
-      x: typeof centerX === "number" && Number.isFinite(centerX) ? centerX : 0,
-      y: typeof centerY === "number" && Number.isFinite(centerY) ? centerY : 0,
-    },
+    zoom:
+      value.mode !== "manual"
+        ? 1
+        : clampZoom(typeof value.zoom === "number" ? value.zoom : 1),
+    center:
+      value.mode !== "manual"
+        ? { x: 0, y: 0 }
+        : {
+            x:
+              typeof centerX === "number" && Number.isFinite(centerX)
+                ? centerX
+                : 0,
+            y:
+              typeof centerY === "number" && Number.isFinite(centerY)
+                ? centerY
+                : 0,
+          },
     gridEnabled: value.gridEnabled === true,
     loupeEnabled: value.loupeEnabled === true,
   }

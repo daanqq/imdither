@@ -21,7 +21,7 @@ describe("Editor Settings public contract", () => {
       viewScale: "actual",
     })
 
-    expect(settings.schemaVersion).toBe(4)
+    expect(settings.schemaVersion).toBe(5)
     expect(settings.algorithm).toBe("atkinson")
     expect(settings.resize.width).toBe(320)
     expect(settings).not.toHaveProperty("compareMode")
@@ -34,13 +34,13 @@ describe("Editor Settings public contract", () => {
     expect(settings.effectStack[1].kind).toBe("dither")
   })
 
-  it("normalizes schema version 2 settings into schema version 4 with compatibility stack", () => {
+  it("normalizes schema version 2 settings into schema version 5 with compatibility stack", () => {
     const settings = normalizeSettings({
       algorithm: "atkinson",
       schemaVersion: 2,
     })
 
-    expect(settings.schemaVersion).toBe(4)
+    expect(settings.schemaVersion).toBe(5)
     expect(settings.effectStack).toHaveLength(2)
   })
 
@@ -59,7 +59,7 @@ describe("Editor Settings public contract", () => {
       ],
     })
 
-    expect(settings.schemaVersion).toBe(4)
+    expect(settings.schemaVersion).toBe(5)
     expect(settings.effectStack).toHaveLength(2)
     expect(settings.effectStack[0].kind).toBe("quantize")
     expect(settings.effectStack[0].params.matchingMode).toBe("rgb")
@@ -70,14 +70,14 @@ describe("Editor Settings public contract", () => {
   it("builds compatibility stack from v4 settings without explicit effectStack", () => {
     const settings = normalizeSettings({
       ...DEFAULT_SETTINGS,
-      schemaVersion: 4,
+      schemaVersion: 5,
     })
 
-    expect(settings.schemaVersion).toBe(4)
+    expect(settings.schemaVersion).toBe(5)
     expect(settings.effectStack).toHaveLength(2)
   })
 
-  it("preserves color depth and matching settings in schema v4", () => {
+  it("preserves color depth and matching settings in schema v5", () => {
     const settings = normalizeSettings({
       algorithm: "bayer",
       bayerSize: 8,
@@ -86,7 +86,7 @@ describe("Editor Settings public contract", () => {
       matchingMode: "perceptual",
     })
 
-    expect(settings.schemaVersion).toBe(4)
+    expect(settings.schemaVersion).toBe(5)
     expect(settings.colorDepth).toEqual({ mode: "limit", count: 8 })
     expect(settings.matchingMode).toBe("perceptual")
     expect(
