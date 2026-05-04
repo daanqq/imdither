@@ -67,8 +67,8 @@ feature shipped; update its status and keep this index current.
 | planned | [Inspector Tabs Shell](inspector-tabs-shell/PRD.md)                                                          | Inspector tab shell structure.                                                      |
 | planned | [Inspector Deep Editors](inspector-deep-editors/PRD.md)                                                      | Deeper inspector editing controls.                                                  |
 | planned | [Inspector Control Repartition](inspector-control-repartition/PRD.md)                                        | Control ownership repartition across inspector areas.                               |
-| planned | [Phase 6 Motion Pipeline Contract](market-impact-roadmap/phase-6-motion-pipeline/PRD.md)                     | Frame Sequence contract, motion intake/export spike, and temporal stability policy. |
-| Status  | PRD                                                                   | Scope                                                 |
+| in-progress | [Phase 6 Motion Pipeline Contract](market-impact-roadmap/phase-6-motion-pipeline/PRD.md)                  | Frame Sequence contract, motion intake/export spike, and temporal stability policy. |
+| planned     | [Phase 6.1 APNG Intake and Export](market-impact-roadmap/phase-6-apng/PRD.md)                             | APNG intake via fast-png decode, APNG export via fast-png encode, animated format selector. |
 | ------- | --------------------------------------------------------------------- | ----------------------------------------------------- |
 | planned | [Inspector Tabs Shell](inspector-tabs-shell/PRD.md)                   | Inspector tab shell structure.                        |
 | planned | [Inspector Deep Editors](inspector-deep-editors/PRD.md)               | Deeper inspector editing controls.                    |

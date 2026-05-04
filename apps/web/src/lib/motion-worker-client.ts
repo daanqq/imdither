@@ -27,9 +27,22 @@ type MotionFrameSequenceJobParams = {
   onFrame: (frameIndex: number, image: PixelBuffer) => void
 }
 
-type MotionJobParams = MotionGifJobParams | MotionFrameSequenceJobParams
+type MotionApngJobParams = {
+  jobId: number
+  file: File
+  settings: EditorSettings
+  signal?: AbortSignal
+  onDecoded: (frameSequence: FrameSequence) => void
+  onFrame: (frameIndex: number, image: PixelBuffer) => void
+}
+
+type MotionJobParams =
+  | MotionGifJobParams
+  | MotionApngJobParams
+  | MotionFrameSequenceJobParams
 
 type MotionGifJob = {
+  requestType: "process-gif" | "process-apng" | "process-sequence"
   params: MotionJobParams
   resolve: () => void
   reject: (error: Error | DOMException) => void
@@ -41,16 +54,23 @@ let worker: Worker | null = null
 let activeJob: MotionGifJob | null = null
 
 export function runMotionGifJob(params: MotionGifJobParams): Promise<void> {
-  return runMotionJob(params)
+  return runMotionJob("process-gif", params)
+}
+
+export function runMotionApngJob(params: MotionApngJobParams): Promise<void> {
+  return runMotionJob("process-apng", params)
 }
 
 export function runMotionFrameSequenceJob(
   params: MotionFrameSequenceJobParams
 ): Promise<void> {
-  return runMotionJob(params)
+  return runMotionJob("process-sequence", params)
 }
 
-function runMotionJob(params: MotionJobParams): Promise<void> {
+function runMotionJob(
+  requestType: MotionGifJob["requestType"],
+  params: MotionJobParams
+): Promise<void> {
   return new Promise((resolve, reject) => {
     if (params.signal?.aborted) {
       reject(createAbortError())
@@ -64,6 +84,7 @@ function runMotionJob(params: MotionJobParams): Promise<void> {
     }
 
     const job: MotionGifJob = {
+      requestType,
       params,
       resolve,
       reject,
@@ -86,20 +107,22 @@ function postJob(job: MotionGifJob) {
   activeJob = job
 
   try {
-    const request: MotionWorkerRequest =
-      "file" in job.params
-        ? {
-            type: "process-gif",
-            jobId: job.params.jobId,
-            file: job.params.file,
-            settings: job.params.settings,
-          }
-        : {
-            type: "process-sequence",
-            jobId: job.params.jobId,
-            frameSequence: job.params.frameSequence,
-            settings: job.params.settings,
-          }
+    const isFileJob =
+      job.requestType === "process-gif" || job.requestType === "process-apng"
+    const request: MotionWorkerRequest = isFileJob
+      ? {
+          type: job.requestType,
+          jobId: job.params.jobId,
+          file: (job.params as MotionGifJobParams).file,
+          settings: (job.params as MotionGifJobParams).settings,
+        }
+      : {
+          type: "process-sequence",
+          jobId: job.params.jobId,
+          frameSequence: (job.params as MotionFrameSequenceJobParams)
+            .frameSequence,
+          settings: (job.params as MotionFrameSequenceJobParams).settings,
+        }
 
     getWorker().postMessage(request)
   } catch (error) {

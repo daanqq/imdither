@@ -1,7 +1,18 @@
 # Phase 6 PRD: Motion Pipeline Contract
 
-Status: planned
-Last updated: 2026-05-03
+Status: in-progress
+Last updated: 2026-05-04
+
+## Implementation Progress
+
+- [x] GIF intake via gifuct-js through motion worker
+- [x] GIF export via gifenc through Frame Sequence contract
+- [x] Frame Sequence type and processing contract in `@workspace/core`
+- [x] Frame preview controls (play/pause, scrub, frame step)
+- [x] Temporal stability ("none" | "global-palette") in Editor Settings
+- [x] Still export stability preserved alongside GIF export
+- [x] APNG intake and export (see phase-6-apng/PRD.md)
+- [ ] WebM/video export via WebCodecs
 
 ## Problem Statement
 

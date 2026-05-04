@@ -20,6 +20,7 @@ import { PreviewSurfaceControls } from "@/components/preview-surface-controls"
 import { ExportDrawerContent } from "@/components/export-drawer-content"
 import { PreviewActionStrip } from "@/components/preview-action-strip"
 import { FrameStrip } from "@/components/frame-strip"
+import type { AnimatedExportFormat } from "@/lib/export-motion"
 import { type ExportFormat } from "@/lib/export-image"
 import { type PreviewViewport } from "@/lib/preview-viewport"
 import { usePreviewDisplayMeasurement } from "@/lib/use-preview-display-measurement"
@@ -66,6 +67,8 @@ export type PreviewStageProps = {
   onFrameChange?: (frame: number) => void
   onPrevFrame?: () => void
   onNextFrame?: () => void
+  animatedExportFormat?: AnimatedExportFormat
+  onAnimatedExportFormatChange?: (format: AnimatedExportFormat) => void
 }
 
 export const PreviewStage = React.memo(function PreviewStage({
@@ -106,6 +109,8 @@ export const PreviewStage = React.memo(function PreviewStage({
   onFrameChange,
   onPrevFrame,
   onNextFrame,
+  animatedExportFormat = "gif",
+  onAnimatedExportFormatChange,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -259,13 +264,16 @@ export const PreviewStage = React.memo(function PreviewStage({
                 />
                 <ExportDrawerContent
                   isAnimated={isAnimated}
+                  animatedExportFormat={animatedExportFormat}
                   exportFormat={exportFormat}
                   exportQuality={exportQuality}
                   status={status}
+                  frameCount={frameCount}
                   motionExportSettings={motionExportSettings}
                   onExport={onExport}
                   onExportFormatChange={onExportFormatChange}
                   onExportQualityChange={onExportQualityChange}
+                  onAnimatedExportFormatChange={onAnimatedExportFormatChange}
                   onMotionExportSettingsChange={onMotionExportSettingsChange}
                 />
               </ResponsiveDrawer>

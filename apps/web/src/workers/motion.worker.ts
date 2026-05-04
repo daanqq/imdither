@@ -6,6 +6,7 @@ import {
   type FrameSequence,
 } from "@workspace/core"
 
+import { decodeApngToFrameSequence } from "@/lib/apng-intake"
 import { decodeGifToFrameSequence } from "@/lib/gif-intake"
 import type {
   MotionWorkerRequest,
@@ -28,6 +29,11 @@ scope.addEventListener(
       return
     }
 
+    if (event.data.type === "process-apng") {
+      void processApng(event.data)
+      return
+    }
+
     if (event.data.type === "process-sequence") {
       void processFrameSequenceJob(
         event.data.jobId,
@@ -37,6 +43,51 @@ scope.addEventListener(
     }
   }
 )
+
+async function processApng(
+  request: Extract<MotionWorkerRequest, { type: "process-apng" }>
+) {
+  try {
+    canceledJobIds.delete(request.jobId)
+
+    const buffer = await request.file.arrayBuffer()
+
+    if (isCanceled(request.jobId)) {
+      return
+    }
+
+    const frameSequence = decodeApngToFrameSequence(buffer)
+    const decodedResponse: MotionWorkerResponse = {
+      type: "decoded",
+      jobId: request.jobId,
+      frameSequence,
+    }
+
+    scope.postMessage(decodedResponse)
+
+    if (!isCanceled(request.jobId)) {
+      const completeResponse: MotionWorkerResponse = {
+        type: "complete",
+        jobId: request.jobId,
+      }
+      scope.postMessage(completeResponse)
+    }
+  } catch (error) {
+    if (isCanceled(request.jobId)) {
+      return
+    }
+
+    const errorResponse: MotionWorkerResponse = {
+      type: "error",
+      jobId: request.jobId,
+      message:
+        error instanceof Error ? error.message : "APNG processing failed",
+    }
+    scope.postMessage(errorResponse)
+  } finally {
+    canceledJobIds.delete(request.jobId)
+  }
+}
 
 async function processGif(
   request: Extract<MotionWorkerRequest, { type: "process-gif" }>

@@ -12,6 +12,12 @@ export type MotionWorkerRequest =
       settings: EditorSettings
     }
   | {
+      type: "process-apng"
+      jobId: number
+      file: File
+      settings: EditorSettings
+    }
+  | {
       type: "process-sequence"
       jobId: number
       frameSequence: FrameSequence

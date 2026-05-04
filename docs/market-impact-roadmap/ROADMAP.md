@@ -181,19 +181,21 @@ Planning artifacts:
 
 ### Phase 6: Motion and Export Surfaces
 
-- [ ] Add an animated-image intake spike using browser frame decoding APIs.
-- [ ] Define a frame sequence processing contract.
-- [ ] Add frame preview controls.
-- [ ] Add temporal stability options for animated dithering.
-- [ ] Add GIF or APNG export as the first motion output.
+- [x] Add an animated-image intake spike using browser frame decoding APIs.
+- [x] Define a frame sequence processing contract.
+- [x] Add frame preview controls.
+- [x] Add temporal stability options for animated dithering.
+- [x] Add GIF export as the first motion output.
+- [ ] Add APNG intake and export through the Frame Sequence contract (in progress, see phase-6-apng/PRD.md).
 - [ ] Add WebM/video export through a WebCodecs-based path where supported.
-- [ ] Keep still-image export stable while adding motion.
+- [x] Keep still-image export stable while adding motion.
 
 Success signal: IMDITHER differentiates from still-only dithering tools while preserving local-first processing.
 
 Planning artifacts:
 
 - [Phase 6 Motion Pipeline Contract](phase-6-motion-pipeline/PRD.md)
+- [Phase 6.1 APNG Intake and Export](phase-6-apng/PRD.md)
 
 ### Phase 7: Automation and Pro Workflows
 

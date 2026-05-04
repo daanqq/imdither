@@ -251,20 +251,31 @@ Export is format-neutral until the Export Layer encodes a Full Output.
 Use these terms consistently:
 
 - Export Preferences: persisted editor UI preferences for encoding.
-- Export Format: PNG, WebP, or JPEG.
+- Export Format: PNG, WebP, or JPEG for still images.
 - Export Quality: shared lossy encoder quality for WebP and JPEG.
+- Animated Export Format: GIF or APNG for motion output, chosen per session and
+  not persisted.
+- Motion Export Settings: per-session frame duration and loop count for animated
+  export.
 - Export Action: command that starts an Export Job, passes the Full Output
   through the Browser Encoder, downloads an Export File, and reports export
   metadata, status, and errors.
 - Export Action Application: browser-side seam that applies an Export Action to
   editor runtime state without making the App Shell own Export Job ordering,
   Browser Encoder calls, download naming, metadata updates, status, or errors.
-- Export Drawer: responsive drawer that owns Export Format, Export Quality, and
-  the final Export Action.
+- Export Drawer: responsive drawer that owns Export Format and Export Quality for
+  still images, or Animated Export Format and Motion Export Settings for motion,
+  plus the final Export Action.
 - Export Layer: browser-side layer that encodes a Pixel Buffer.
-- Browser Encoder: canvas encoder used by the Export Layer.
+- Browser Encoder: canvas encoder or third-party codec adapter used by the
+  Export Layer.
 - Encoder Failure: explicit failure state when the Browser Encoder cannot
   produce the requested Export Format.
+
+Animated export always uses a dedicated third-party encoder (gifenc for GIF,
+fast-png for APNG) rather than the canvas-based Browser Encoder. Still and
+animated export paths share the same Export Drawer but diverge at the encoder
+boundary.
 
 Preserve the rule that PNG remains the default export path unless a feature
 explicitly widens the behavior.

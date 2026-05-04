@@ -25,6 +25,7 @@ import {
   getExportFormatOption,
   type ExportFormat,
 } from "@/lib/export-image"
+import type { AnimatedExportFormat } from "@/lib/export-motion"
 import { useState } from "react"
 import type { JobStatus } from "@/store/editor-store"
 
@@ -33,20 +34,26 @@ export function ExportDrawerContent({
   exportQuality,
   status,
   isAnimated = false,
+  animatedExportFormat = "gif",
+  frameCount,
   motionExportSettings,
   onExport,
   onExportFormatChange,
   onExportQualityChange,
+  onAnimatedExportFormatChange,
   onMotionExportSettingsChange,
 }: {
   exportFormat: ExportFormat
   exportQuality: number
   status: JobStatus
   isAnimated?: boolean
+  animatedExportFormat?: AnimatedExportFormat
+  frameCount?: number
   motionExportSettings?: { frameDurationMs: number; loopCount: number }
   onExport: () => void
   onExportFormatChange: (format: ExportFormat) => void
   onExportQualityChange: (quality: number) => void
+  onAnimatedExportFormatChange?: (format: AnimatedExportFormat) => void
   onMotionExportSettingsChange?: (settings: {
     frameDurationMs?: number
     loopCount?: number
@@ -54,13 +61,7 @@ export function ExportDrawerContent({
 }) {
   const [durationInput, setDurationInput] = useState<string | null>(null)
   const selectedExportFormat = isAnimated
-    ? {
-        extension: "gif" as const,
-        id: "gif" as const,
-        label: "Animated GIF" as const,
-        mimeType: "image/gif",
-        supportsQuality: false,
-      }
+    ? getAnimatedFormatOption(animatedExportFormat)
     : getExportFormatOption(exportFormat)
   const exportQualityPercent = Math.round(exportQuality * 100)
   const displayedExportQuality = selectedExportFormat.supportsQuality
@@ -73,7 +74,7 @@ export function ExportDrawerContent({
         <DrawerTitle>Export</DrawerTitle>
         <DrawerDescription>
           {isAnimated
-            ? "Export all frames as an animated GIF."
+            ? `Export all frames as an animated ${animatedExportFormat === "apng" ? "PNG (APNG)" : "GIF"}.`
             : "Format and quality for final image download."}
         </DrawerDescription>
       </DrawerHeader>
@@ -85,9 +86,24 @@ export function ExportDrawerContent({
           >
             Export Format
             {isAnimated ? (
-              <div className="mt-1.5 font-mono text-xs text-muted-foreground">
-                Animated GIF
-              </div>
+              <Select
+                value={animatedExportFormat}
+                onValueChange={(value) =>
+                  onAnimatedExportFormatChange?.(value as AnimatedExportFormat)
+                }
+              >
+                <SelectTrigger
+                  aria-label="Animated export format"
+                  className="w-full min-w-0"
+                  id="animated-export-format"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gif">GIF</SelectItem>
+                  <SelectItem value="apng">APNG</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
               <Select
                 value={exportFormat}
@@ -139,8 +155,9 @@ export function ExportDrawerContent({
         {isAnimated ? (
           <>
             <p className="text-xs text-muted-foreground">
-              GIF output uses the active palette. Palettes larger than 256
-              colors are not supported.
+              {animatedExportFormat === "apng"
+                ? "APNG output uses 24-bit RGBA per frame. Palette matching and dithering still apply."
+                : "GIF output uses the active palette. Palettes larger than 256 colors are not supported."}
             </p>
             {motionExportSettings && onMotionExportSettingsChange ? (
               <div className="grid gap-3">
@@ -184,6 +201,9 @@ export function ExportDrawerContent({
                     {motionExportSettings.frameDurationMs}ms ≈{" "}
                     {Math.round(1000 / motionExportSettings.frameDurationMs)}{" "}
                     fps
+                    {frameCount != null && frameCount > 0
+                      ? ` · total ${formatDuration(motionExportSettings.frameDurationMs * frameCount)}`
+                      : ""}
                   </span>
                 </label>
                 <label
@@ -238,4 +258,36 @@ export function ExportDrawerContent({
       </DrawerFooter>
     </DrawerContent>
   )
+}
+
+function formatDuration(ms: number): string {
+  if (ms >= 60000) {
+    const sec = (ms / 1000).toFixed(1)
+    return `${sec}s`
+  }
+  return `${ms}ms`
+}
+
+function getAnimatedFormatOption(format: AnimatedExportFormat): {
+  extension: string
+  id: string
+  label: string
+  mimeType: string
+  supportsQuality: boolean
+} {
+  return format === "apng"
+    ? {
+        extension: "png",
+        id: "apng",
+        label: "APNG",
+        mimeType: "image/png",
+        supportsQuality: false,
+      }
+    : {
+        extension: "gif",
+        id: "gif",
+        label: "GIF",
+        mimeType: "image/gif",
+        supportsQuality: false,
+      }
 }

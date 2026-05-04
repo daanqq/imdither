@@ -47,8 +47,15 @@ import {
   DEFAULT_PREVIEW_VIEWPORT,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
-import { exportGifSequence, makeMotionExportName } from "@/lib/export-motion"
 import {
+  exportApngSequence,
+  exportGifSequence,
+  makeMotionExportName,
+  type AnimatedExportFormat,
+} from "@/lib/export-motion"
+import { hasAcTlChunk } from "@/lib/apng-intake-detect"
+import {
+  runMotionApngJob,
   runMotionFrameSequenceJob,
   runMotionGifJob,
 } from "@/lib/motion-worker-client"
@@ -122,6 +129,8 @@ export function App() {
     (state) => state.clearProcessedFrames
   )
   const [source, setSource] = React.useState<LoadedSource | null>(null)
+  const [animatedExportFormat, setAnimatedExportFormat] =
+    React.useState<AnimatedExportFormat>("gif")
   const [isDesktopViewScale, setIsDesktopViewScale] = React.useState(() =>
     typeof window === "undefined"
       ? true
@@ -237,7 +246,7 @@ export function App() {
     : preview
 
   const handleAnimatedFile = React.useCallback(
-    async (file: File) => {
+    async (file: File, format: "gif" | "apng" = "gif") => {
       motionJobAbortRef.current?.abort()
       const controller = new AbortController()
       motionJobAbortRef.current = controller
@@ -247,7 +256,8 @@ export function App() {
       try {
         setSource(null)
         setStatus("processing")
-        await runMotionGifJob({
+        const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
+        await runner({
           jobId,
           file,
           settings,
@@ -411,12 +421,23 @@ export function App() {
   }, [isPlaying, frameSequence, currentFrameIndex, setCurrentFrameIndex])
 
   const handleFile = React.useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (
         file.type === "image/gif" ||
         file.name.toLowerCase().endsWith(".gif")
       ) {
-        return handleAnimatedFile(file)
+        return handleAnimatedFile(file, "gif")
+      }
+
+      if (
+        file.type === "image/png" ||
+        file.name.toLowerCase().endsWith(".png")
+      ) {
+        const isApng = await hasAcTlChunk(file)
+
+        if (isApng) {
+          return handleAnimatedFile(file, "apng")
+        }
       }
 
       motionJobAbortRef.current?.abort()
@@ -527,13 +548,19 @@ export function App() {
     if (isAnimated && frameSequence) {
       try {
         setStatus("exporting")
-        const blob = await exportGifSequence(
+        const exporter =
+          animatedExportFormat === "apng"
+            ? exportApngSequence
+            : exportGifSequence
+        const blob = await exporter(
           frameSequence,
           settings,
           motionExportSettings
         )
+        const ext = animatedExportFormat === "apng" ? "png" : "gif"
         const name = makeMotionExportName(
-          animatedSourceName ?? (source ? source.name : "output.gif")
+          animatedSourceName ?? (source ? source.name : `output.${ext}`),
+          animatedExportFormat
         )
 
         downloadBlob(blob, name)
@@ -543,7 +570,7 @@ export function App() {
         setError(
           exportError instanceof Error
             ? exportError.message
-            : "GIF export failed"
+            : `${animatedExportFormat === "apng" ? "APNG" : "GIF"} export failed`
         )
       }
 
@@ -561,6 +588,7 @@ export function App() {
       { runExportJob: processingJobs.runExportJob }
     )
   }, [
+    animatedExportFormat,
     animatedSourceName,
     exportActionAdapter,
     exportFormat,
@@ -843,6 +871,8 @@ export function App() {
             frameCount={frameSequence?.frames.length ?? 0}
             currentFrame={currentFrameIndex}
             isPlaying={isPlaying}
+            animatedExportFormat={animatedExportFormat}
+            onAnimatedExportFormatChange={setAnimatedExportFormat}
             onPlayPause={() => setIsPlaying(!isPlaying)}
             onFrameChange={setCurrentFrameIndex}
             onPrevFrame={() =>
