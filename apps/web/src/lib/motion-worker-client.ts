@@ -9,6 +9,7 @@ import type {
   MotionWorkerRequest,
   MotionWorkerResponse,
 } from "@/workers/motion-protocol"
+import type { VideoExportSettings } from "./motion-types"
 
 type MotionGifJobParams = {
   jobId: number
@@ -16,6 +17,24 @@ type MotionGifJobParams = {
   settings: EditorSettings
   signal?: AbortSignal
   onDecoded: (frameSequence: FrameSequence) => void
+  onFrame: (frameIndex: number, image: PixelBuffer) => void
+}
+
+type MotionVideoJobParams = {
+  jobId: number
+  file: File
+  settings: EditorSettings
+  signal?: AbortSignal
+  onDecoded: (frameSequence: FrameSequence) => void
+  onFrame: (frameIndex: number, image: PixelBuffer) => void
+}
+
+type MotionWebMEncodeJobParams = {
+  jobId: number
+  frameSequence: FrameSequence
+  settings: EditorSettings
+  videoExport: VideoExportSettings
+  signal?: AbortSignal
   onFrame: (frameIndex: number, image: PixelBuffer) => void
 }
 
@@ -39,10 +58,17 @@ type MotionApngJobParams = {
 type MotionJobParams =
   | MotionGifJobParams
   | MotionApngJobParams
+  | MotionVideoJobParams
+  | MotionWebMEncodeJobParams
   | MotionFrameSequenceJobParams
 
 type MotionGifJob = {
-  requestType: "process-gif" | "process-apng" | "process-sequence"
+  requestType:
+    | "process-gif"
+    | "process-apng"
+    | "process-video"
+    | "process-and-encode-webm"
+    | "process-sequence"
   params: MotionJobParams
   resolve: () => void
   reject: (error: Error | DOMException) => void
@@ -59,6 +85,16 @@ export function runMotionGifJob(params: MotionGifJobParams): Promise<void> {
 
 export function runMotionApngJob(params: MotionApngJobParams): Promise<void> {
   return runMotionJob("process-apng", params)
+}
+
+export function runMotionVideoJob(params: MotionVideoJobParams): Promise<void> {
+  return runMotionJob("process-video", params)
+}
+
+export function runMotionWebMEncodeJob(
+  params: MotionWebMEncodeJobParams
+): Promise<void> {
+  return runMotionJob("process-and-encode-webm", params)
 }
 
 export function runMotionFrameSequenceJob(
@@ -107,22 +143,33 @@ function postJob(job: MotionGifJob) {
   activeJob = job
 
   try {
+    const rt = job.requestType
     const isFileJob =
-      job.requestType === "process-gif" || job.requestType === "process-apng"
+      rt === "process-gif" || rt === "process-apng" || rt === "process-video"
+    const isWebmEncode = rt === "process-and-encode-webm"
     const request: MotionWorkerRequest = isFileJob
       ? {
-          type: job.requestType,
+          type: rt,
           jobId: job.params.jobId,
           file: (job.params as MotionGifJobParams).file,
           settings: (job.params as MotionGifJobParams).settings,
         }
-      : {
-          type: "process-sequence",
-          jobId: job.params.jobId,
-          frameSequence: (job.params as MotionFrameSequenceJobParams)
-            .frameSequence,
-          settings: (job.params as MotionFrameSequenceJobParams).settings,
-        }
+      : isWebmEncode
+        ? {
+            type: "process-and-encode-webm",
+            jobId: job.params.jobId,
+            frameSequence: (job.params as MotionWebMEncodeJobParams)
+              .frameSequence,
+            settings: (job.params as MotionWebMEncodeJobParams).settings,
+            videoExport: (job.params as MotionWebMEncodeJobParams).videoExport,
+          }
+        : {
+            type: "process-sequence",
+            jobId: job.params.jobId,
+            frameSequence: (job.params as MotionFrameSequenceJobParams)
+              .frameSequence,
+            settings: (job.params as MotionFrameSequenceJobParams).settings,
+          }
 
     getWorker().postMessage(request)
   } catch (error) {
@@ -172,6 +219,11 @@ function handleWorkerMessage(event: MessageEvent<MotionWorkerResponse>) {
   }
 
   activeJob = null
+
+  if (event.data.type === "webm-blob") {
+    resolveJob(job)
+    return
+  }
 
   if (event.data.type === "error") {
     rejectJob(job, new Error(event.data.message))
@@ -229,5 +281,5 @@ function resetWorker() {
 }
 
 function createAbortError(): DOMException {
-  return new DOMException("Motion GIF job aborted", "AbortError")
+  return new DOMException("Motion job aborted", "AbortError")
 }

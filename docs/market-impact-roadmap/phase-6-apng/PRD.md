@@ -1,7 +1,7 @@
 # Phase 6.1 PRD: APNG Intake and Export
 
-Status: planned
-Last updated: 2026-05-04
+Status: implemented
+Last updated: 2026-05-05
 
 ## Problem Statement
 

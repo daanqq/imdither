@@ -215,25 +215,42 @@ Use these terms consistently:
 Do not write Committed Settings or Preview Viewport state on every pointer move
 unless a PRD explicitly accepts the responsiveness tradeoff.
 
-## Performance And Motion Context
+## Motion Context
 
-Performance acceleration must preserve the local-first still-image pipeline while
-leaving room for future motion workflows.
+Motion processing reuses the still-image Editor Settings pipeline frame by frame
+through the Frame Sequence contract.
 
 Use these terms consistently:
 
 - Frame Sequence: an ordered set of decoded image frames plus timing metadata
-  that can be processed and exported as animated or video output in a future
-  motion pipeline.
-- Acceleration Layer: a measured optimization path, such as pooling, caching,
-  OffscreenCanvas, WASM, WebGL, or WebGPU, that improves processing throughput
-  without changing Editor Settings semantics.
-- Acceleration Adapter: a narrow boundary around a browser API or third-party
-  library candidate used for profiling or optional execution before it becomes
-  part of the supported processing contract.
+  that can be processed and exported as animated or video output.
+- Audio Track: an optional passthrough audio track attached to a Frame Sequence
+  during video intake. Preserved byte-for-byte and remuxed into WebM export when
+  all source frames are preserved. Dropped when frames are uniformly sampled.
+- Uniform Frame Sampling: extracting every Nth frame from a video source to stay
+  under a configurable frame cap while covering the full timeline. Sampling
+  preserves the playback duration but reduces the frame count.
+- Frame Cap: the maximum number of frames decoded from a video source (default
+  120). Prevents memory exhaustion from long videos.
+- Motion Worker: the shared Web Worker that handles GIF and APNG decoding plus
+  per-frame processing and video encoding. Video intake (`decodeVideoToFrameSequence`)
+  runs in the main thread because it uses DOM APIs (`HTMLVideoElement`,
+  `OffscreenCanvas`), not in the Worker. After intake, the Frame Sequence is
+  sent to the Worker for dithering via the existing process-sequence protocol.
+- Video Intake: frame extraction from video files using `<video>` element +
+  `canvas` capture in the main thread. Frame rate estimated at 30 fps. Frame
+  count capped at 120. Audio is not preserved.
+- Motion Export Settings: per-session frame duration and loop count for animated
+  export. For WebM export, loop count is ignored.
+- Video Export Settings: per-session video quality (VP9 CRF 0–63) for WebM
+  export. CRF maps to a per-resolution-tier bitrate with `bitrateMode: "variable"`.
+- WebCodecs Gate: browser feature detection that enables or disables WebM
+  export. When `VideoEncoder` is unavailable, WebM export is hidden with a
+  fallback message. Video intake uses `<video>` element (always available),
+  not WebCodecs.
 
 Phase 8 acceleration may optimize still-image processing first, but its cache,
-tiling, worker, WASM, and GPU decisions must stay compatible with a future Frame
+tiling, worker, WASM, and GPU decisions must stay compatible with the Frame
 Sequence Processing Contract from Phase 6.
 
 Third-party acceleration libraries must enter through Acceleration Adapters
@@ -253,10 +270,11 @@ Use these terms consistently:
 - Export Preferences: persisted editor UI preferences for encoding.
 - Export Format: PNG, WebP, or JPEG for still images.
 - Export Quality: shared lossy encoder quality for WebP and JPEG.
-- Animated Export Format: GIF or APNG for motion output, chosen per session and
-  not persisted.
+- Animated Export Format: GIF, APNG, or WebM for motion output, chosen per
+  session and not persisted. WebM requires WebCodecs browser support.
 - Motion Export Settings: per-session frame duration and loop count for animated
-  export.
+  export. Loop count is ignored for WebM (video players handle looping).
+- Video Export Settings: per-session VP9 CRF quality value for WebM export.
 - Export Action: command that starts an Export Job, passes the Full Output
   through the Browser Encoder, downloads an Export File, and reports export
   metadata, status, and errors.
@@ -273,9 +291,9 @@ Use these terms consistently:
   produce the requested Export Format.
 
 Animated export always uses a dedicated third-party encoder (gifenc for GIF,
-fast-png for APNG) rather than the canvas-based Browser Encoder. Still and
-animated export paths share the same Export Drawer but diverge at the encoder
-boundary.
+fast-png for APNG, Mediabunny muxer + WebCodecs VideoEncoder for WebM) rather
+than the canvas-based Browser Encoder. Still and animated export paths share the
+same Export Drawer but diverge at the encoder boundary.
 
 Preserve the rule that PNG remains the default export path unless a feature
 explicitly widens the behavior.

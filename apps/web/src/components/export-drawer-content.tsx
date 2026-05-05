@@ -25,7 +25,10 @@ import {
   getExportFormatOption,
   type ExportFormat,
 } from "@/lib/export-image"
-import type { AnimatedExportFormat } from "@/lib/export-motion"
+import type {
+  AnimatedExportFormat,
+  VideoExportSettings,
+} from "@/lib/motion-types"
 import { useState } from "react"
 import type { JobStatus } from "@/store/editor-store"
 
@@ -36,11 +39,14 @@ export function ExportDrawerContent({
   isAnimated = false,
   animatedExportFormat = "gif",
   frameCount,
+  webCodecsAvailable = false,
+  videoExportSettings,
   motionExportSettings,
   onExport,
   onExportFormatChange,
   onExportQualityChange,
   onAnimatedExportFormatChange,
+  onVideoExportSettingsChange,
   onMotionExportSettingsChange,
 }: {
   exportFormat: ExportFormat
@@ -49,11 +55,14 @@ export function ExportDrawerContent({
   isAnimated?: boolean
   animatedExportFormat?: AnimatedExportFormat
   frameCount?: number
+  webCodecsAvailable?: boolean
+  videoExportSettings?: VideoExportSettings
   motionExportSettings?: { frameDurationMs: number; loopCount: number }
   onExport: () => void
   onExportFormatChange: (format: ExportFormat) => void
   onExportQualityChange: (quality: number) => void
   onAnimatedExportFormatChange?: (format: AnimatedExportFormat) => void
+  onVideoExportSettingsChange?: (settings: Partial<VideoExportSettings>) => void
   onMotionExportSettingsChange?: (settings: {
     frameDurationMs?: number
     loopCount?: number
@@ -102,7 +111,16 @@ export function ExportDrawerContent({
                 <SelectContent>
                   <SelectItem value="gif">GIF</SelectItem>
                   <SelectItem value="apng">APNG</SelectItem>
+                  {webCodecsAvailable ? (
+                    <SelectItem value="webm">WebM</SelectItem>
+                  ) : null}
                 </SelectContent>
+                {!webCodecsAvailable ? (
+                  <span className="font-sans text-[11px] text-muted-foreground">
+                    WebM requires WebCodecs (Chrome 94+, Firefox 130+, Safari
+                    16.4+)
+                  </span>
+                ) : null}
               </Select>
             ) : (
               <Select
@@ -155,11 +173,41 @@ export function ExportDrawerContent({
         {isAnimated ? (
           <>
             <p className="text-xs text-muted-foreground">
-              {animatedExportFormat === "apng"
-                ? "APNG output uses 24-bit RGBA per frame. Palette matching and dithering still apply."
-                : "GIF output uses the active palette. Palettes larger than 256 colors are not supported."}
+              {animatedExportFormat === "webm"
+                ? "WebM output uses VP9 lossy compression. Palette matching and dithering still apply."
+                : animatedExportFormat === "apng"
+                  ? "APNG output uses 24-bit RGBA per frame. Palette matching and dithering still apply."
+                  : "GIF output uses the active palette. Palettes larger than 256 colors are not supported."}
             </p>
-            {motionExportSettings && onMotionExportSettingsChange ? (
+            {animatedExportFormat === "webm" &&
+            videoExportSettings &&
+            onVideoExportSettingsChange ? (
+              <label className="grid min-w-0 gap-1.5 text-sm font-medium">
+                CRF (quality)
+                <Slider
+                  aria-label="Video quality"
+                  className="min-w-0"
+                  max={63}
+                  min={0}
+                  step={1}
+                  value={[videoExportSettings.crf]}
+                  onValueChange={(value) =>
+                    onVideoExportSettingsChange({ crf: value[0] ?? 30 })
+                  }
+                />
+                <span className="font-sans text-[11px] text-muted-foreground">
+                  {videoExportSettings.crf} —{" "}
+                  {videoExportSettings.crf <= 20
+                    ? "high quality"
+                    : videoExportSettings.crf <= 35
+                      ? "medium quality"
+                      : "low quality"}
+                </span>
+              </label>
+            ) : null}
+            {animatedExportFormat !== "webm" &&
+            motionExportSettings &&
+            onMotionExportSettingsChange ? (
               <div className="grid gap-3">
                 <label
                   className="grid min-w-0 gap-1.5 text-sm font-medium"
@@ -275,19 +323,29 @@ function getAnimatedFormatOption(format: AnimatedExportFormat): {
   mimeType: string
   supportsQuality: boolean
 } {
-  return format === "apng"
-    ? {
-        extension: "png",
-        id: "apng",
-        label: "APNG",
-        mimeType: "image/png",
-        supportsQuality: false,
-      }
-    : {
-        extension: "gif",
-        id: "gif",
-        label: "GIF",
-        mimeType: "image/gif",
-        supportsQuality: false,
-      }
+  if (format === "apng") {
+    return {
+      extension: "png",
+      id: "apng",
+      label: "APNG",
+      mimeType: "image/png",
+      supportsQuality: false,
+    }
+  }
+  if (format === "webm") {
+    return {
+      extension: "webm",
+      id: "webm",
+      label: "WebM",
+      mimeType: "video/webm",
+      supportsQuality: false,
+    }
+  }
+  return {
+    extension: "gif",
+    id: "gif",
+    label: "GIF",
+    mimeType: "image/gif",
+    supportsQuality: false,
+  }
 }

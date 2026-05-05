@@ -34,6 +34,11 @@ scope.addEventListener(
       return
     }
 
+    if (event.data.type === "process-and-encode-webm") {
+      void processWebmEncode(event.data)
+      return
+    }
+
     if (event.data.type === "process-sequence") {
       void processFrameSequenceJob(
         event.data.jobId,
@@ -185,6 +190,69 @@ async function processFrameSequence(
       jobId,
     }
     scope.postMessage(completeResponse)
+  }
+}
+
+async function processWebmEncode(
+  request: Extract<MotionWorkerRequest, { type: "process-and-encode-webm" }>
+) {
+  try {
+    canceledJobIds.delete(request.jobId)
+
+    for (let i = 0; i < request.frameSequence.frames.length; i += 1) {
+      if (isCanceled(request.jobId)) {
+        return
+      }
+
+      const processed = processImage(
+        request.frameSequence.frames[i],
+        request.settings
+      )
+      const frameResponse: MotionWorkerResponse = {
+        type: "frame",
+        jobId: request.jobId,
+        frameIndex: i,
+        image: processed.image,
+      }
+
+      scope.postMessage(frameResponse, [processed.image.data.buffer])
+      await yieldToWorkerEventLoop()
+    }
+
+    if (isCanceled(request.jobId)) {
+      return
+    }
+
+    const { encodeFrameSequenceToWebM: encodeWebM } =
+      await import("@/lib/webm-export")
+
+    const bytes = await encodeWebM(
+      request.frameSequence,
+      request.videoExport,
+      request.frameSequence.audioTrack
+    )
+
+    const blob = new Blob([bytes], { type: "video/webm" })
+    const blobResponse: MotionWorkerResponse = {
+      type: "webm-blob",
+      jobId: request.jobId,
+      blob,
+    }
+
+    scope.postMessage(blobResponse)
+  } catch (error) {
+    if (isCanceled(request.jobId)) {
+      return
+    }
+
+    const errorResponse: MotionWorkerResponse = {
+      type: "error",
+      jobId: request.jobId,
+      message: error instanceof Error ? error.message : "WebM encoding failed",
+    }
+    scope.postMessage(errorResponse)
+  } finally {
+    canceledJobIds.delete(request.jobId)
   }
 }
 

@@ -12,7 +12,7 @@ Last updated: 2026-05-04
 - [x] Temporal stability ("none" | "global-palette") in Editor Settings
 - [x] Still export stability preserved alongside GIF export
 - [x] APNG intake and export (see phase-6-apng/PRD.md)
-- [ ] WebM/video export via WebCodecs
+- [x] WebM/video intake and export via &lt;video&gt; element + WebCodecs (see phase-6-video-pipeline/PRD.md)
 
 ## Problem Statement
 

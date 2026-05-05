@@ -7,8 +7,7 @@ import {
 import { encodeFrameSequenceToApng } from "./apng-export"
 import { encodeFrameSequenceToGif } from "./gif-export"
 import { processFrameSequence } from "./motion-processor"
-
-export type AnimatedExportFormat = "gif" | "apng"
+import type { AnimatedExportFormat, VideoExportSettings } from "./motion-types"
 
 export async function exportGifSequence(
   frameSequence: FrameSequence,
@@ -23,6 +22,28 @@ export async function exportGifSequence(
   )
   const bytes = encodeFrameSequenceToGif(processedSequence, palette)
   return new Blob([bytes], { type: "image/gif" })
+}
+
+export async function exportWebMSequence(
+  frameSequence: FrameSequence,
+  settings: EditorSettings,
+  motion?: MotionExportSettings,
+  videoExport?: VideoExportSettings
+): Promise<Blob> {
+  const processedSequence = await buildProcessedSequence(
+    frameSequence,
+    settings,
+    motion
+  )
+
+  const { encodeFrameSequenceToWebM } = await import("./webm-export")
+
+  const bytes = await encodeFrameSequenceToWebM(
+    processedSequence,
+    videoExport ?? { crf: 30 },
+    frameSequence.audioTrack
+  )
+  return new Blob([bytes], { type: "video/webm" })
 }
 
 export async function exportApngSequence(
@@ -153,7 +174,7 @@ export function makeMotionExportName(
   baseName: string,
   format: AnimatedExportFormat = "gif"
 ): string {
-  const ext = format === "apng" ? "png" : "gif"
+  const ext = format === "apng" ? "png" : format === "webm" ? "webm" : "gif"
   const dotIndex = baseName.lastIndexOf(".")
 
   if (dotIndex > 0) {

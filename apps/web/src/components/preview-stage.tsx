@@ -20,7 +20,10 @@ import { PreviewSurfaceControls } from "@/components/preview-surface-controls"
 import { ExportDrawerContent } from "@/components/export-drawer-content"
 import { PreviewActionStrip } from "@/components/preview-action-strip"
 import { FrameStrip } from "@/components/frame-strip"
-import type { AnimatedExportFormat } from "@/lib/export-motion"
+import type {
+  AnimatedExportFormat,
+  VideoExportSettings,
+} from "@/lib/motion-types"
 import { type ExportFormat } from "@/lib/export-image"
 import { type PreviewViewport } from "@/lib/preview-viewport"
 import { usePreviewDisplayMeasurement } from "@/lib/use-preview-display-measurement"
@@ -69,6 +72,9 @@ export type PreviewStageProps = {
   onNextFrame?: () => void
   animatedExportFormat?: AnimatedExportFormat
   onAnimatedExportFormatChange?: (format: AnimatedExportFormat) => void
+  webCodecsAvailable?: boolean
+  videoExportSettings?: VideoExportSettings
+  onVideoExportSettingsChange?: (settings: Partial<VideoExportSettings>) => void
 }
 
 export const PreviewStage = React.memo(function PreviewStage({
@@ -111,6 +117,9 @@ export const PreviewStage = React.memo(function PreviewStage({
   onNextFrame,
   animatedExportFormat = "gif",
   onAnimatedExportFormatChange,
+  webCodecsAvailable,
+  videoExportSettings,
+  onVideoExportSettingsChange,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -141,12 +150,12 @@ export const PreviewStage = React.memo(function PreviewStage({
     setDragActive(false)
     const file = event.dataTransfer.files[0]
 
-    if (file?.type.startsWith("image/")) {
+    if (file?.type.startsWith("image/") || file?.type.startsWith("video/")) {
       await onFileSelected(file)
       return
     }
 
-    onInvalidDrop("Drop an image file")
+    onInvalidDrop("Drop an image or video file")
   }
 
   return (
@@ -249,7 +258,7 @@ export const PreviewStage = React.memo(function PreviewStage({
                 ref={fileInputRef}
                 className="sr-only"
                 type="file"
-                accept="image/*"
+                accept="image/*,.mp4,.webm,.mov,.mkv,.avi,.mpeg,.mpg,.ts"
                 onChange={handleFileInput}
               />
               <ResponsiveDrawer>
@@ -269,11 +278,14 @@ export const PreviewStage = React.memo(function PreviewStage({
                   exportQuality={exportQuality}
                   status={status}
                   frameCount={frameCount}
+                  webCodecsAvailable={webCodecsAvailable}
+                  videoExportSettings={videoExportSettings}
                   motionExportSettings={motionExportSettings}
                   onExport={onExport}
                   onExportFormatChange={onExportFormatChange}
                   onExportQualityChange={onExportQualityChange}
                   onAnimatedExportFormatChange={onAnimatedExportFormatChange}
+                  onVideoExportSettingsChange={onVideoExportSettingsChange}
                   onMotionExportSettingsChange={onMotionExportSettingsChange}
                 />
               </ResponsiveDrawer>

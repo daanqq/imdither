@@ -100,12 +100,20 @@ export type StageCache = {
   clear: () => void
 }
 
+export type AudioTrack = {
+  codec: string
+  data: ArrayBuffer
+  sampleRate: number
+  numberOfChannels: number
+}
+
 export type FrameSequence = {
   frames: PixelBuffer[]
   durationsMs: number[]
   loopCount: number
   sourceWidth: number
   sourceHeight: number
+  audioTrack?: AudioTrack
 }
 
 export type MotionExportSettings = {

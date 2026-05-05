@@ -121,6 +121,7 @@ export type {
 } from "./processing-presets"
 export type {
   AlphaBackground,
+  AudioTrack,
   BayerSize,
   ColorDepth,
   ColorMode,

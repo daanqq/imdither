@@ -4,6 +4,8 @@ import type {
   PixelBuffer,
 } from "@workspace/core"
 
+import type { VideoExportSettings } from "@/lib/motion-types"
+
 export type MotionWorkerRequest =
   | {
       type: "process-gif"
@@ -16,6 +18,19 @@ export type MotionWorkerRequest =
       jobId: number
       file: File
       settings: EditorSettings
+    }
+  | {
+      type: "process-video"
+      jobId: number
+      file: File
+      settings: EditorSettings
+    }
+  | {
+      type: "process-and-encode-webm"
+      jobId: number
+      frameSequence: FrameSequence
+      settings: EditorSettings
+      videoExport: VideoExportSettings
     }
   | {
       type: "process-sequence"
@@ -43,6 +58,11 @@ export type MotionWorkerResponse =
   | {
       type: "complete"
       jobId: number
+    }
+  | {
+      type: "webm-blob"
+      jobId: number
+      blob: Blob
     }
   | {
       type: "error"

@@ -16,10 +16,7 @@ import {
   applyAutoTuneRecommendation,
   type AutoTuneApplyAdapter,
 } from "@/lib/auto-tune-application"
-import {
-  executeClipboardCommand,
-  type ClipboardSettingsAdapter,
-} from "@/lib/clipboard-settings-application"
+import { executeClipboardCommand } from "@/lib/clipboard-settings-application"
 import {
   applyExportAction,
   type ExportActionRuntimeAdapter,
@@ -50,9 +47,15 @@ import {
 import {
   exportApngSequence,
   exportGifSequence,
+  exportWebMSequence,
   makeMotionExportName,
-  type AnimatedExportFormat,
 } from "@/lib/export-motion"
+import type {
+  AnimatedExportFormat,
+  VideoExportSettings,
+} from "@/lib/motion-types"
+import { isVideoFile } from "@/lib/motion-types"
+import { decodeVideoToFrameSequence } from "@/lib/video-intake"
 import { hasAcTlChunk } from "@/lib/apng-intake-detect"
 import {
   runMotionApngJob,
@@ -131,13 +134,18 @@ export function App() {
   const [source, setSource] = React.useState<LoadedSource | null>(null)
   const [animatedExportFormat, setAnimatedExportFormat] =
     React.useState<AnimatedExportFormat>("gif")
-  const [isDesktopViewScale, setIsDesktopViewScale] = React.useState(() =>
+  const [webCodecsAvailable] = React.useState(
+    () => typeof VideoEncoder !== "undefined"
+  )
+  const [videoExportSettings, setVideoExportSettings] =
+    React.useState<VideoExportSettings>({ crf: 30 })
+  const [isDesktopViewScale, _setIsDesktopViewScale] = React.useState(() =>
     typeof window === "undefined"
       ? true
       : window.matchMedia(DESKTOP_VIEW_SCALE_QUERY).matches
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
-  const lookHashAppliedRef = React.useRef(false)
+  const _lookHashAppliedRef = React.useRef(false)
   const motionJobIdRef = React.useRef(0)
   const motionJobAbortRef = React.useRef<AbortController | null>(null)
   const [selectedLookRecipeId, setSelectedLookRecipeId] =
@@ -246,7 +254,7 @@ export function App() {
     : preview
 
   const handleAnimatedFile = React.useCallback(
-    async (file: File, format: "gif" | "apng" = "gif") => {
+    async (file: File, format: "gif" | "apng" | "video" = "gif") => {
       motionJobAbortRef.current?.abort()
       const controller = new AbortController()
       motionJobAbortRef.current = controller
@@ -256,7 +264,12 @@ export function App() {
       try {
         setSource(null)
         setStatus("processing")
-        const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
+        const runner =
+          format === "apng"
+            ? runMotionApngJob
+            : format === "video"
+              ? runMotionVideoJob
+              : runMotionGifJob
         await runner({
           jobId,
           file,
@@ -422,6 +435,59 @@ export function App() {
 
   const handleFile = React.useCallback(
     async (file: File) => {
+      if (isVideoFile(file)) {
+        try {
+          motionJobAbortRef.current?.abort()
+          setSource(null)
+          setStatus("processing")
+
+          const frameSequence = await decodeVideoToFrameSequence(file)
+
+          if (frameSequence.frames.length > 0) {
+            const firstFrame = frameSequence.frames[0]
+            setFrameSequence(frameSequence, file.name)
+            setMotionExportSettings({
+              frameDurationMs: frameSequence.durationsMs[0] ?? 100,
+              loopCount: frameSequence.loopCount ?? 0,
+            })
+            useEditorStore.setState((state) => ({
+              settings: {
+                ...state.settings,
+                resize: {
+                  ...state.settings.resize,
+                  width: frameSequence.sourceWidth,
+                  height: frameSequence.sourceHeight,
+                },
+              },
+            }))
+            if (firstFrame) {
+              setSource({
+                id: `video-${file.name}-${file.size}-${file.lastModified}`,
+                name: file.name,
+                buffer: firstFrame,
+                autoTuneAnalysisSample:
+                  createAutoTuneAnalysisSample(firstFrame),
+                originalWidth: frameSequence.sourceWidth,
+                originalHeight: frameSequence.sourceHeight,
+              })
+            }
+            setPreviewViewport({ mode: "fit" })
+            setError(null)
+          }
+
+          setStatus("ready")
+          return
+        } catch (videoError) {
+          setStatus("error")
+          setError(
+            videoError instanceof Error
+              ? videoError.message
+              : "Video intake failed"
+          )
+          return
+        }
+      }
+
       if (
         file.type === "image/gif" ||
         file.name.toLowerCase().endsWith(".gif")
@@ -448,13 +514,22 @@ export function App() {
         sourceIntakeAdapter
       )
     },
-    [handleAnimatedFile, setFrameSequence, sourceIntakeAdapter]
+    [
+      handleAnimatedFile,
+      setError,
+      setFrameSequence,
+      setMotionExportSettings,
+      setPreviewViewport,
+      setSource,
+      setStatus,
+      sourceIntakeAdapter,
+    ]
   )
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_VIEW_SCALE_QUERY)
     const enforceMobileFit = () => {
-      setIsDesktopViewScale(mediaQuery.matches)
+      _setIsDesktopViewScale(mediaQuery.matches)
 
       if (!mediaQuery.matches) {
         setPreviewViewport({ mode: "fit" })
@@ -488,7 +563,7 @@ export function App() {
     }
   }, [handleFile])
 
-  const clipboardSettingsAdapter: ClipboardSettingsAdapter = React.useMemo(
+  const clipboardSettingsAdapter = React.useMemo(
     () => ({
       setError,
       setSourceNotice,
@@ -497,11 +572,11 @@ export function App() {
   )
 
   React.useEffect(() => {
-    if (!source || lookHashAppliedRef.current) {
+    if (!source || _lookHashAppliedRef.current) {
       return
     }
 
-    lookHashAppliedRef.current = true
+    _lookHashAppliedRef.current = true
 
     void executeClipboardCommand(
       { type: "apply-look-from-url", text: window.location.hash },
@@ -551,13 +626,21 @@ export function App() {
         const exporter =
           animatedExportFormat === "apng"
             ? exportApngSequence
-            : exportGifSequence
+            : animatedExportFormat === "webm"
+              ? exportWebMSequence
+              : exportGifSequence
         const blob = await exporter(
           frameSequence,
           settings,
-          motionExportSettings
+          motionExportSettings,
+          animatedExportFormat === "webm" ? videoExportSettings : undefined
         )
-        const ext = animatedExportFormat === "apng" ? "png" : "gif"
+        const ext =
+          animatedExportFormat === "apng"
+            ? "png"
+            : animatedExportFormat === "webm"
+              ? "webm"
+              : "gif"
         const name = makeMotionExportName(
           animatedSourceName ?? (source ? source.name : `output.${ext}`),
           animatedExportFormat
@@ -570,7 +653,7 @@ export function App() {
         setError(
           exportError instanceof Error
             ? exportError.message
-            : `${animatedExportFormat === "apng" ? "APNG" : "GIF"} export failed`
+            : `${animatedExportFormat === "apng" ? "APNG" : animatedExportFormat === "webm" ? "WebM" : "GIF"} export failed`
         )
       }
 
@@ -601,6 +684,7 @@ export function App() {
     setStatus,
     settings,
     source,
+    videoExportSettings,
   ])
 
   const handleCopySettings = React.useCallback(async () => {
@@ -873,6 +957,9 @@ export function App() {
             isPlaying={isPlaying}
             animatedExportFormat={animatedExportFormat}
             onAnimatedExportFormatChange={setAnimatedExportFormat}
+            webCodecsAvailable={webCodecsAvailable}
+            videoExportSettings={videoExportSettings}
+            onVideoExportSettingsChange={setVideoExportSettings}
             onPlayPause={() => setIsPlaying(!isPlaying)}
             onFrameChange={setCurrentFrameIndex}
             onPrevFrame={() =>
