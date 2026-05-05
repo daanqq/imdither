@@ -328,7 +328,7 @@ describe("editor store settings transitions", () => {
 
     useEditorStore.getState().transitionSettings({
       type: "set-color-mode",
-      colorMode: "color-preserve",
+      colorMode: "grayscale-first",
     })
 
     expect(useEditorStore.getState()).toMatchObject({
@@ -337,7 +337,7 @@ describe("editor store settings transitions", () => {
       settings: {
         algorithm: "floyd-steinberg",
         matchingMode: "rgb",
-        preprocess: { colorMode: "color-preserve" },
+        preprocess: { colorMode: "grayscale-first" },
       },
     })
   })

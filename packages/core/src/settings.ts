@@ -108,7 +108,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
     contrast: 0,
     gamma: 1,
     invert: false,
-    colorMode: "grayscale-first",
+    colorMode: "color-preserve",
   },
   halftoneScreen: DEFAULT_HALFTONE_SCREEN,
   temporalStability: "none" as const,

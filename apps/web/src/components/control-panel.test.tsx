@@ -155,7 +155,7 @@ describe("ControlPanel", () => {
     expect(markup).toContain("Random algorithm")
     expect(markup).toContain("Custom")
     expect(markup).toContain("Sea Glass Atkinson")
-    expect(selectRenders[0]?.value).toBe("fine-mono-bayer")
+    expect(selectRenders[0]?.value).toBe("custom")
 
     selectRenders[0]?.onValueChange?.("sea-glass-atkinson")
     expect(onSettingsTransition).toHaveBeenCalledWith({
