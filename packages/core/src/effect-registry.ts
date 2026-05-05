@@ -1,3 +1,4 @@
+import { acquirePixelBuffer, releasePixelBuffer } from "./buffer-pool"
 import type { EffectStage } from "./effect-stack"
 import type { PixelBuffer } from "./types"
 
@@ -104,7 +105,14 @@ export function applyEffectStages(
       continue
     }
 
-    buffer = definition.process(buffer, stage.params as Record<string, unknown>)
+    const next = definition.process(
+      buffer,
+      stage.params as Record<string, unknown>
+    )
+    if (buffer !== input) {
+      releasePixelBuffer(buffer)
+    }
+    buffer = next
   }
 
   return buffer
@@ -428,11 +436,9 @@ function clampSeed(value: unknown): number {
 }
 
 function clonePixelBuffer(buffer: PixelBuffer): PixelBuffer {
-  return {
-    width: buffer.width,
-    height: buffer.height,
-    data: new Uint8ClampedArray(buffer.data),
-  }
+  const out = acquirePixelBuffer(buffer.width, buffer.height)
+  out.data.set(buffer.data)
+  return out
 }
 
 function clampInt(value: number, min: number, max: number): number {

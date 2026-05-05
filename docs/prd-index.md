@@ -59,6 +59,8 @@ feature shipped; update its status and keep this index current.
 | done   | [Phase 5.1 Algorithm Families and Diffusion Breadth](market-impact-roadmap/phase-5-algorithm-families-diffusion/PRD.md) | Grouped algorithm selector and new diffusion kernels.                          |
 | done   | [Phase 5.2 Experimental Algorithm Evaluation](market-impact-roadmap/phase-5-experimental-algorithms/PRD.md)             | Bounded evaluation of high-quality and parallel-friendly algorithm candidates. |
 | done   | [Phase 5.3 Halftone Screen Controls](market-impact-roadmap/phase-5-halftone-screen/PRD.md)                              | Settings-backed print-like halftone screen controls.                           |
+| done   | [Phase 8.1 Measurement and Baseline Gates](market-impact-roadmap/phase-8-measurement-baselines/PRD.md)                 | Performance and allocation baselines before acceleration work.                      |
+| done   | [Phase 8.2 CPU Hot-Path Cleanup](market-impact-roadmap/phase-8-cpu-hot-paths/PRD.md)                                   | Buffer pooling, allocation reduction, and deterministic stage-cache cleanup.        |
 
 ## Planned PRDs
 
@@ -70,10 +72,8 @@ feature shipped; update its status and keep this index current.
 | in-progress | [Phase 6 Motion Pipeline Contract](market-impact-roadmap/phase-6-motion-pipeline/PRD.md)                  | Frame Sequence contract, motion intake/export spike, and temporal stability policy. |
 | planned     | [Phase 6.1 APNG Intake and Export](market-impact-roadmap/phase-6-apng/PRD.md)                             | APNG intake via fast-png decode, APNG export via fast-png encode, animated format selector. |
 | planned     | [Phase 6.2 Video Intake and WebM Export](market-impact-roadmap/phase-6-video-pipeline/PRD.md)             | Video intake via Mediabunny + WebCodecs, WebM export via Mediabunny, audio passthrough. |
-| ------- | --------------------------------------------------------------------- | ----------------------------------------------------- |
-| planned | [Inspector Tabs Shell](inspector-tabs-shell/PRD.md)                   | Inspector tab shell structure.                        |
-| planned | [Inspector Deep Editors](inspector-deep-editors/PRD.md)               | Deeper inspector editing controls.                    |
-| planned | [Inspector Control Repartition](inspector-control-repartition/PRD.md) | Control ownership repartition across inspector areas. |
+| planned | [Phase 8.3 Canvas, Worker, and Tile Architecture](market-impact-roadmap/phase-8-canvas-workers-tiles/PRD.md) | OffscreenCanvas evaluation and internal tile-processing contract.                   |
+| planned | [Phase 8.4 WASM, GPU, and Third-Party Evaluation](market-impact-roadmap/phase-8-wasm-gpu-third-party/PRD.md) | Adapter-backed acceleration candidate evaluation with ship/defer/reject gates.      |
 
 ## Local Scratch PRDs
 

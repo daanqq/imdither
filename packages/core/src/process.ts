@@ -3,6 +3,7 @@ import {
   getDitherAlgorithmMetadataLabel,
   processWithDitherAlgorithm,
 } from "./algorithm-registry"
+import { releasePixelBuffer } from "./buffer-pool"
 import { applyEffectStages } from "./effect-registry"
 import { getEffectivePalette, resolvePalette } from "./palettes"
 import { normalizeSettings } from "./settings"
@@ -60,6 +61,14 @@ export function processImage(
   )
 
   const image = applyEffectStages(dithered, postStages)
+
+  if (!options.cache) {
+    if (flattened !== input) releasePixelBuffer(flattened)
+    releasePixelBuffer(resized)
+    if (effected !== resized) releasePixelBuffer(effected)
+    releasePixelBuffer(preprocessed)
+    if (dithered !== image) releasePixelBuffer(dithered)
+  }
 
   return {
     image,

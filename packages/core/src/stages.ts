@@ -11,6 +11,11 @@ import type {
   Rgb,
 } from "./types"
 import { createPaletteMatcher } from "./palette-matcher"
+import {
+  acquireFloat32Array,
+  acquirePixelBuffer,
+  releaseFloat32Array,
+} from "./buffer-pool"
 
 const BAYER_MATRICES: Record<BayerSize, number[][]> = {
   2: [
@@ -283,13 +288,13 @@ export function mapToPalette(
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
   const matcher = createPaletteMatcher(palette, matchingMode)
+  const scratch = [0, 0, 0] as [number, number, number]
 
   for (let index = 0; index < input.data.length; index += 4) {
-    const nearest = matcher.nearest([
-      input.data[index],
-      input.data[index + 1],
-      input.data[index + 2],
-    ])
+    scratch[0] = input.data[index]
+    scratch[1] = input.data[index + 1]
+    scratch[2] = input.data[index + 2]
+    const nearest = matcher.nearest(scratch)
 
     output.data[index] = nearest[0]
     output.data[index + 1] = nearest[1]
@@ -352,6 +357,7 @@ export function ditherHalftoneDot(
 
   const output = createBuffer(input.width, input.height)
   const matcher = createPaletteMatcher(palette, matchingMode)
+  const scratch = [0, 0, 0] as [number, number, number]
 
   for (let y = 0; y < input.height; y += 1) {
     for (let x = 0; x < input.width; x += 1) {
@@ -364,11 +370,10 @@ export function ditherHalftoneDot(
 
       const index = (y * input.width + x) * 4
       const threshold = ((matrix[sy][sx] + 0.5) / divisor - 0.5) * strength
-      const nearest = matcher.nearest([
-        clampByte(input.data[index] + threshold),
-        clampByte(input.data[index + 1] + threshold),
-        clampByte(input.data[index + 2] + threshold),
-      ])
+      scratch[0] = clampByte(input.data[index] + threshold)
+      scratch[1] = clampByte(input.data[index + 1] + threshold)
+      scratch[2] = clampByte(input.data[index + 2] + threshold)
+      const nearest = matcher.nearest(scratch)
 
       output.data[index] = nearest[0]
       output.data[index + 1] = nearest[1]
@@ -391,17 +396,17 @@ function ditherWithThresholdMatrix(
   const matcher = createPaletteMatcher(palette, matchingMode)
   const divisor = size * size
   const strength = palette.colors.length <= 2 ? 96 : 56
+  const scratch = [0, 0, 0] as [number, number, number]
 
   for (let y = 0; y < input.height; y += 1) {
     for (let x = 0; x < input.width; x += 1) {
       const index = (y * input.width + x) * 4
       const threshold =
         ((matrix[y % size][x % size] + 0.5) / divisor - 0.5) * strength
-      const nearest = matcher.nearest([
-        clampByte(input.data[index] + threshold),
-        clampByte(input.data[index + 1] + threshold),
-        clampByte(input.data[index + 2] + threshold),
-      ])
+      scratch[0] = clampByte(input.data[index] + threshold)
+      scratch[1] = clampByte(input.data[index + 1] + threshold)
+      scratch[2] = clampByte(input.data[index + 2] + threshold)
+      const nearest = matcher.nearest(scratch)
 
       output.data[index] = nearest[0]
       output.data[index + 1] = nearest[1]
@@ -691,8 +696,10 @@ export function ditherOstromoukhov(
   matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
-  const work = new Float32Array(input.data.length)
+  const work = acquireFloat32Array(input.data.length)
   const matcher = createPaletteMatcher(palette, matchingMode)
+  const scratchColor = [0, 0, 0] as [number, number, number]
+  const scratchError = [0, 0, 0] as [number, number, number]
 
   for (let index = 0; index < input.data.length; index += 1) {
     work[index] = input.data[index]
@@ -706,23 +713,19 @@ export function ditherOstromoukhov(
 
     for (let x = start; x !== end; x += step) {
       const index = (y * input.width + x) * 4
-      const oldColor: Rgb = [
-        clampByte(work[index]),
-        clampByte(work[index + 1]),
-        clampByte(work[index + 2]),
-      ]
+      scratchColor[0] = clampByte(work[index])
+      scratchColor[1] = clampByte(work[index + 1])
+      scratchColor[2] = clampByte(work[index + 2])
 
       const inputLuma =
         input.data[index] * 0.2126 +
         input.data[index + 1] * 0.7152 +
         input.data[index + 2] * 0.0722
       const kernel = getOstromoukhovKernel(inputLuma)
-      const nextColor = matcher.nearest(oldColor)
-      const error: Rgb = [
-        oldColor[0] - nextColor[0],
-        oldColor[1] - nextColor[1],
-        oldColor[2] - nextColor[2],
-      ]
+      const nextColor = matcher.nearest(scratchColor)
+      scratchError[0] = scratchColor[0] - nextColor[0]
+      scratchError[1] = scratchColor[1] - nextColor[1]
+      scratchError[2] = scratchColor[2] - nextColor[2]
 
       output.data[index] = nextColor[0]
       output.data[index + 1] = nextColor[1]
@@ -743,13 +746,14 @@ export function ditherOstromoukhov(
         }
 
         const targetIndex = (targetY * input.width + targetX) * 4
-        work[targetIndex] += error[0] * factor
-        work[targetIndex + 1] += error[1] * factor
-        work[targetIndex + 2] += error[2] * factor
+        work[targetIndex] += scratchError[0] * factor
+        work[targetIndex + 1] += scratchError[1] * factor
+        work[targetIndex + 2] += scratchError[2] * factor
       }
     }
   }
 
+  releaseFloat32Array(work)
   return output
 }
 
@@ -803,8 +807,10 @@ function diffuseError(
   matchingMode: MatchingMode = "rgb"
 ): PixelBuffer {
   const output = createBuffer(input.width, input.height)
-  const work = new Float32Array(input.data.length)
+  const work = acquireFloat32Array(input.data.length)
   const matcher = createPaletteMatcher(palette, matchingMode)
+  const scratchColor = [0, 0, 0] as [number, number, number]
+  const scratchError = [0, 0, 0] as [number, number, number]
 
   for (let index = 0; index < input.data.length; index += 1) {
     work[index] = input.data[index]
@@ -818,17 +824,13 @@ function diffuseError(
 
     for (let x = start; x !== end; x += step) {
       const index = (y * input.width + x) * 4
-      const oldColor: Rgb = [
-        clampByte(work[index]),
-        clampByte(work[index + 1]),
-        clampByte(work[index + 2]),
-      ]
-      const nextColor = matcher.nearest(oldColor)
-      const error: Rgb = [
-        oldColor[0] - nextColor[0],
-        oldColor[1] - nextColor[1],
-        oldColor[2] - nextColor[2],
-      ]
+      scratchColor[0] = clampByte(work[index])
+      scratchColor[1] = clampByte(work[index + 1])
+      scratchColor[2] = clampByte(work[index + 2])
+      const nextColor = matcher.nearest(scratchColor)
+      scratchError[0] = scratchColor[0] - nextColor[0]
+      scratchError[1] = scratchColor[1] - nextColor[1]
+      scratchError[2] = scratchColor[2] - nextColor[2]
 
       output.data[index] = nextColor[0]
       output.data[index + 1] = nextColor[1]
@@ -849,27 +851,24 @@ function diffuseError(
         }
 
         const targetIndex = (targetY * input.width + targetX) * 4
-        work[targetIndex] += error[0] * factor
-        work[targetIndex + 1] += error[1] * factor
-        work[targetIndex + 2] += error[2] * factor
+        work[targetIndex] += scratchError[0] * factor
+        work[targetIndex + 1] += scratchError[1] * factor
+        work[targetIndex + 2] += scratchError[2] * factor
       }
     }
   }
 
+  releaseFloat32Array(work)
   return output
 }
 
 function createBuffer(width: number, height: number, fill = 0): PixelBuffer {
-  const data = new Uint8ClampedArray(width * height * 4)
-
-  for (let index = 0; index < data.length; index += 4) {
-    data[index] = fill
-    data[index + 1] = fill
-    data[index + 2] = fill
-    data[index + 3] = 255
+  const buf = acquirePixelBuffer(width, height)
+  buf.data.fill(fill)
+  for (let index = 3; index < buf.data.length; index += 4) {
+    buf.data[index] = 255
   }
-
-  return { width, height, data }
+  return buf
 }
 
 function getResizeGeometry(

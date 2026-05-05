@@ -7,6 +7,8 @@
     "format": "oxfmt . --write --config ../../.oxfmtrc.json",
     "format:check": "oxfmt . --check --config ../../.oxfmtrc.json",
     "perf:baseline": "bun scripts/performance-baseline.ts",
+    "perf:bench": "vitest bench --run",
+    "test:baseline": "vitest run baseline-runner.test.ts memory-baselines.test.ts motion-workload-shape.test.ts baseline-gates.test.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -15,6 +17,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "typescript": "^5.9.3"
   },
   "exports": {

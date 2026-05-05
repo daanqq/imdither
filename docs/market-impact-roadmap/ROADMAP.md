@@ -1,7 +1,7 @@
 # Market Impact Roadmap
 
-Status: planned
-Last updated: 2026-04-27
+Status: active
+Last updated: 2026-05-05
 
 ## Source
 
@@ -212,8 +212,9 @@ Success signal: IMDITHER supports production throughput without requiring a back
 
 ### Phase 8: Performance Acceleration
 
-- [ ] Add buffer pooling for hot `Uint8ClampedArray` and `Float32Array` paths.
-- [ ] Reduce intermediate allocations in palette matching and quantization.
+- [x] Add measurement and baseline gates (Phase 8.1)
+- [x] Add buffer pooling for hot `Uint8ClampedArray` and `Float32Array` paths.
+- [x] Reduce intermediate allocations in palette matching and quantization.
 - [ ] Evaluate OffscreenCanvas in workers.
 - [ ] Add deterministic stage cache invalidation.
 - [ ] Add tile-based processing for huge output paths.
@@ -222,6 +223,17 @@ Success signal: IMDITHER supports production throughput without requiring a back
 - [ ] Keep sequential error diffusion on CPU until a measured alternative is better.
 
 Success signal: performance work follows measured bottlenecks instead of a broad rewrite.
+
+Dependency note: Phase 8 may optimize still-image CPU paths before Phase 6, but
+any slice that needs motion semantics must first use the Phase 6 Frame Sequence
+contract instead of inventing hidden assumptions.
+
+Planning artifacts:
+
+- [x] [Phase 8.1 Measurement and Baseline Gates](phase-8-measurement-baselines/PRD.md)
+- [x] [Phase 8.2 CPU Hot-Path Cleanup](phase-8-cpu-hot-paths/PRD.md)
+- [ ] [Phase 8.3 Canvas, Worker, and Tile Architecture](phase-8-canvas-workers-tiles/PRD.md)
+- [ ] [Phase 8.4 WASM, GPU, and Third-Party Evaluation](phase-8-wasm-gpu-third-party/PRD.md)
 
 ## Non-Goals
 
