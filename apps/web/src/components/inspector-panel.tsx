@@ -105,7 +105,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
               <TabsTrigger value="manual">Manual</TabsTrigger>
             </TabsList>
           </CardHeader>
-          <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden px-0 py-0">
+          <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden p-0">
             <InspectorTab value="looks">
               <AutoTunePanel
                 appliedRecommendationId={appliedRecommendationId}

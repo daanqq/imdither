@@ -109,6 +109,7 @@ export async function encodeFrameSequenceToWebM(
       frame.height
     )
 
+    // eslint-disable-next-line react-doctor/async-await-in-loop
     const imageBitmap = await createImageBitmap(imageData)
 
     const videoFrame = new VideoFrame(imageBitmap, {
@@ -148,17 +149,21 @@ const VP9_CODEC_CANDIDATES = [
 ]
 
 async function resolveVp9Codec(width: number, height: number): Promise<string> {
-  for (const codec of VP9_CODEC_CANDIDATES) {
-    try {
-      const supported = await VideoEncoder.isConfigSupported({
-        codec,
-        width,
-        height,
-      })
-      if (supported.supported) return codec
-    } catch {
-      // try next
-    }
-  }
+  const supports = await Promise.all(
+    VP9_CODEC_CANDIDATES.map(async (codec) => {
+      try {
+        const supported = await VideoEncoder.isConfigSupported({
+          codec,
+          width,
+          height,
+        })
+        return supported.supported ? codec : null
+      } catch {
+        return null
+      }
+    })
+  )
+  const codec = supports.find((c) => c !== null)
+  if (codec) return codec
   throw new Error("VP9 not supported by this browser")
 }

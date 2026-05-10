@@ -1,6 +1,6 @@
 import { DEFAULT_FIT_INSET } from "@/lib/preview-frame"
 
-export type PreviewViewportMode = "fit" | "manual"
+type PreviewViewportMode = "fit" | "manual"
 
 export type PreviewViewport = {
   mode: PreviewViewportMode
@@ -131,7 +131,7 @@ export function clampManualViewportCenter({
   }
 }
 
-export function getFitViewportScale({
+function getFitViewportScale({
   fitInset = DEFAULT_FIT_INSET,
   imageHeight,
   imageWidth,

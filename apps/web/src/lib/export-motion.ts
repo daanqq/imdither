@@ -30,13 +30,10 @@ export async function exportWebMSequence(
   motion?: MotionExportSettings,
   videoExport?: VideoExportSettings
 ): Promise<Blob> {
-  const processedSequence = await buildProcessedSequence(
-    frameSequence,
-    settings,
-    motion
-  )
-
-  const { encodeFrameSequenceToWebM } = await import("./webm-export")
+  const [processedSequence, { encodeFrameSequenceToWebM }] = await Promise.all([
+    buildProcessedSequence(frameSequence, settings, motion),
+    import("./webm-export"),
+  ])
 
   const bytes = await encodeFrameSequenceToWebM(
     processedSequence,

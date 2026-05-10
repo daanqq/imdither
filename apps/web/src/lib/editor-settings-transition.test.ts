@@ -427,9 +427,10 @@ describe("Editor Settings transitions", () => {
       { type: "add-effect-stage", kind: "pre", effect: "pre.blur" }
     )
 
-    const preIds = withPres.settings.effectStack
-      .filter((s) => s.kind === "pre")
-      .map((s) => s.instanceId)
+    const preIds = withPres.settings.effectStack.reduce<string[]>((acc, s) => {
+      if (s.kind === "pre") acc.push(s.instanceId)
+      return acc
+    }, [])
 
     const result = applySettingsTransition(withPres.settings, {
       type: "reorder-effect-stages",
@@ -438,9 +439,10 @@ describe("Editor Settings transitions", () => {
       toIndex: 1,
     })
 
-    const newPreIds = result.settings.effectStack
-      .filter((s) => s.kind === "pre")
-      .map((s) => s.instanceId)
+    const newPreIds = result.settings.effectStack.reduce<string[]>((acc, s) => {
+      if (s.kind === "pre") acc.push(s.instanceId)
+      return acc
+    }, [])
 
     expect(newPreIds).toEqual([preIds[1], preIds[0]])
     expect(result.settings.effectStack[2].kind).toBe("quantize")

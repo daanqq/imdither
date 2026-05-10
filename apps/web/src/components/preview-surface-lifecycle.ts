@@ -37,7 +37,7 @@ export function PreviewSurfaceLifecycleProvider({
 }
 
 export function usePreviewSurfaceLifecycle() {
-  return React.useContext(PreviewSurfaceLifecycleContext)
+  return React.use(PreviewSurfaceLifecycleContext)
 }
 
 export function usePreviewCanvasRedrawBoundary(redraw: () => void) {

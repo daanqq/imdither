@@ -30,12 +30,14 @@ export async function processFrameSequence(
 
   const results: ProcessedFrame[] = []
 
+  // eslint-disable-next-line react-doctor/async-await-in-loop
   for (let i = 0; i < frameSequence.frames.length; i += 1) {
     const processed = processImage(frameSequence.frames[i], settingsWithPalette)
     results.push({ image: processed.image, frameIndex: i })
 
     // Yield to event loop every frame to avoid blocking the main thread
     if (i < frameSequence.frames.length - 1) {
+      // eslint-disable-next-line react-doctor/async-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, 0))
     }
   }

@@ -5,7 +5,7 @@ import {
   type ViewportCenter,
 } from "./preview-viewport"
 
-export const MIN_PINCH_DISTANCE = 16
+const MIN_PINCH_DISTANCE = 16
 
 type PointerPair = {
   first: ViewportCenter

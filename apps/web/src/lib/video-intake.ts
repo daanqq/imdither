@@ -67,11 +67,13 @@ export async function decodeVideoToFrameSequence(
   const frames = []
   const durationsMs: number[] = []
 
+  // eslint-disable-next-line react-doctor/async-await-in-loop
   for (let i = 0; i < frameCount; i++) {
     const frameIndex = i * step
     const time = frameIndex / fps
 
     video.currentTime = time
+    // eslint-disable-next-line react-doctor/async-await-in-loop
     await new Promise<void>((resolve) => {
       const onSeeked = () => {
         video.removeEventListener("seeked", onSeeked)

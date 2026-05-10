@@ -537,26 +537,42 @@ function LookRecipeBar({
   onSave: (name: string) => void
   onSelect: (id: string) => void
 }) {
-  const [saveName, setSaveName] = React.useState("")
-  const [saveOpen, setSaveOpen] = React.useState(false)
-  const [moreOpen, setMoreOpen] = React.useState(false)
-  const [renaming, setRenaming] = React.useState(false)
-  const [renameName, setRenameName] = React.useState("")
+  const [state, updateState] = React.useReducer(
+    (
+      prev: {
+        saveName: string
+        saveOpen: boolean
+        moreOpen: boolean
+        renaming: boolean
+        renameName: string
+      },
+      next: Partial<{
+        saveName: string
+        saveOpen: boolean
+        moreOpen: boolean
+        renaming: boolean
+        renameName: string
+      }>
+    ) => ({ ...prev, ...next }),
+    {
+      saveName: "",
+      saveOpen: false,
+      moreOpen: false,
+      renaming: false,
+      renameName: "",
+    }
+  )
   const activeRecipe = recipes.find((recipe) => recipe.id === activeId)
   const isBuiltIn = activeRecipe?.builtIn === true
 
   function handleRenameConfirm() {
-    if (!renameName.trim() || !activeRecipe) return
-    onRename(activeRecipe.id, renameName.trim())
-    setRenaming(false)
-    setMoreOpen(false)
+    if (!state.renameName.trim() || !activeRecipe) return
+    onRename(activeRecipe.id, state.renameName.trim())
+    updateState({ renaming: false, moreOpen: false })
   }
 
   function handleMoreOpenChange(open: boolean) {
-    setMoreOpen(open)
-    if (!open) {
-      setRenaming(false)
-    }
+    updateState({ moreOpen: open, renaming: open ? state.renaming : false })
   }
 
   return (
@@ -581,7 +597,10 @@ function LookRecipeBar({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Popover open={saveOpen} onOpenChange={setSaveOpen}>
+      <Popover
+        open={state.saveOpen}
+        onOpenChange={(open) => updateState({ saveOpen: open })}
+      >
         <PopoverTrigger asChild>
           <Button aria-label="Save look recipe" size="icon" variant="ghost">
             <PlusIcon className="size-4" />
@@ -591,22 +610,22 @@ function LookRecipeBar({
           <div className="grid gap-2">
             <Input
               aria-label="Look recipe name"
-              value={saveName}
-              onChange={(event) => setSaveName(event.currentTarget.value)}
+              value={state.saveName}
+              onChange={(event) =>
+                updateState({ saveName: event.currentTarget.value })
+              }
               onKeyDown={(event) => {
-                if (event.key === "Enter" && saveName.trim()) {
-                  onSave(saveName.trim())
-                  setSaveName("")
-                  setSaveOpen(false)
+                if (event.key === "Enter" && state.saveName.trim()) {
+                  onSave(state.saveName.trim())
+                  updateState({ saveName: "", saveOpen: false })
                 }
               }}
             />
             <Button
-              disabled={!saveName.trim()}
+              disabled={!state.saveName.trim()}
               onClick={() => {
-                onSave(saveName.trim())
-                setSaveName("")
-                setSaveOpen(false)
+                onSave(state.saveName.trim())
+                updateState({ saveName: "", saveOpen: false })
               }}
             >
               Save
@@ -614,7 +633,7 @@ function LookRecipeBar({
           </div>
         </PopoverContent>
       </Popover>
-      <Popover open={moreOpen} onOpenChange={handleMoreOpenChange}>
+      <Popover open={state.moreOpen} onOpenChange={handleMoreOpenChange}>
         <PopoverTrigger asChild>
           <Button
             aria-label="Look recipe menu"
@@ -626,12 +645,14 @@ function LookRecipeBar({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-56">
-          {renaming ? (
+          {state.renaming ? (
             <div className="grid gap-2">
               <Input
                 aria-label="Rename look recipe"
-                value={renameName}
-                onChange={(event) => setRenameName(event.currentTarget.value)}
+                value={state.renameName}
+                onChange={(event) =>
+                  updateState({ renameName: event.currentTarget.value })
+                }
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     handleRenameConfirm()
@@ -639,7 +660,7 @@ function LookRecipeBar({
                 }}
               />
               <Button
-                disabled={!renameName.trim()}
+                disabled={!state.renameName.trim()}
                 onClick={handleRenameConfirm}
               >
                 Rename
@@ -653,8 +674,7 @@ function LookRecipeBar({
                 className="justify-start"
                 onClick={() => {
                   if (!activeRecipe) return
-                  setRenaming(true)
-                  setRenameName(activeRecipe.name)
+                  updateState({ renaming: true, renameName: activeRecipe.name })
                 }}
               >
                 Rename
@@ -666,7 +686,7 @@ function LookRecipeBar({
                 onClick={() => {
                   if (!activeRecipe) return
                   onDelete(activeRecipe.id)
-                  setMoreOpen(false)
+                  updateState({ moreOpen: false })
                 }}
               >
                 Delete
@@ -727,8 +747,10 @@ function AddEffectButton({
   )
 }
 
+const EMPTY_COLORS: string[] = []
+
 function StackGroup({
-  activePaletteColors = [],
+  activePaletteColors = EMPTY_COLORS,
   emptyAction,
   label,
   paletteSelectValue = "custom",
@@ -843,7 +865,7 @@ function StackGroup({
 }
 
 function StageRow({
-  activePaletteColors = [],
+  activePaletteColors = EMPTY_COLORS,
   index,
   isFirst,
   isLast,
@@ -957,7 +979,7 @@ function StageRow({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="size-6"
               onClick={() =>
                 onSettingsTransition({
                   type: "remove-effect-stage",
@@ -1026,7 +1048,7 @@ function StageActions({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="size-6"
         >
           <MoreVerticalIcon className="size-3" />
         </Button>
@@ -1125,7 +1147,7 @@ function CoreParamsEditor({
             type="button"
             variant="outline"
             size="icon"
-            className="h-6 w-6 shrink-0"
+            className="size-6 shrink-0"
             onClick={() =>
               onSettingsTransition({
                 type: "set-palette",
@@ -1267,7 +1289,7 @@ function CoreParamsEditor({
           type="button"
           variant="outline"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className="size-6 shrink-0"
           onClick={() =>
             onSettingsTransition({
               type: "set-algorithm",
@@ -1678,7 +1700,7 @@ function PaletteHexInput({
 
   return (
     <Input
-      key={color}
+      key={`${color}-${index}`}
       aria-label={`Hex color ${index + 1}`}
       className={className}
       defaultValue={color}

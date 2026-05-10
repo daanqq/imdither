@@ -9,7 +9,6 @@ import {
   rejectOversizedSource,
   type LoadedSource,
   type SourceIntakeResult,
-  type SourceNotice,
 } from "./source-intake-core"
 
 export {
@@ -17,7 +16,6 @@ export {
   formatSourceNotices,
   type LoadedSource,
   type SourceIntakeResult,
-  type SourceNotice,
 }
 
 type SourceIntakeWorkerRequest = {

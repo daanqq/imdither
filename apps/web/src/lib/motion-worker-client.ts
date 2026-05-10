@@ -87,16 +87,6 @@ export function runMotionApngJob(params: MotionApngJobParams): Promise<void> {
   return runMotionJob("process-apng", params)
 }
 
-export function runMotionVideoJob(params: MotionVideoJobParams): Promise<void> {
-  return runMotionJob("process-video", params)
-}
-
-export function runMotionWebMEncodeJob(
-  params: MotionWebMEncodeJobParams
-): Promise<void> {
-  return runMotionJob("process-and-encode-webm", params)
-}
-
 export function runMotionFrameSequenceJob(
   params: MotionFrameSequenceJobParams
 ): Promise<void> {

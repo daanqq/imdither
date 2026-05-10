@@ -115,7 +115,6 @@ export function App() {
   const processedFrames = useEditorStore((state) => state.processedFrames)
   const currentFrameIndex = useEditorStore((state) => state.currentFrameIndex)
   const isPlaying = useEditorStore((state) => state.isPlaying)
-  const setFrameSequence = useEditorStore((state) => state.setFrameSequence)
   const setCurrentFrameIndex = useEditorStore(
     (state) => state.setCurrentFrameIndex
   )
@@ -128,54 +127,96 @@ export function App() {
     (state) => state.setMotionExportSettings
   )
   const setProcessedFrame = useEditorStore((state) => state.setProcessedFrame)
-  const clearProcessedFrames = useEditorStore(
-    (state) => state.clearProcessedFrames
+  const [localState, setLocalState] = React.useReducer(
+    (
+      state: {
+        source: LoadedSource | null
+        animatedExportFormat: AnimatedExportFormat
+        videoExportSettings: VideoExportSettings
+        isDesktopViewScale: boolean
+        selectedLookRecipeId: string
+      },
+      action: Partial<{
+        source: LoadedSource | null
+        animatedExportFormat: AnimatedExportFormat
+        videoExportSettings: VideoExportSettings
+        isDesktopViewScale: boolean
+        selectedLookRecipeId: string
+      }>
+    ) => ({ ...state, ...action }),
+    {
+      source: null,
+      animatedExportFormat: "gif",
+      videoExportSettings: { crf: 30 },
+      isDesktopViewScale:
+        typeof window === "undefined"
+          ? true
+          : window.matchMedia(DESKTOP_VIEW_SCALE_QUERY).matches,
+      selectedLookRecipeId: "custom",
+    }
   )
-  const [source, setSource] = React.useState<LoadedSource | null>(null)
-  const [animatedExportFormat, setAnimatedExportFormat] =
-    React.useState<AnimatedExportFormat>("gif")
+  const {
+    source,
+    animatedExportFormat,
+    videoExportSettings,
+    isDesktopViewScale,
+    selectedLookRecipeId,
+  } = localState
+  const setAnimatedExportFormat = (
+    animatedExportFormat: AnimatedExportFormat
+  ) => setLocalState({ animatedExportFormat })
+  const setVideoExportSettings = (
+    videoExportSettings: Partial<VideoExportSettings>
+  ) =>
+    setLocalState({
+      videoExportSettings: {
+        ...localState.videoExportSettings,
+        ...videoExportSettings,
+      },
+    })
+  const _setIsDesktopViewScale = (isDesktopViewScale: boolean) =>
+    setLocalState({ isDesktopViewScale })
+  const setSelectedLookRecipeId = (selectedLookRecipeId: string) =>
+    setLocalState({ selectedLookRecipeId })
   const [webCodecsAvailable] = React.useState(
     () => typeof VideoEncoder !== "undefined"
-  )
-  const [videoExportSettings, setVideoExportSettings] =
-    React.useState<VideoExportSettings>({ crf: 30 })
-  const [isDesktopViewScale, _setIsDesktopViewScale] = React.useState(() =>
-    typeof window === "undefined"
-      ? true
-      : window.matchMedia(DESKTOP_VIEW_SCALE_QUERY).matches
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
   const _lookHashAppliedRef = React.useRef(false)
   const motionJobIdRef = React.useRef(0)
   const motionJobAbortRef = React.useRef<AbortController | null>(null)
-  const [selectedLookRecipeId, setSelectedLookRecipeId] =
-    React.useState("custom")
   const explicitCustomRef = React.useRef(false)
-  const aspectLabel = source
-    ? formatAspectRatio(source.buffer.width, source.buffer.height)
+  const aspectLabel = localState.source
+    ? formatAspectRatio(
+        localState.source.buffer.width,
+        localState.source.buffer.height
+      )
     : formatAspectRatio(settings.resize.width, settings.resize.height)
   const transitionContext = React.useMemo(
     () => ({
-      sourceDimensions: source
-        ? { width: source.buffer.width, height: source.buffer.height }
+      sourceDimensions: localState.source
+        ? {
+            width: localState.source.buffer.width,
+            height: localState.source.buffer.height,
+          }
         : null,
     }),
-    [source]
+    [localState.source]
   )
   const allLookRecipes = React.useMemo(
     () => [...BUILT_IN_LOOK_RECIPES, ...lookRecipes],
     [lookRecipes]
   )
   const lookRecipeId =
-    explicitCustomRef.current && selectedLookRecipeId === "custom"
+    explicitCustomRef.current && localState.selectedLookRecipeId === "custom"
       ? "custom"
-      : selectedLookRecipeId !== "custom" &&
+      : localState.selectedLookRecipeId !== "custom" &&
           allLookRecipes.some(
             (recipe) =>
-              recipe.id === selectedLookRecipeId &&
+              recipe.id === localState.selectedLookRecipeId &&
               matchLookRecipe(settings, [recipe]) !== null
           )
-        ? selectedLookRecipeId
+        ? localState.selectedLookRecipeId
         : (matchLookRecipe(settings, allLookRecipes)?.id ?? "custom")
   const {
     preview,
@@ -187,7 +228,7 @@ export function App() {
     processingJobs,
     previewViewportMode: previewViewport.mode,
     settings,
-    source,
+    source: localState.source,
     onErrorChange: setError,
     onMetadataChange: setMetadata,
     onStatusChange: setStatus,
@@ -195,7 +236,7 @@ export function App() {
   const autoTune = useAutoTuneRecommendations({
     enabled: Boolean(preview),
     settings,
-    source,
+    source: localState.source,
   })
   const {
     appliedRecommendationId,
@@ -209,7 +250,6 @@ export function App() {
   const sourceIntakeAdapter: SourceIntakeRuntimeAdapter = React.useMemo(
     () => ({
       setStatus,
-      setSource,
       setSourceNotice,
       setError,
       resetPreviewCycle,
@@ -220,12 +260,12 @@ export function App() {
           undefined,
           { recordHistory: false }
         ),
+      setSource: (source) => setLocalState({ source }),
     }),
     [
       resetPreviewCycle,
       setError,
       setPreviewViewport,
-      setSource,
       setSourceNotice,
       setStatus,
       transitionSettings,
@@ -248,13 +288,13 @@ export function App() {
   const isAnimated = frameSequence !== null
   const currentOriginal = isAnimated
     ? frameSequence.frames[currentFrameIndex]
-    : (source?.buffer ?? null)
+    : (localState.source?.buffer ?? null)
   const currentPreview = isAnimated
     ? (processedFrames[currentFrameIndex] ?? null)
     : preview
 
   const handleAnimatedFile = React.useCallback(
-    async (file: File, format: "gif" | "apng" | "video" = "gif") => {
+    async (file: File, format: "gif" | "apng" = "gif") => {
       motionJobAbortRef.current?.abort()
       const controller = new AbortController()
       motionJobAbortRef.current = controller
@@ -262,14 +302,9 @@ export function App() {
       const jobId = motionJobIdRef.current
 
       try {
-        setSource(null)
-        setStatus("processing")
-        const runner =
-          format === "apng"
-            ? runMotionApngJob
-            : format === "video"
-              ? runMotionVideoJob
-              : runMotionGifJob
+        setLocalState({ source: null })
+        useEditorStore.setState({ status: "processing" })
+        const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
         await runner({
           jobId,
           file,
@@ -282,13 +317,16 @@ export function App() {
 
             const firstFrame = decoded.frames[0]
 
-            setFrameSequence(decoded, file.name)
-            setMotionExportSettings({
-              frameDurationMs: decoded.durationsMs[0] ?? 100,
-              loopCount: decoded.loopCount ?? 0,
-            })
-
             useEditorStore.setState((state) => ({
+              frameSequence: decoded,
+              processedFrames: [],
+              currentFrameIndex: 0,
+              animatedSourceName: file.name,
+              motionExportSettings: {
+                ...state.motionExportSettings,
+                frameDurationMs: decoded.durationsMs[0] ?? 100,
+                loopCount: decoded.loopCount ?? 0,
+              },
               settings: {
                 ...state.settings,
                 resize: {
@@ -297,22 +335,27 @@ export function App() {
                   height: decoded.sourceHeight,
                 },
               },
+              previewViewport: {
+                ...state.previewViewport,
+                mode: "fit",
+                center: { x: 0, y: 0 },
+              },
+              error: null,
             }))
 
             if (firstFrame) {
-              setSource({
-                id: `gif-${file.name}-${file.size}-${file.lastModified}`,
-                name: file.name,
-                buffer: firstFrame,
-                autoTuneAnalysisSample:
-                  createAutoTuneAnalysisSample(firstFrame),
-                originalWidth: decoded.sourceWidth,
-                originalHeight: decoded.sourceHeight,
+              setLocalState({
+                source: {
+                  id: `gif-${file.name}-${file.size}-${file.lastModified}`,
+                  name: file.name,
+                  buffer: firstFrame,
+                  autoTuneAnalysisSample:
+                    createAutoTuneAnalysisSample(firstFrame),
+                  originalWidth: decoded.sourceWidth,
+                  originalHeight: decoded.sourceHeight,
+                },
               })
             }
-
-            setPreviewViewport({ mode: "fit" })
-            setError(null)
           },
           onFrame: (frameIndex, image) => {
             if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
@@ -327,7 +370,7 @@ export function App() {
           return
         }
 
-        setStatus("ready")
+        useEditorStore.setState({ status: "ready" })
       } catch (gifError) {
         if (
           gifError instanceof DOMException &&
@@ -336,22 +379,14 @@ export function App() {
           return
         }
 
-        setStatus("error")
-        setError(
-          gifError instanceof Error ? gifError.message : "GIF decode failed"
-        )
+        useEditorStore.setState({
+          status: "error",
+          error:
+            gifError instanceof Error ? gifError.message : "GIF decode failed",
+        })
       }
     },
-    [
-      setError,
-      setFrameSequence,
-      setMotionExportSettings,
-      setPreviewViewport,
-      setProcessedFrame,
-      setSource,
-      setStatus,
-      settings,
-    ]
+    [setProcessedFrame, settings]
   )
 
   React.useEffect(() => {
@@ -365,8 +400,7 @@ export function App() {
     motionJobIdRef.current += 1
     const jobId = motionJobIdRef.current
 
-    setStatus("processing")
-    clearProcessedFrames()
+    useEditorStore.setState({ status: "processing", processedFrames: [] })
 
     void runMotionFrameSequenceJob({
       jobId,
@@ -386,7 +420,7 @@ export function App() {
           return
         }
 
-        setStatus("ready")
+        useEditorStore.setState({ status: "ready" })
       })
       .catch((motionError) => {
         if (
@@ -396,25 +430,19 @@ export function App() {
           return
         }
 
-        setStatus("error")
-        setError(
-          motionError instanceof Error
-            ? motionError.message
-            : "GIF processing failed"
-        )
+        useEditorStore.setState({
+          status: "error",
+          error:
+            motionError instanceof Error
+              ? motionError.message
+              : "GIF processing failed",
+        })
       })
 
     return () => {
       controller.abort()
     }
-  }, [
-    clearProcessedFrames,
-    frameSequence,
-    settings,
-    setError,
-    setProcessedFrame,
-    setStatus,
-  ])
+  }, [frameSequence, settings, setProcessedFrame])
 
   React.useEffect(() => {
     if (!isPlaying || !frameSequence || frameSequence.frames.length <= 1) {
@@ -436,21 +464,34 @@ export function App() {
   const handleFile = React.useCallback(
     async (file: File) => {
       if (isVideoFile(file)) {
+        motionJobAbortRef.current?.abort()
+        const controller = new AbortController()
+        motionJobAbortRef.current = controller
+        motionJobIdRef.current += 1
+        const jobId = motionJobIdRef.current
+
         try {
-          motionJobAbortRef.current?.abort()
-          setSource(null)
-          setStatus("processing")
+          setLocalState({ source: null })
+          useEditorStore.setState({ status: "processing" })
 
           const frameSequence = await decodeVideoToFrameSequence(file)
 
+          if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
+            return
+          }
+
           if (frameSequence.frames.length > 0) {
             const firstFrame = frameSequence.frames[0]
-            setFrameSequence(frameSequence, file.name)
-            setMotionExportSettings({
-              frameDurationMs: frameSequence.durationsMs[0] ?? 100,
-              loopCount: frameSequence.loopCount ?? 0,
-            })
             useEditorStore.setState((state) => ({
+              frameSequence,
+              processedFrames: [],
+              currentFrameIndex: 0,
+              animatedSourceName: file.name,
+              motionExportSettings: {
+                ...state.motionExportSettings,
+                frameDurationMs: frameSequence.durationsMs[0] ?? 100,
+                loopCount: frameSequence.loopCount ?? 0,
+              },
               settings: {
                 ...state.settings,
                 resize: {
@@ -459,31 +500,48 @@ export function App() {
                   height: frameSequence.sourceHeight,
                 },
               },
+              previewViewport: {
+                ...state.previewViewport,
+                mode: "fit",
+                center: { x: 0, y: 0 },
+              },
+              error: null,
             }))
+
             if (firstFrame) {
-              setSource({
-                id: `video-${file.name}-${file.size}-${file.lastModified}`,
-                name: file.name,
-                buffer: firstFrame,
-                autoTuneAnalysisSample:
-                  createAutoTuneAnalysisSample(firstFrame),
-                originalWidth: frameSequence.sourceWidth,
-                originalHeight: frameSequence.sourceHeight,
+              setLocalState({
+                source: {
+                  id: `video-${file.name}-${file.size}-${file.lastModified}`,
+                  name: file.name,
+                  buffer: firstFrame,
+                  autoTuneAnalysisSample:
+                    createAutoTuneAnalysisSample(firstFrame),
+                  originalWidth: frameSequence.sourceWidth,
+                  originalHeight: frameSequence.sourceHeight,
+                },
               })
             }
-            setPreviewViewport({ mode: "fit" })
-            setError(null)
           }
 
-          setStatus("ready")
+          useEditorStore.setState({ status: "ready" })
           return
         } catch (videoError) {
-          setStatus("error")
-          setError(
-            videoError instanceof Error
-              ? videoError.message
-              : "Video intake failed"
-          )
+          if (
+            controller.signal.aborted ||
+            jobId !== motionJobIdRef.current ||
+            (videoError instanceof DOMException &&
+              videoError.name === "AbortError")
+          ) {
+            return
+          }
+
+          useEditorStore.setState({
+            status: "error",
+            error:
+              videoError instanceof Error
+                ? videoError.message
+                : "Video intake failed",
+          })
           return
         }
       }
@@ -507,23 +565,19 @@ export function App() {
       }
 
       motionJobAbortRef.current?.abort()
-      setFrameSequence(null, undefined)
+      useEditorStore.setState({
+        frameSequence: null,
+        processedFrames: [],
+        currentFrameIndex: 0,
+        animatedSourceName: null,
+      })
 
       return executeSourceLoadCommand(
         { kind: "file", file },
         sourceIntakeAdapter
       )
     },
-    [
-      handleAnimatedFile,
-      setError,
-      setFrameSequence,
-      setMotionExportSettings,
-      setPreviewViewport,
-      setSource,
-      setStatus,
-      sourceIntakeAdapter,
-    ]
+    [handleAnimatedFile, sourceIntakeAdapter]
   )
 
   React.useEffect(() => {

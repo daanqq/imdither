@@ -1135,7 +1135,7 @@ function PaletteHexInput({
 
   return (
     <Input
-      key={color}
+      key={`${color}-${index}`}
       aria-label={`Hex color ${index + 1}`}
       className={className ?? "h-8 font-mono"}
       defaultValue={color}

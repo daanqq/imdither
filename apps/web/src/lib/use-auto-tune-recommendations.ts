@@ -32,36 +32,69 @@ export function useAutoTuneRecommendations({
   settings: EditorSettings
   source: AutoTuneSource
 }): AutoTuneRecommendationState {
-  const [recommendations, setRecommendations] = React.useState<
-    AutoTuneRecommendation[]
-  >([])
-  const [recommendationsSourceId, setRecommendationsSourceId] = React.useState<
-    string | null
-  >(null)
-  const [isLoading, setIsLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const [errorSourceId, setErrorSourceId] = React.useState<string | null>(null)
-  const [appliedRecommendationId, setAppliedRecommendationId] = React.useState<
-    string | null
-  >(null)
-  const [appliedSourceId, setAppliedSourceId] = React.useState<string | null>(
-    null
+  const [state, dispatch] = React.useReducer(
+    (
+      prev: {
+        recommendations: AutoTuneRecommendation[]
+        recommendationsSourceId: string | null
+        error: string | null
+        errorSourceId: string | null
+        appliedRecommendationId: string | null
+        appliedSourceId: string | null
+      },
+      action:
+        | Partial<{
+            recommendations: AutoTuneRecommendation[]
+            recommendationsSourceId: string | null
+            error: string | null
+            errorSourceId: string | null
+            appliedRecommendationId: string | null
+            appliedSourceId: string | null
+          }>
+        | ((prev: {
+            recommendations: AutoTuneRecommendation[]
+            recommendationsSourceId: string | null
+            error: string | null
+            errorSourceId: string | null
+            appliedRecommendationId: string | null
+            appliedSourceId: string | null
+          }) => Partial<{
+            recommendations: AutoTuneRecommendation[]
+            recommendationsSourceId: string | null
+            error: string | null
+            errorSourceId: string | null
+            appliedRecommendationId: string | null
+            appliedSourceId: string | null
+          }>)
+    ) => ({
+      ...prev,
+      ...(typeof action === "function" ? action(prev) : action),
+    }),
+    {
+      recommendations: [] as AutoTuneRecommendation[],
+      recommendationsSourceId: null as string | null,
+      error: null as string | null,
+      errorSourceId: null as string | null,
+      appliedRecommendationId: null as string | null,
+      appliedSourceId: null as string | null,
+    }
   )
+  const [isLoading, startTransition] = React.useTransition()
   const generationIdRef = React.useRef(0)
   const nextJobIdRef = React.useRef(0)
   const settingsRef = React.useRef(settings)
   const sourceId = source?.id ?? null
   const visibleRecommendations =
-    recommendationsSourceId === sourceId ? recommendations : []
-  const visibleError = errorSourceId === sourceId ? error : null
+    state.recommendationsSourceId === sourceId ? state.recommendations : []
+  const visibleError = state.errorSourceId === sourceId ? state.error : null
   const derivedAppliedRecommendationId = findAppliedRecommendationId({
     recommendations: visibleRecommendations,
     settings,
   })
   const explicitAppliedRecommendationId =
-    appliedSourceId === sourceId &&
-    appliedRecommendationId === derivedAppliedRecommendationId
-      ? appliedRecommendationId
+    state.appliedSourceId === sourceId &&
+    state.appliedRecommendationId === derivedAppliedRecommendationId
+      ? state.appliedRecommendationId
       : null
   const visibleAppliedRecommendationId =
     explicitAppliedRecommendationId ?? derivedAppliedRecommendationId
@@ -80,13 +113,14 @@ export function useAutoTuneRecommendations({
           return
         }
 
-        setError(null)
-        setErrorSourceId(null)
-        setRecommendations([])
-        setRecommendationsSourceId(null)
-        setAppliedRecommendationId(null)
-        setAppliedSourceId(null)
-        setIsLoading(false)
+        dispatch({
+          recommendations: [],
+          recommendationsSourceId: null,
+          error: null,
+          errorSourceId: null,
+          appliedRecommendationId: null,
+          appliedSourceId: null,
+        })
       })
       return undefined
     }
@@ -94,58 +128,63 @@ export function useAutoTuneRecommendations({
     const currentSource = source
     const controller = new AbortController()
 
-    async function generateAutoTune() {
-      try {
-        setIsLoading(true)
-        setError(null)
-        setErrorSourceId(null)
-        await waitForLoadingPaint()
-        const currentSettings = settingsRef.current
-        nextJobIdRef.current += 1
+    function generateAutoTune() {
+      startTransition(async () => {
+        try {
+          dispatch((prev) => ({
+            ...prev,
+            error: null,
+            errorSourceId: null,
+          }))
+          await waitForLoadingPaint()
+          const currentSettings = settingsRef.current
+          nextJobIdRef.current += 1
 
-        const nextRecommendations = await runAutoTuneJob({
-          jobId: nextJobIdRef.current,
-          sourceId: currentSource.id,
-          analysisSample: currentSource.autoTuneAnalysisSample,
-          settings: currentSettings,
-          outputDimensions: {
-            width: currentSettings.resize.width,
-            height: currentSettings.resize.height,
-          },
-          signal: controller.signal,
-        })
+          const nextRecommendations = await runAutoTuneJob({
+            jobId: nextJobIdRef.current,
+            sourceId: currentSource.id,
+            analysisSample: currentSource.autoTuneAnalysisSample,
+            settings: currentSettings,
+            outputDimensions: {
+              width: currentSettings.resize.width,
+              height: currentSettings.resize.height,
+            },
+            signal: controller.signal,
+          })
 
-        if (generationIdRef.current !== generationId) {
-          return
+          if (generationIdRef.current !== generationId) {
+            return
+          }
+
+          dispatch((prev) => ({
+            ...prev,
+            recommendations: nextRecommendations,
+            recommendationsSourceId: currentSource.id,
+            appliedRecommendationId: null,
+            appliedSourceId: null,
+          }))
+        } catch (autoTuneError) {
+          if (generationIdRef.current !== generationId) {
+            return
+          }
+
+          if (isAbortError(autoTuneError)) {
+            return
+          }
+
+          dispatch({
+            recommendations: [],
+            recommendationsSourceId: null,
+            appliedRecommendationId: null,
+            appliedSourceId: null,
+            error: getAutoTuneErrorMessage(autoTuneError),
+            errorSourceId: currentSource.id,
+          })
         }
-
-        setRecommendations(nextRecommendations)
-        setRecommendationsSourceId(currentSource.id)
-        setAppliedRecommendationId(null)
-        setAppliedSourceId(null)
-      } catch (autoTuneError) {
-        if (generationIdRef.current !== generationId) {
-          return
-        }
-
-        if (isAbortError(autoTuneError)) {
-          return
-        }
-
-        setRecommendations([])
-        setRecommendationsSourceId(null)
-        setAppliedRecommendationId(null)
-        setAppliedSourceId(null)
-        setError(getAutoTuneErrorMessage(autoTuneError))
-        setErrorSourceId(currentSource.id)
-      } finally {
-        if (generationIdRef.current === generationId) {
-          setIsLoading(false)
-        }
-      }
+      })
     }
 
-    void generateAutoTune()
+    generateAutoTune()
 
     return () => {
       controller.abort()
@@ -154,15 +193,21 @@ export function useAutoTuneRecommendations({
 
   const markApplied = React.useCallback(
     (recommendationId: string) => {
-      setAppliedRecommendationId(recommendationId)
-      setAppliedSourceId(sourceId)
+      dispatch((prev) => ({
+        ...prev,
+        appliedRecommendationId: recommendationId,
+        appliedSourceId: sourceId,
+      }))
     },
     [sourceId]
   )
 
   const clearAppliedMarker = React.useCallback(() => {
-    setAppliedRecommendationId(null)
-    setAppliedSourceId(null)
+    dispatch((prev) => ({
+      ...prev,
+      appliedRecommendationId: null,
+      appliedSourceId: null,
+    }))
   }, [])
 
   return {

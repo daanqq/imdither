@@ -181,6 +181,7 @@ async function processFrameSequence(
     }
 
     scope.postMessage(frameResponse, [processed.image.data.buffer])
+    // eslint-disable-next-line react-doctor/async-await-in-loop
     await yieldToWorkerEventLoop()
   }
 
@@ -216,6 +217,7 @@ async function processWebmEncode(
       }
 
       scope.postMessage(frameResponse, [processed.image.data.buffer])
+      // eslint-disable-next-line react-doctor/async-await-in-loop
       await yieldToWorkerEventLoop()
     }
 

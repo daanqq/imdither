@@ -52,11 +52,11 @@ type PreviewPresentationFitPointerInteraction = {
   onUpdate: (clientX: number) => void
 }
 
-export type PreviewSurfaceCapabilities = {
+type PreviewSurfaceCapabilities = {
   slideDivider?: PreviewPresentationFitPointerInteraction
 }
 
-export type PreviewPresentationProps = {
+type PreviewPresentationProps = {
   compareMode: CompareMode
   desktopPrecisionEnabled: boolean
   fullOutputHeight: number
@@ -168,10 +168,7 @@ export function PreviewPresentationSurface({
         zoom: viewport.zoom,
       })
 
-      frameRef.current.style.height = `${metrics.displayHeight}px`
-      frameRef.current.style.marginLeft = `${-Math.round(viewport.center.x * metrics.pixelScaleX)}px`
-      frameRef.current.style.marginTop = `${-Math.round(viewport.center.y * metrics.pixelScaleY)}px`
-      frameRef.current.style.width = `${metrics.displayWidth}px`
+      frameRef.current.style.cssText += `height: ${metrics.displayHeight}px; margin-left: ${-Math.round(viewport.center.x * metrics.pixelScaleX)}px; margin-top: ${-Math.round(viewport.center.y * metrics.pixelScaleY)}px; width: ${metrics.displayWidth}px;`
       onManualFramePositionChange?.(viewport)
     },
     [frameRef, manualImageHeight, manualImageWidth, onManualFramePositionChange]
@@ -310,7 +307,7 @@ export function PreviewPresentationSurface({
     [applyManualFrameViewport]
   )
 
-  const applyInteractionOutcome = React.useCallback(
+  const applyInteractionOutcome = React.useEffectEvent(
     (
       outcome: PreviewViewportInteractionOutcome,
       target: Pick<
@@ -346,8 +343,7 @@ export function PreviewPresentationSurface({
             break
         }
       }
-    },
-    [onViewportChange, scheduleManualFrameViewport]
+    }
   )
 
   React.useEffect(() => {
@@ -362,13 +358,13 @@ export function PreviewPresentationSurface({
     }
 
     viewportElement.addEventListener("wheel", handleNativeWheel, {
-      passive: false,
+      passive: true,
     })
 
     return () => {
       viewportElement.removeEventListener("wheel", handleNativeWheel)
     }
-  }, [controller, nativeWheel, applyInteractionOutcome])
+  }, [controller, nativeWheel])
 
   function inspectPointer(event: React.PointerEvent<HTMLDivElement>) {
     if (

@@ -55,7 +55,7 @@ export function ProcessingOverlay({
           {PROCESSING_OVERLAY_PULSE_STEPS.map((step) => (
             <span
               key={step.id}
-              className="h-3 w-3 animate-pulse bg-primary"
+              className="size-3 animate-pulse bg-primary"
               style={{ animationDelay: `${step.delayMs}ms` }}
             />
           ))}

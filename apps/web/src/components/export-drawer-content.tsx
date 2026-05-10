@@ -196,7 +196,7 @@ export function ExportDrawerContent({
                   }
                 />
                 <span className="font-sans text-[11px] text-muted-foreground">
-                  {videoExportSettings.crf} —{" "}
+                  {videoExportSettings.crf}:{" "}
                   {videoExportSettings.crf <= 20
                     ? "high quality"
                     : videoExportSettings.crf <= 35

@@ -1,6 +1,5 @@
 import {
   DEFAULT_SETTINGS,
-  PRESET_PALETTES,
   normalizeSettings,
   type EditorSettings,
   type MotionExportSettings,
@@ -367,10 +366,6 @@ export function normalizeCompareMode(value: unknown): CompareMode {
   }
 
   return "slide"
-}
-
-export function paletteName(id: string): string {
-  return PRESET_PALETTES.find((palette) => palette.id === id)?.name ?? "Custom"
 }
 
 export function normalizePersistedEditorState(

@@ -6,7 +6,7 @@ export type PreviewTarget = {
   width: number
 }
 
-export const FIT_PREVIEW_PIXEL_RATIO = 2
+const FIT_PREVIEW_PIXEL_RATIO = 2
 
 export function getScreenPreviewTarget({
   displayHeight,

@@ -40,7 +40,7 @@ export type PreviewJobEvent =
   | { type: "refined-preview-ready"; result: DitherJobResult }
   | { type: "failed"; error: Error }
 
-export type ProcessingJobTimings = {
+type ProcessingJobTimings = {
   queueDelayMs: number
   refineDelayMs: number
   interactivePixelBudget: number

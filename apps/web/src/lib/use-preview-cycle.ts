@@ -7,10 +7,7 @@ import type {
 
 import type { LoadedSource } from "@/lib/source-intake"
 import { createProcessingJobs } from "@/lib/processing-jobs"
-import {
-  getScreenPreviewTarget,
-  type PreviewTarget,
-} from "@/lib/screen-preview"
+import { getScreenPreviewTarget } from "@/lib/screen-preview"
 import type { PreviewViewport } from "@/lib/preview-viewport"
 import type { JobStatus } from "@/store/editor-store"
 
@@ -38,9 +35,31 @@ export function usePreviewCycle({
   onMetadataChange,
   onStatusChange,
 }: PreviewCycleParams) {
-  const [preview, setPreview] = React.useState<PixelBuffer | null>(null)
-  const [previewRefiningPending, setPreviewRefiningPending] =
-    React.useState(false)
+  const [state, dispatch] = React.useReducer(
+    (
+      prev: { preview: PixelBuffer | null; previewRefiningPending: boolean },
+      action:
+        | Partial<{
+            preview: PixelBuffer | null
+            previewRefiningPending: boolean
+          }>
+        | ((prev: {
+            preview: PixelBuffer | null
+            previewRefiningPending: boolean
+          }) => Partial<{
+            preview: PixelBuffer | null
+            previewRefiningPending: boolean
+          }>)
+    ) => ({
+      ...prev,
+      ...(typeof action === "function" ? action(prev) : action),
+    }),
+    {
+      preview: null as PixelBuffer | null,
+      previewRefiningPending: false,
+    }
+  )
+  const { preview, previewRefiningPending } = state
   const [previewDisplaySize, setPreviewDisplaySize] =
     React.useState<PreviewDisplaySize | null>(null)
   const previewTarget = React.useMemo(
@@ -62,8 +81,7 @@ export function usePreviewCycle({
   )
 
   const resetPreviewCycle = React.useCallback(() => {
-    setPreview(null)
-    setPreviewRefiningPending(false)
+    dispatch({ preview: null, previewRefiningPending: false })
   }, [])
 
   React.useEffect(() => {
@@ -85,23 +103,30 @@ export function usePreviewCycle({
             onStatusChange("processing")
             return
           case "reduced-preview-ready":
-            setPreview(event.result.image)
+            dispatch({
+              preview: event.result.image,
+              previewRefiningPending: event.willRefine,
+            })
             onMetadataChange(event.result.metadata)
             onErrorChange(null)
             onStatusChange("ready")
-            setPreviewRefiningPending(event.willRefine)
             return
           case "refined-preview-ready":
-            setPreview(event.result.image)
+            dispatch({
+              preview: event.result.image,
+              previewRefiningPending: false,
+            })
             onMetadataChange(event.result.metadata)
             onErrorChange(null)
             onStatusChange("ready")
-            setPreviewRefiningPending(false)
             return
           case "failed":
             onErrorChange(event.error.message)
             onStatusChange("error")
-            setPreviewRefiningPending(false)
+            dispatch((prev) => ({
+              ...prev,
+              previewRefiningPending: false,
+            }))
             return
         }
       },
@@ -128,5 +153,3 @@ export function usePreviewCycle({
     setPreviewDisplaySize,
   }
 }
-
-export type { PreviewTarget }

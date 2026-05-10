@@ -113,8 +113,10 @@ describe("motion frame processor", () => {
       },
     }
 
-    const first = await processFrameSequence(frameSequence, settings)
-    const second = await processFrameSequence(frameSequence, settings)
+    const [first, second] = await Promise.all([
+      processFrameSequence(frameSequence, settings),
+      processFrameSequence(frameSequence, settings),
+    ])
 
     for (let i = 0; i < first.length; i += 1) {
       expect(Array.from(first[i].image.data)).toEqual(
@@ -139,14 +141,13 @@ describe("motion frame processor", () => {
       },
     }
 
-    const floydResult = await processFrameSequence(
-      frameSequence,
-      defaultSettings
-    )
-    const noneResult = await processFrameSequence(frameSequence, {
-      ...defaultSettings,
-      algorithm: "none" as const,
-    })
+    const [floydResult, noneResult] = await Promise.all([
+      processFrameSequence(frameSequence, defaultSettings),
+      processFrameSequence(frameSequence, {
+        ...defaultSettings,
+        algorithm: "none" as const,
+      }),
+    ])
 
     for (let i = 0; i < floydResult.length; i += 1) {
       expect(Array.from(floydResult[i].image.data)).not.toEqual(

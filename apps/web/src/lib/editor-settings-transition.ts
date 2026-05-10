@@ -26,7 +26,7 @@ import {
   resolveOutputSizePolicy,
 } from "./output-size-policy"
 
-export type SourceDimensions = {
+type SourceDimensions = {
   width: number
   height: number
 }
@@ -359,9 +359,14 @@ export function applySettingsTransition(
         },
       }
     case "reorder-effect-stages": {
-      const groupStages = current.effectStack
-        .map((s, i) => ({ stage: s, index: i }))
-        .filter(({ stage }) => stage.kind === transition.group)
+      const groupStages = current.effectStack.reduce<
+        { stage: EffectStage; index: number }[]
+      >((acc, stage, index) => {
+        if (stage.kind === transition.group) {
+          acc.push({ stage, index })
+        }
+        return acc
+      }, [])
 
       if (
         transition.fromIndex < 0 ||
@@ -376,9 +381,10 @@ export function applySettingsTransition(
       groupStages.splice(transition.toIndex, 0, moved)
 
       const newStack = [...current.effectStack]
-      const groupIndices = current.effectStack
-        .map((s, i) => (s.kind === transition.group ? i : -1))
-        .filter((i) => i >= 0)
+      const groupIndices = current.effectStack.reduce<number[]>((acc, s, i) => {
+        if (s.kind === transition.group) acc.push(i)
+        return acc
+      }, [])
 
       for (let i = 0; i < groupIndices.length; i += 1) {
         newStack[groupIndices[i]] = groupStages[i].stage
@@ -441,8 +447,12 @@ function getAspectRatio(
 }
 
 function withCanonicalEffectStack(current: EditorSettings): EditorSettings {
-  const pre = current.effectStack.filter((s) => s.kind === "pre")
-  const post = current.effectStack.filter((s) => s.kind === "post")
+  const pre: typeof current.effectStack = []
+  const post: typeof current.effectStack = []
+  for (const s of current.effectStack) {
+    if (s.kind === "pre") pre.push(s)
+    else if (s.kind === "post") post.push(s)
+  }
   const core = buildCompatibilityStack(current)
 
   return {

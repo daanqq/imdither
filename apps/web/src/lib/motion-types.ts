@@ -28,14 +28,6 @@ export function sampleFrames(
   }
 }
 
-export function isWebCodecsAvailable(): boolean {
-  return (
-    typeof globalThis !== "undefined" &&
-    "VideoEncoder" in globalThis &&
-    "VideoDecoder" in globalThis
-  )
-}
-
 export const VIDEO_MIME_TYPES = [
   "video/mp4",
   "video/webm",
@@ -63,8 +55,4 @@ export function isVideoFile(file: File): boolean {
   if (mimeMatch) return true
   const name = file.name.toLowerCase()
   return VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext))
-}
-
-export function getVideoFileError(): string {
-  return "Video processing requires WebCodecs, which is not available in this browser. Supported browsers: Chrome 94+, Firefox 130+, Safari 16.4+."
 }

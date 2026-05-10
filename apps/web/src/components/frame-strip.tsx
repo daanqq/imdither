@@ -39,7 +39,7 @@ export function FrameStrip({
         title={isPlaying ? "Pause" : "Play"}
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0"
+        className="size-7 shrink-0"
         onClick={onPlayPause}
       >
         {isPlaying ? (
@@ -54,7 +54,7 @@ export function FrameStrip({
         title="Previous frame"
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0"
+        className="size-7 shrink-0"
         disabled={isAtStart}
         onClick={onPrevFrame}
       >
@@ -84,7 +84,7 @@ export function FrameStrip({
         title="Next frame"
         variant="ghost"
         size="icon"
-        className="h-7 w-7 shrink-0"
+        className="size-7 shrink-0"
         disabled={isAtEnd}
         onClick={onNextFrame}
       >

@@ -68,10 +68,3 @@ export function downloadBlob(blob: Blob, filename: string) {
   anchor.click()
   URL.revokeObjectURL(url)
 }
-
-export function downloadJson(value: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(value, null, 2)], {
-    type: "application/json",
-  })
-  downloadBlob(blob, filename)
-}

@@ -75,7 +75,7 @@ export function CommittedSliderField({
     commitValue(draftValueRef.current)
   }, [commitValue])
 
-  function handleInput(event: React.FormEvent<HTMLInputElement>) {
+  function updateDraftValue(event: React.ChangeEvent<HTMLInputElement>) {
     const nextValue = normalizeSliderValue(
       Number(event.currentTarget.value),
       min,
@@ -152,7 +152,7 @@ export function CommittedSliderField({
         }
         type="range"
         onBlur={commitCurrentValue}
-        onInput={handleInput}
+        onInput={updateDraftValue}
         onKeyUp={handleKeyUp}
         onPointerCancel={commitCurrentValue}
         onPointerUp={commitCurrentValue}
