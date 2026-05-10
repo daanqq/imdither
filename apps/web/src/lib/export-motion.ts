@@ -48,6 +48,10 @@ export async function exportApngSequence(
   settings: EditorSettings,
   motion?: MotionExportSettings
 ): Promise<Blob> {
+  if (frameSequence.frames.length === 0) {
+    throw new Error("APNG export requires at least one frame")
+  }
+
   // Save alpha before processing (processImage flattens alpha to 255)
   const originalAlphas = frameSequence.frames.map(extractAlpha)
 
@@ -59,7 +63,8 @@ export async function exportApngSequence(
 
   // Restore alpha on processed frames, resampling if dimensions changed
   const framesWithAlpha = processedSequence.frames.map((frame, i) => {
-    const origAlpha = originalAlphas[i]
+    const origAlpha =
+      originalAlphas[i] ?? originalAlphas[originalAlphas.length - 1]
     const alpha = normalizeAlpha(origAlpha, frame.width, frame.height)
     return mergeAlpha(frame, alpha)
   })
@@ -97,23 +102,45 @@ function normalizeAlpha(
   }
   const out = new Uint8Array(targetW * targetH)
   for (let y = 0; y < targetH; y++) {
+    const sourceY =
+      targetH === 1 ? 0 : (y / Math.max(1, targetH - 1)) * (alpha.height - 1)
+    const y0 = Math.floor(sourceY)
+    const y1 = Math.min(alpha.height - 1, y0 + 1)
+    const yWeight = sourceY - y0
+
     for (let x = 0; x < targetW; x++) {
-      const sy = Math.floor((y / targetH) * alpha.height)
-      const sx = Math.floor((x / targetW) * alpha.width)
-      out[y * targetW + x] = alpha.data[sy * alpha.width + sx]
+      const sourceX =
+        targetW === 1 ? 0 : (x / Math.max(1, targetW - 1)) * (alpha.width - 1)
+      const x0 = Math.floor(sourceX)
+      const x1 = Math.min(alpha.width - 1, x0 + 1)
+      const xWeight = sourceX - x0
+      const top =
+        alpha.data[y0 * alpha.width + x0] * (1 - xWeight) +
+        alpha.data[y0 * alpha.width + x1] * xWeight
+      const bottom =
+        alpha.data[y1 * alpha.width + x0] * (1 - xWeight) +
+        alpha.data[y1 * alpha.width + x1] * xWeight
+
+      out[y * targetW + x] = Math.round(top * (1 - yWeight) + bottom * yWeight)
     }
   }
   return out
 }
 
 function mergeAlpha(
-  frame: { data: Uint8ClampedArray },
+  frame: { width: number; height: number; data: Uint8ClampedArray },
   alpha: Uint8Array
 ): typeof frame {
-  for (let i = 0; i < alpha.length; i++) {
-    frame.data[i * 4 + 3] = alpha[i]
+  const next = {
+    ...frame,
+    data: new Uint8ClampedArray(frame.data),
   }
-  return frame
+
+  for (let i = 0; i < alpha.length; i++) {
+    next.data[i * 4 + 3] = alpha[i]
+  }
+
+  return next
 }
 
 async function buildProcessedSequence(

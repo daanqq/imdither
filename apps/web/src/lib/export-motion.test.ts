@@ -80,6 +80,25 @@ describe("exportGifSequence", () => {
   })
 })
 
+describe("exportApngSequence", () => {
+  it("rejects an empty Frame Sequence with explicit copy", async () => {
+    const { exportApngSequence } = await import("./export-motion")
+
+    await expect(
+      exportApngSequence(
+        {
+          frames: [],
+          durationsMs: [],
+          loopCount: 0,
+          sourceWidth: 0,
+          sourceHeight: 0,
+        },
+        DEFAULT_SETTINGS
+      )
+    ).rejects.toThrow("APNG export requires at least one frame")
+  })
+})
+
 describe("makeMotionExportName", () => {
   it("replaces extension with .gif", () => {
     expect(makeMotionExportName("demo.png")).toBe("demo.gif")

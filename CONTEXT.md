@@ -299,6 +299,27 @@ Use these terms consistently:
 - Export Action Application: browser-side seam that applies an Export Action to
   editor runtime state without making the App Shell own Export Job ordering,
   Browser Encoder calls, download naming, metadata updates, status, or errors.
+- Motion Export Action: command that exports a Frame Sequence as an animated
+  Export File through the selected Animated Export Format, Motion Export
+  Settings, and Video Export Settings when applicable.
+- Motion Export Action Application: browser-side seam that applies a Motion
+  Export Action to editor runtime state without making the App Shell own
+  animated encoder selection, motion export processing, download naming, status,
+  or errors.
+- Motion Export Action always builds the Export File from the source Frame
+  Sequence and current Editor Settings; Motion Cycle processed frames are Preview
+  state and are not the export source of truth.
+- Motion Export Action does not write still-image Processing Metadata; motion
+  export metadata needs a separate contract before it is shown in the editor.
+- A Motion Export Action without a Frame Sequence is a safe no-op; the UI should
+  normally disable the action, but the Motion Export Action Application should
+  not report an error or change status for this case.
+- Motion Export Action uses the shared Job Status model: started export sets
+  status to exporting, successful export clears errors and sets status to ready,
+  and failed export reports an error and sets status to error.
+- Motion Export Action receives WebCodecs Gate state as runtime input;
+  requesting WebM when the gate is closed is an explicit Encoder Failure rather
+  than a silent no-op.
 - Export Drawer: responsive drawer that owns Export Format and Export Quality for
   still images, or Animated Export Format and Motion Export Settings for motion,
   plus the final Export Action.

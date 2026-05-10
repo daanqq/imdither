@@ -21,6 +21,10 @@ import {
   type ExportActionRuntimeAdapter,
 } from "@/lib/export-action-application"
 import {
+  applyMotionExportAction,
+  type MotionExportActionRuntimeAdapter,
+} from "@/lib/motion-export-action-application"
+import {
   applyEditorSettingsCommand,
   type EditorSettingsCommandAdapter,
 } from "@/lib/editor-settings-command-application"
@@ -54,12 +58,6 @@ import {
   DEFAULT_PREVIEW_VIEWPORT,
   type PreviewViewport,
 } from "@/lib/preview-viewport"
-import {
-  exportApngSequence,
-  exportGifSequence,
-  exportWebMSequence,
-  makeMotionExportName,
-} from "@/lib/export-motion"
 import type {
   AnimatedExportFormat,
   VideoExportSettings,
@@ -542,43 +540,30 @@ export function App() {
     [setError, setMetadata, setStatus]
   )
 
+  const motionExportActionAdapter: MotionExportActionRuntimeAdapter =
+    React.useMemo(
+      () => ({
+        setStatus,
+        setError,
+        downloadBlob,
+      }),
+      [setError, setStatus]
+    )
+
   const handleExport = React.useCallback(async () => {
     if (isAnimated && frameSequence) {
-      try {
-        setStatus("exporting")
-        const exporter =
-          animatedExportFormat === "apng"
-            ? exportApngSequence
-            : animatedExportFormat === "webm"
-              ? exportWebMSequence
-              : exportGifSequence
-        const blob = await exporter(
+      await applyMotionExportAction(
+        {
           frameSequence,
+          sourceName: animatedSourceName ?? source?.name ?? null,
           settings,
+          animatedExportFormat,
           motionExportSettings,
-          animatedExportFormat === "webm" ? videoExportSettings : undefined
-        )
-        const ext =
-          animatedExportFormat === "apng"
-            ? "png"
-            : animatedExportFormat === "webm"
-              ? "webm"
-              : "gif"
-        const name = makeMotionExportName(
-          animatedSourceName ?? (source ? source.name : `output.${ext}`),
-          animatedExportFormat
-        )
-
-        downloadBlob(blob, name)
-        setStatus("ready")
-      } catch (exportError) {
-        setStatus("error")
-        setError(
-          exportError instanceof Error
-            ? exportError.message
-            : `${animatedExportFormat === "apng" ? "APNG" : animatedExportFormat === "webm" ? "WebM" : "GIF"} export failed`
-        )
-      }
+          videoExportSettings,
+          webCodecsAvailable,
+        },
+        motionExportActionAdapter
+      )
 
       return
     }
@@ -602,12 +587,12 @@ export function App() {
     frameSequence,
     isAnimated,
     motionExportSettings,
+    motionExportActionAdapter,
     processingJobs,
-    setError,
-    setStatus,
     settings,
     source,
     videoExportSettings,
+    webCodecsAvailable,
   ])
 
   const handleCopySettings = React.useCallback(async () => {

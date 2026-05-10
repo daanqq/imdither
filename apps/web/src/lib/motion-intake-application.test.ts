@@ -51,15 +51,14 @@ describe("MotionIntakeApplication", () => {
     const app = new MotionIntakeApplication()
     const frameSequence = createFrameSequence()
     const decodeVideo = vi.fn(async () => frameSequence)
+    const file = createFile("clip.webm")
 
-    await app.execute(
-      { kind: "video", file: createFile("clip.webm") },
-      adapter,
-      DEFAULT_SETTINGS,
-      { runAnimatedJob: vi.fn(), decodeVideo }
-    )
+    await app.execute({ kind: "video", file }, adapter, DEFAULT_SETTINGS, {
+      runAnimatedJob: vi.fn(),
+      decodeVideo,
+    })
 
-    expect(decodeVideo).toHaveBeenCalledWith(createFile("clip.webm"))
+    expect(decodeVideo).toHaveBeenCalledWith(file)
     expect(adapter.applyMotionSource).toHaveBeenCalledWith(
       frameSequence,
       "clip.webm"
