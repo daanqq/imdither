@@ -232,6 +232,24 @@ Use these terms consistently:
   preserves the playback duration but reduces the frame count.
 - Frame Cap: the maximum number of frames decoded from a video source (default
   120). Prevents memory exhaustion from long videos.
+- Motion Load Command: user intent to load a motion source from a file after
+  raw browser events have been normalized.
+- Motion Intake Application: browser-side seam that applies accepted/rejected
+  Motion Load Commands and Frame Sequence results to motion source state,
+  first-frame Source Image state, initial frame selection, Motion Export
+  Settings defaults, Output Size transition, Preview Viewport reset, status, and
+  error state. Successful Motion Intake always produces a first-frame Source
+  Image so Preview, Auto-Tune, and inspection can treat the loaded motion source
+  as an inspectable source.
+- Motion Cycle: browser-side runtime layer that owns Motion Worker start/cancel
+  wiring, processed frame updates, job freshness, and status/error outcomes for
+  reprocessing a Frame Sequence when Editor Settings change.
+- Motion Playback: preview-local interaction state for playing a Frame Sequence
+  and changing the current frame after Motion Intake has selected the initial
+  frame.
+- Source Kind Switch: runtime rule that loading a still Source Image clears
+  motion source state, and loading a motion source replaces the active still
+  Source Image with the first-frame Source Image from Motion Intake.
 - Motion Worker: the shared Web Worker that handles GIF and APNG decoding plus
   per-frame processing and video encoding. Video intake (`decodeVideoToFrameSequence`)
   runs in the main thread because it uses DOM APIs (`HTMLVideoElement`,

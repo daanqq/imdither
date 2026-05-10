@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-  createAutoTuneAnalysisSample,
   type PaletteExtractionSize,
   type AutoTuneRecommendation,
 } from "@workspace/core"
@@ -39,6 +38,17 @@ import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import { usePreviewCycle } from "@/lib/use-preview-cycle"
 import { pickImageFromClipboard, type LoadedSource } from "@/lib/source-intake"
 import { BUILT_IN_LOOK_RECIPES, matchLookRecipe } from "@/lib/look-recipes"
+import { MotionCycle } from "@/lib/motion-cycle"
+import {
+  MotionIntakeApplication,
+  type MotionIntakeRuntimeAdapter,
+} from "@/lib/motion-intake-application"
+import {
+  getMotionPlaybackDelay,
+  getNextMotionFrameIndex,
+  getPreviousMotionFrameIndex,
+  isMotionPlayable,
+} from "@/lib/motion-playback"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 import {
   DEFAULT_PREVIEW_VIEWPORT,
@@ -127,6 +137,9 @@ export function App() {
     (state) => state.setMotionExportSettings
   )
   const setProcessedFrame = useEditorStore((state) => state.setProcessedFrame)
+  const clearProcessedFrames = useEditorStore(
+    (state) => state.clearProcessedFrames
+  )
   const [localState, setLocalState] = React.useReducer(
     (
       state: {
@@ -183,8 +196,8 @@ export function App() {
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
   const _lookHashAppliedRef = React.useRef(false)
-  const motionJobIdRef = React.useRef(0)
-  const motionJobAbortRef = React.useRef<AbortController | null>(null)
+  const motionIntakeRef = React.useRef(new MotionIntakeApplication())
+  const motionCycleRef = React.useRef(new MotionCycle())
   const explicitCustomRef = React.useRef(false)
   const aspectLabel = localState.source
     ? formatAspectRatio(
@@ -293,100 +306,51 @@ export function App() {
     ? (processedFrames[currentFrameIndex] ?? null)
     : preview
 
+  const motionIntakeAdapter = React.useMemo<MotionIntakeRuntimeAdapter>(
+    () => ({
+      applyMotionSource: (nextFrameSequence, sourceName) =>
+        useEditorStore.setState({
+          frameSequence: nextFrameSequence,
+          processedFrames: [],
+          currentFrameIndex: 0,
+          animatedSourceName: sourceName,
+        }),
+      applyOutputSizeWithoutHistory: (width, height) =>
+        transitionSettings(
+          { type: "set-output-size", width, height },
+          undefined,
+          { recordHistory: false }
+        ),
+      resetPreviewViewport: () =>
+        setPreviewViewport({ mode: "fit", center: { x: 0, y: 0 } }),
+      setError,
+      setMotionExportSettings,
+      setProcessedFrame,
+      setSource: (source) => setLocalState({ source }),
+      setStatus,
+    }),
+    [
+      setError,
+      setMotionExportSettings,
+      setPreviewViewport,
+      setProcessedFrame,
+      setStatus,
+      transitionSettings,
+    ]
+  )
+
   const handleAnimatedFile = React.useCallback(
     async (file: File, format: "gif" | "apng" = "gif") => {
-      motionJobAbortRef.current?.abort()
-      const controller = new AbortController()
-      motionJobAbortRef.current = controller
-      motionJobIdRef.current += 1
-      const jobId = motionJobIdRef.current
+      const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
 
-      try {
-        setLocalState({ source: null })
-        useEditorStore.setState({ status: "processing" })
-        const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
-        await runner({
-          jobId,
-          file,
-          settings,
-          signal: controller.signal,
-          onDecoded: (decoded) => {
-            if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-              return
-            }
-
-            const firstFrame = decoded.frames[0]
-
-            useEditorStore.setState((state) => ({
-              frameSequence: decoded,
-              processedFrames: [],
-              currentFrameIndex: 0,
-              animatedSourceName: file.name,
-              motionExportSettings: {
-                ...state.motionExportSettings,
-                frameDurationMs: decoded.durationsMs[0] ?? 100,
-                loopCount: decoded.loopCount ?? 0,
-              },
-              settings: {
-                ...state.settings,
-                resize: {
-                  ...state.settings.resize,
-                  width: decoded.sourceWidth,
-                  height: decoded.sourceHeight,
-                },
-              },
-              previewViewport: {
-                ...state.previewViewport,
-                mode: "fit",
-                center: { x: 0, y: 0 },
-              },
-              error: null,
-            }))
-
-            if (firstFrame) {
-              setLocalState({
-                source: {
-                  id: `gif-${file.name}-${file.size}-${file.lastModified}`,
-                  name: file.name,
-                  buffer: firstFrame,
-                  autoTuneAnalysisSample:
-                    createAutoTuneAnalysisSample(firstFrame),
-                  originalWidth: decoded.sourceWidth,
-                  originalHeight: decoded.sourceHeight,
-                },
-              })
-            }
-          },
-          onFrame: (frameIndex, image) => {
-            if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-              return
-            }
-
-            setProcessedFrame(frameIndex, image)
-          },
-        })
-
-        if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-          return
-        }
-
-        useEditorStore.setState({ status: "ready" })
-      } catch (gifError) {
-        if (
-          gifError instanceof DOMException &&
-          gifError.name === "AbortError"
-        ) {
-          return
-        }
-
-        useEditorStore.setState({
-          status: "error",
-          error:
-            gifError instanceof Error ? gifError.message : "GIF decode failed",
-        })
-      }
+      await motionIntakeRef.current.execute(
+        { kind: format, file },
+        motionIntakeAdapter,
+        settings,
+        { runAnimatedJob: runner, decodeVideo: decodeVideoToFrameSequence }
+      )
     },
-    [setProcessedFrame, settings]
+    [motionIntakeAdapter, settings]
   )
 
   React.useEffect(() => {
@@ -394,67 +358,41 @@ export function App() {
       return
     }
 
-    motionJobAbortRef.current?.abort()
-    const controller = new AbortController()
-    motionJobAbortRef.current = controller
-    motionJobIdRef.current += 1
-    const jobId = motionJobIdRef.current
+    const motionCycle = motionCycleRef.current
 
-    useEditorStore.setState({ status: "processing", processedFrames: [] })
-
-    void runMotionFrameSequenceJob({
-      jobId,
+    void motionCycle.start(
       frameSequence,
       settings,
-      signal: controller.signal,
-      onFrame: (frameIndex, image) => {
-        if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-          return
-        }
-
-        setProcessedFrame(frameIndex, image)
+      {
+        clearProcessedFrames,
+        setError,
+        setProcessedFrame,
+        setStatus,
       },
-    })
-      .then(() => {
-        if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-          return
-        }
-
-        useEditorStore.setState({ status: "ready" })
-      })
-      .catch((motionError) => {
-        if (
-          motionError instanceof DOMException &&
-          motionError.name === "AbortError"
-        ) {
-          return
-        }
-
-        useEditorStore.setState({
-          status: "error",
-          error:
-            motionError instanceof Error
-              ? motionError.message
-              : "GIF processing failed",
-        })
-      })
+      { runFrameSequenceJob: runMotionFrameSequenceJob }
+    )
 
     return () => {
-      controller.abort()
+      motionCycle.cancel()
     }
-  }, [frameSequence, settings, setProcessedFrame])
+  }, [
+    clearProcessedFrames,
+    frameSequence,
+    setError,
+    setProcessedFrame,
+    setStatus,
+    settings,
+  ])
 
   React.useEffect(() => {
-    if (!isPlaying || !frameSequence || frameSequence.frames.length <= 1) {
+    if (!isPlaying || !isMotionPlayable(frameSequence)) {
       return
     }
 
-    const duration = frameSequence.durationsMs[currentFrameIndex] ?? 100
+    const duration = getMotionPlaybackDelay(frameSequence, currentFrameIndex)
     const timer = setTimeout(() => {
       setCurrentFrameIndex(
-        currentFrameIndex < frameSequence.frames.length - 1
-          ? currentFrameIndex + 1
-          : 0
+        getNextMotionFrameIndex(frameSequence, currentFrameIndex)
       )
     }, duration)
 
@@ -464,86 +402,16 @@ export function App() {
   const handleFile = React.useCallback(
     async (file: File) => {
       if (isVideoFile(file)) {
-        motionJobAbortRef.current?.abort()
-        const controller = new AbortController()
-        motionJobAbortRef.current = controller
-        motionJobIdRef.current += 1
-        const jobId = motionJobIdRef.current
-
-        try {
-          setLocalState({ source: null })
-          useEditorStore.setState({ status: "processing" })
-
-          const frameSequence = await decodeVideoToFrameSequence(file)
-
-          if (controller.signal.aborted || jobId !== motionJobIdRef.current) {
-            return
+        await motionIntakeRef.current.execute(
+          { kind: "video", file },
+          motionIntakeAdapter,
+          settings,
+          {
+            runAnimatedJob: runMotionGifJob,
+            decodeVideo: decodeVideoToFrameSequence,
           }
-
-          if (frameSequence.frames.length > 0) {
-            const firstFrame = frameSequence.frames[0]
-            useEditorStore.setState((state) => ({
-              frameSequence,
-              processedFrames: [],
-              currentFrameIndex: 0,
-              animatedSourceName: file.name,
-              motionExportSettings: {
-                ...state.motionExportSettings,
-                frameDurationMs: frameSequence.durationsMs[0] ?? 100,
-                loopCount: frameSequence.loopCount ?? 0,
-              },
-              settings: {
-                ...state.settings,
-                resize: {
-                  ...state.settings.resize,
-                  width: frameSequence.sourceWidth,
-                  height: frameSequence.sourceHeight,
-                },
-              },
-              previewViewport: {
-                ...state.previewViewport,
-                mode: "fit",
-                center: { x: 0, y: 0 },
-              },
-              error: null,
-            }))
-
-            if (firstFrame) {
-              setLocalState({
-                source: {
-                  id: `video-${file.name}-${file.size}-${file.lastModified}`,
-                  name: file.name,
-                  buffer: firstFrame,
-                  autoTuneAnalysisSample:
-                    createAutoTuneAnalysisSample(firstFrame),
-                  originalWidth: frameSequence.sourceWidth,
-                  originalHeight: frameSequence.sourceHeight,
-                },
-              })
-            }
-          }
-
-          useEditorStore.setState({ status: "ready" })
-          return
-        } catch (videoError) {
-          if (
-            controller.signal.aborted ||
-            jobId !== motionJobIdRef.current ||
-            (videoError instanceof DOMException &&
-              videoError.name === "AbortError")
-          ) {
-            return
-          }
-
-          useEditorStore.setState({
-            status: "error",
-            error:
-              videoError instanceof Error
-                ? videoError.message
-                : "Video intake failed",
-          })
-          return
-        }
+        )
+        return
       }
 
       if (
@@ -564,7 +432,8 @@ export function App() {
         }
       }
 
-      motionJobAbortRef.current?.abort()
+      motionIntakeRef.current.cancel()
+      motionCycleRef.current.cancel()
       useEditorStore.setState({
         frameSequence: null,
         processedFrames: [],
@@ -577,7 +446,7 @@ export function App() {
         sourceIntakeAdapter
       )
     },
-    [handleAnimatedFile, sourceIntakeAdapter]
+    [handleAnimatedFile, motionIntakeAdapter, settings, sourceIntakeAdapter]
   )
 
   React.useEffect(() => {
@@ -1017,15 +886,23 @@ export function App() {
             onPlayPause={() => setIsPlaying(!isPlaying)}
             onFrameChange={setCurrentFrameIndex}
             onPrevFrame={() =>
-              setCurrentFrameIndex(Math.max(0, currentFrameIndex - 1))
+              frameSequence
+                ? setCurrentFrameIndex(
+                    getPreviousMotionFrameIndex(
+                      frameSequence,
+                      currentFrameIndex
+                    )
+                  )
+                : undefined
             }
             onNextFrame={() =>
-              setCurrentFrameIndex(
-                Math.min(
-                  (frameSequence?.frames.length ?? 1) - 1,
-                  currentFrameIndex + 1
-                )
-              )
+              frameSequence
+                ? setCurrentFrameIndex(
+                    getNextMotionFrameIndex(frameSequence, currentFrameIndex, {
+                      wrap: false,
+                    })
+                  )
+                : undefined
             }
           />
 
