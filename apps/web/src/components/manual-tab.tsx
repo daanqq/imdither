@@ -97,6 +97,11 @@ import { getNextPaletteColor } from "@/lib/palette-add-color"
 import { normalizeHexColorDraft } from "@/lib/palette-color-draft"
 import { getRandomDifferentValue } from "@/lib/random-options"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
+import {
+  buildEffectStackModel,
+  executeEffectStackCommand,
+  type EffectStackEditingCommand,
+} from "@/lib/effect-stack-editing-application"
 
 const PRE_EFFECTS = [
   { id: "pre.blur", label: "Blur" },
@@ -145,6 +150,42 @@ type StackTabProps = {
   onSettingsTransition: (transition: SettingsTransition) => void
 }
 
+function settingsTransitionToCommand(
+  transition: SettingsTransition
+): EffectStackEditingCommand | null {
+  switch (transition.type) {
+    case "add-effect-stage":
+      return {
+        type: "add-stage",
+        kind: transition.kind,
+        effect: transition.effect,
+      }
+    case "remove-effect-stage":
+      return { type: "remove-stage", instanceId: transition.instanceId }
+    case "set-effect-stage-enabled":
+      return {
+        type: "toggle-stage",
+        instanceId: transition.instanceId,
+        enabled: transition.enabled,
+      }
+    case "set-effect-stage-params":
+      return {
+        type: "edit-stage-params",
+        instanceId: transition.instanceId,
+        params: transition.params,
+      }
+    case "reorder-effect-stages":
+      return {
+        type: "reorder-stages",
+        group: transition.group,
+        fromIndex: transition.fromIndex,
+        toIndex: transition.toIndex,
+      }
+    default:
+      return null
+  }
+}
+
 export function ManualTab({
   settings,
   activePaletteColors,
@@ -173,10 +214,39 @@ export function ManualTab({
   onSelectLookRecipe,
   onSettingsTransition,
 }: StackTabProps) {
-  const preStages = settings.effectStack.filter((s) => s.kind === "pre")
-  const postStages = settings.effectStack.filter((s) => s.kind === "post")
-  const quantize = settings.effectStack.find((s) => s.kind === "quantize")
-  const dither = settings.effectStack.find((s) => s.kind === "dither")
+  const stackModel = React.useMemo(
+    () => buildEffectStackModel(settings),
+    [settings]
+  )
+  const [preGroup, coreGroup, postGroup] = stackModel
+
+  const settingsRef = React.useRef(settings)
+  React.useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+
+  const handleTransition = React.useCallback(
+    (transition: SettingsTransition) => {
+      const command = settingsTransitionToCommand(transition)
+      if (command) {
+        const result = executeEffectStackCommand(settingsRef.current, command)
+        if (result.ok) {
+          onSettingsTransition(result.transition)
+        } else {
+          console.warn(
+            "Effect stack command failed, falling back",
+            command,
+            result
+          )
+          onSettingsTransition(transition)
+        }
+        return
+      }
+      onSettingsTransition(transition)
+    },
+    [onSettingsTransition]
+  )
+
   const [expandOutput, setExpandOutput] = React.useState(false)
   const [expandTone, setExpandTone] = React.useState(false)
   const [expandUtility, setExpandUtility] = React.useState(false)
@@ -283,16 +353,16 @@ export function ManualTab({
       </div>
 
       <StackGroup
-        label="Pre"
-        stages={preStages}
+        label={preGroup.label}
+        stages={preGroup.stages}
         emptyAction={
           <AddEffectButton
             kind="pre"
             effects={PRE_EFFECTS}
-            onSettingsTransition={onSettingsTransition}
+            onSettingsTransition={handleTransition}
           />
         }
-        onSettingsTransition={onSettingsTransition}
+        onSettingsTransition={handleTransition}
       />
 
       {/* Tone: brightness, contrast, advanced */}
@@ -423,11 +493,8 @@ export function ManualTab({
       </div>
 
       <StackGroup
-        label="Core"
-        stages={[
-          ...(quantize ? [{ ...quantize, kind: "quantize" as const }] : []),
-          ...(dither ? [{ ...dither, kind: "dither" as const }] : []),
-        ]}
+        label={coreGroup.label}
+        stages={coreGroup.stages}
         activePaletteColors={activePaletteColors}
         paletteSelectValue={paletteSelectValue}
         settings={settings}
@@ -437,20 +504,20 @@ export function ManualTab({
         onExtractPalette={onExtractPalette}
         onImportPaletteFile={onImportPaletteFile}
         onImportPaletteFromClipboard={onImportPaletteFromClipboard}
-        onSettingsTransition={onSettingsTransition}
+        onSettingsTransition={handleTransition}
       />
 
       <StackGroup
-        label="Post"
-        stages={postStages}
+        label={postGroup.label}
+        stages={postGroup.stages}
         emptyAction={
           <AddEffectButton
             kind="post"
             effects={POST_EFFECTS}
-            onSettingsTransition={onSettingsTransition}
+            onSettingsTransition={handleTransition}
           />
         }
-        onSettingsTransition={onSettingsTransition}
+        onSettingsTransition={handleTransition}
       />
 
       {/* Utility actions */}

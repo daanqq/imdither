@@ -102,6 +102,31 @@ Use these terms consistently:
 - Editor Settings Command Application: browser-side seam that owns
   reset-defaults, set-output-width, and generic Settings Transition commands
   with consistent applied-marker clearing through a runtime adapter.
+- Effect Stack Editing Application: browser-side seam that turns Effect Stack
+  editing intents into Settings Transitions while preserving fixed group
+  ordering, locked core stages, serializable stage params, and Editor Settings
+  ownership.
+- Effect Stack Editing Command: user intent to edit the visible Effect Stack
+  surface, later adapted by Effect Stack Editing Application into valid Settings
+  Transitions.
+- Effect Stack Editing Model: renderable grouping of Effect Stack rows, locked
+  Core stages, labels, reorderability, and allowed actions produced for the
+  Manual tab by Effect Stack Editing Application.
+- Effect Stack Editing Application does not own drag-and-drop mechanics; UI
+  adapters translate drag results into semantic Effect Stack Editing Commands,
+  and the application validates reorder intent against Stage Kind rules.
+- Effect Stack Editing Application guards user-edit commands with effect
+  definitions and parameter bounds before emitting Settings Transitions, while
+  core Effect Stack validation remains the canonical persistence/import gate.
+- Effect Stack Editing Application models both editable optional `pre`/`post`
+  groups and visible locked Core stages; Core stage edits must still use the
+  existing Settings Transition commands for palette and dither settings.
+- Effect Stack Editing Application may place palette controls inside the visible
+  Core stage editing model, but palette import, export, extraction, and clipboard
+  side effects remain owned by Palette Action Application.
+- Effect Stack Editing Application may consume Look Recipe selection as display
+  context, but Look Recipe save, apply, rename, and delete actions stay outside
+  the Effect Stack editing seam.
 - Palette Action Application: browser-side seam that owns palette import,
   export JSON/GPL, copy JSON, and palette extraction commands through a
   single runtime adapter and discriminated command interface.
@@ -173,6 +198,22 @@ Architecture terms:
 - Preview Cycle: React runtime layer that owns Screen Preview target
   calculation, Preview Job start/cancel wiring, reduced/refined Preview updates,
   and Preview Refinement state before Preview Stage receives renderable state.
+- Preview Cycle Application: browser-side seam under the Preview Cycle hook that
+  calculates Screen Preview targets and reduces Preview Job events into Preview
+  state and runtime effects through a runtime adapter without depending on React
+  state mechanics.
+- Preview Cycle Application consumes Processing Jobs for job scheduling,
+  reduced/refined worker execution, cancellation handles, and Export Job
+  interaction; it must not absorb Processing Jobs or own Export Jobs.
+- Preview Cycle Application keeps the previous Preview output visible while a
+  replacement Preview Job is queued or processing; Preview output is replaced by
+  reduced/refined results or cleared only by explicit reset.
+- Preview Cycle Runtime Adapter: browser-side adapter that lets Preview Cycle
+  Application apply Preview output, Preview Refinement state, status, error, and
+  metadata effects without exposing React setters as the application interface.
+- Preview Cycle Application owns freshness checks for Source Image, Editor
+  Settings, Preview Viewport mode, and Screen Preview target so superseded
+  Preview Job events cannot apply runtime effects.
 - Preview Viewport Interaction: the view-local interaction module that owns
   Preview Viewport gesture policy, including wheel zoom, Manual View pan, Touch
   Pinch Zoom, pointer capture decisions, live viewport updates, and
@@ -247,6 +288,30 @@ Use these terms consistently:
 - Motion Playback: preview-local interaction state for playing a Frame Sequence
   and changing the current frame after Motion Intake has selected the initial
   frame.
+- Source Replacement Application: browser-side seam that applies a user intent
+  to replace the current source with a Demo Image, still Source Image, or motion
+  source while preserving the distinct Source Load Command and Motion Load
+  Command meanings.
+- Source Replacement Application owns source-kind detection after raw browser
+  events have been normalized to a file or demo intent; App Shell and Preview
+  Stage must not classify files into still, GIF, APNG, or video branches.
+- Source Replacement Application starts after upload, paste, and drop events have
+  been normalized to a file or demo intent; raw DOM events remain owned by App
+  Shell or Preview Stage adapters.
+- Source Replacement Application owns cancellation and state clearing for the
+  previous source kind when a replacement crosses between still and motion
+  sources.
+- Source Replacement Application resets the still Preview Cycle at the start of
+  motion replacement so stale still-image Preview results cannot surface while
+  Motion Intake is decoding.
+- Source Replacement Runtime Adapter: browser-side adapter that lets Source
+  Replacement Application apply still-source, motion-source, Preview Cycle,
+  Preview Viewport, Output Size, status, notice, error, and cancellation effects
+  without exposing Source Intake and Motion Intake adapter shapes to callers.
+- Source Replacement Application sits above Source Intake Application and Motion
+  Intake Application; it owns routing, Source Kind Switch, cross-kind
+  cancellation, and freshness ordering while preserving still-specific and
+  motion-specific intake Modules.
 - Source Kind Switch: runtime rule that loading a still Source Image clears
   motion source state, and loading a motion source replaces the active still
   Source Image with the first-frame Source Image from Motion Intake.
