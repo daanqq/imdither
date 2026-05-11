@@ -35,18 +35,15 @@ import {
 import { downloadBlob } from "@/lib/image"
 import { createProcessingJobs } from "@/lib/processing-jobs"
 import {
-  executeSourceLoadCommand,
-  type SourceIntakeRuntimeAdapter,
-} from "@/lib/source-intake-application"
+  SourceReplacementApplication,
+  type SourceReplacementDependencies,
+  type SourceReplacementRuntimeAdapter,
+} from "@/lib/source-replacement-application"
 import { useAutoTuneRecommendations } from "@/lib/use-auto-tune-recommendations"
 import { usePreviewCycle } from "@/lib/use-preview-cycle"
 import { pickImageFromClipboard, type LoadedSource } from "@/lib/source-intake"
 import { BUILT_IN_LOOK_RECIPES, matchLookRecipe } from "@/lib/look-recipes"
 import { MotionCycle } from "@/lib/motion-cycle"
-import {
-  MotionIntakeApplication,
-  type MotionIntakeRuntimeAdapter,
-} from "@/lib/motion-intake-application"
 import {
   getMotionPlaybackDelay,
   getNextMotionFrameIndex,
@@ -62,9 +59,7 @@ import type {
   AnimatedExportFormat,
   VideoExportSettings,
 } from "@/lib/motion-types"
-import { isVideoFile } from "@/lib/motion-types"
 import { decodeVideoToFrameSequence } from "@/lib/video-intake"
-import { hasAcTlChunk } from "@/lib/apng-intake-detect"
 import {
   runMotionApngJob,
   runMotionFrameSequenceJob,
@@ -73,6 +68,12 @@ import {
 import { useEditorStore } from "@/store/editor-store"
 
 const DESKTOP_VIEW_SCALE_QUERY = "(min-width: 768px)"
+
+const sourceReplacementDeps: SourceReplacementDependencies = {
+  runMotionGifJob,
+  runMotionApngJob,
+  decodeVideo: decodeVideoToFrameSequence,
+}
 
 function BrandMark() {
   return (
@@ -194,9 +195,11 @@ export function App() {
   )
   const processingJobs = React.useMemo(() => createProcessingJobs(), [])
   const _lookHashAppliedRef = React.useRef(false)
-  const motionIntakeRef = React.useRef(new MotionIntakeApplication())
+  const sourceReplacementRef = React.useRef(new SourceReplacementApplication())
   const motionCycleRef = React.useRef(new MotionCycle())
   const explicitCustomRef = React.useRef(false)
+  const settingsRef = React.useRef(settings)
+  settingsRef.current = settings
   const aspectLabel = localState.source
     ? formatAspectRatio(
         localState.source.buffer.width,
@@ -258,43 +261,69 @@ export function App() {
     recommendations: autoTuneRecommendations,
   } = autoTune
 
-  const sourceIntakeAdapter: SourceIntakeRuntimeAdapter = React.useMemo(
-    () => ({
-      setStatus,
-      setSourceNotice,
-      setError,
-      resetPreviewCycle,
-      resetPreviewViewport: () => setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT),
-      applyOutputSizeWithoutHistory: (width, height) =>
-        transitionSettings(
-          { type: "set-output-size", width, height },
-          undefined,
-          { recordHistory: false }
-        ),
-      setSource: (source) => setLocalState({ source }),
-    }),
-    [
-      resetPreviewCycle,
-      setError,
-      setPreviewViewport,
-      setSourceNotice,
-      setStatus,
-      transitionSettings,
-    ]
-  )
+  const sourceReplacementAdapter =
+    React.useMemo<SourceReplacementRuntimeAdapter>(
+      () => ({
+        setStatus,
+        setSource: (source) => setLocalState({ source }),
+        setSourceNotice,
+        setError,
+        resetPreviewCycle,
+        resetPreviewViewport: () =>
+          setPreviewViewport(DEFAULT_PREVIEW_VIEWPORT),
+        applyOutputSizeWithoutHistory: (width, height) =>
+          transitionSettings(
+            { type: "set-output-size", width, height },
+            undefined,
+            { recordHistory: false }
+          ),
+        applyMotionSource: (nextFrameSequence, sourceName) =>
+          useEditorStore.setState({
+            frameSequence: nextFrameSequence,
+            processedFrames: [],
+            currentFrameIndex: 0,
+            animatedSourceName: sourceName,
+          }),
+        setMotionExportSettings,
+        setProcessedFrame,
+        cancelMotionCycle: () => motionCycleRef.current.cancel(),
+        clearMotionState: () => {
+          useEditorStore.setState({
+            frameSequence: null,
+            processedFrames: [],
+            currentFrameIndex: 0,
+            animatedSourceName: null,
+          })
+          setIsPlaying(false)
+        },
+      }),
+      [
+        resetPreviewCycle,
+        setError,
+        setIsPlaying,
+        setMotionExportSettings,
+        setPreviewViewport,
+        setProcessedFrame,
+        setSourceNotice,
+        setStatus,
+        transitionSettings,
+      ]
+    )
 
   React.useEffect(() => {
     const isCurrentRef = { current: true }
 
-    void executeSourceLoadCommand(
+    void sourceReplacementRef.current.execute(
       { kind: "demo" },
-      { ...sourceIntakeAdapter, isCurrent: () => isCurrentRef.current }
+      { ...sourceReplacementAdapter, isCurrent: () => isCurrentRef.current },
+      settingsRef.current,
+      sourceReplacementDeps
     )
 
     return () => {
       isCurrentRef.current = false
     }
-  }, [sourceIntakeAdapter])
+  }, [sourceReplacementAdapter])
 
   const isAnimated = frameSequence !== null
   const currentOriginal = isAnimated
@@ -303,53 +332,6 @@ export function App() {
   const currentPreview = isAnimated
     ? (processedFrames[currentFrameIndex] ?? null)
     : preview
-
-  const motionIntakeAdapter = React.useMemo<MotionIntakeRuntimeAdapter>(
-    () => ({
-      applyMotionSource: (nextFrameSequence, sourceName) =>
-        useEditorStore.setState({
-          frameSequence: nextFrameSequence,
-          processedFrames: [],
-          currentFrameIndex: 0,
-          animatedSourceName: sourceName,
-        }),
-      applyOutputSizeWithoutHistory: (width, height) =>
-        transitionSettings(
-          { type: "set-output-size", width, height },
-          undefined,
-          { recordHistory: false }
-        ),
-      resetPreviewViewport: () =>
-        setPreviewViewport({ mode: "fit", center: { x: 0, y: 0 } }),
-      setError,
-      setMotionExportSettings,
-      setProcessedFrame,
-      setSource: (source) => setLocalState({ source }),
-      setStatus,
-    }),
-    [
-      setError,
-      setMotionExportSettings,
-      setPreviewViewport,
-      setProcessedFrame,
-      setStatus,
-      transitionSettings,
-    ]
-  )
-
-  const handleAnimatedFile = React.useCallback(
-    async (file: File, format: "gif" | "apng" = "gif") => {
-      const runner = format === "apng" ? runMotionApngJob : runMotionGifJob
-
-      await motionIntakeRef.current.execute(
-        { kind: format, file },
-        motionIntakeAdapter,
-        settings,
-        { runAnimatedJob: runner, decodeVideo: decodeVideoToFrameSequence }
-      )
-    },
-    [motionIntakeAdapter, settings]
-  )
 
   React.useEffect(() => {
     if (!frameSequence) {
@@ -399,52 +381,14 @@ export function App() {
 
   const handleFile = React.useCallback(
     async (file: File) => {
-      if (isVideoFile(file)) {
-        await motionIntakeRef.current.execute(
-          { kind: "video", file },
-          motionIntakeAdapter,
-          settings,
-          {
-            runAnimatedJob: runMotionGifJob,
-            decodeVideo: decodeVideoToFrameSequence,
-          }
-        )
-        return
-      }
-
-      if (
-        file.type === "image/gif" ||
-        file.name.toLowerCase().endsWith(".gif")
-      ) {
-        return handleAnimatedFile(file, "gif")
-      }
-
-      if (
-        file.type === "image/png" ||
-        file.name.toLowerCase().endsWith(".png")
-      ) {
-        const isApng = await hasAcTlChunk(file)
-
-        if (isApng) {
-          return handleAnimatedFile(file, "apng")
-        }
-      }
-
-      motionIntakeRef.current.cancel()
-      motionCycleRef.current.cancel()
-      useEditorStore.setState({
-        frameSequence: null,
-        processedFrames: [],
-        currentFrameIndex: 0,
-        animatedSourceName: null,
-      })
-
-      return executeSourceLoadCommand(
+      await sourceReplacementRef.current.execute(
         { kind: "file", file },
-        sourceIntakeAdapter
+        sourceReplacementAdapter,
+        settingsRef.current,
+        sourceReplacementDeps
       )
     },
-    [handleAnimatedFile, motionIntakeAdapter, settings, sourceIntakeAdapter]
+    [sourceReplacementAdapter]
   )
 
   React.useEffect(() => {
