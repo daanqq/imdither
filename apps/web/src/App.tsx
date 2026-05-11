@@ -51,14 +51,16 @@ import {
   isMotionPlayable,
 } from "@/lib/motion-playback"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
-import {
-  DEFAULT_PREVIEW_VIEWPORT,
-  type PreviewViewport,
-} from "@/lib/preview-viewport"
+import { DEFAULT_PREVIEW_VIEWPORT } from "@/lib/preview-viewport"
 import type {
   AnimatedExportFormat,
   VideoExportSettings,
 } from "@/lib/motion-types"
+import {
+  createPreviewStageApplication,
+  buildPreviewStageModel,
+  type PreviewStageRuntimeAdapter,
+} from "@/lib/preview-stage-application"
 import { decodeVideoToFrameSequence } from "@/lib/video-intake"
 import {
   runMotionApngJob,
@@ -174,18 +176,22 @@ export function App() {
     isDesktopViewScale,
     selectedLookRecipeId,
   } = localState
-  const setAnimatedExportFormat = (
-    animatedExportFormat: AnimatedExportFormat
-  ) => setLocalState({ animatedExportFormat })
-  const setVideoExportSettings = (
-    videoExportSettings: Partial<VideoExportSettings>
-  ) =>
-    setLocalState({
-      videoExportSettings: {
-        ...localState.videoExportSettings,
-        ...videoExportSettings,
-      },
-    })
+  const setAnimatedExportFormat = React.useCallback(
+    (animatedExportFormat: AnimatedExportFormat) =>
+      setLocalState({ animatedExportFormat }),
+    [setLocalState]
+  )
+  const { videoExportSettings: _prevVideoExportSettings } = localState
+  const setVideoExportSettings = React.useCallback(
+    (videoExportSettings: Partial<VideoExportSettings>) =>
+      setLocalState({
+        videoExportSettings: {
+          ..._prevVideoExportSettings,
+          ...videoExportSettings,
+        },
+      }),
+    [setLocalState, _prevVideoExportSettings]
+  )
   const _setIsDesktopViewScale = (isDesktopViewScale: boolean) =>
     setLocalState({ isDesktopViewScale })
   const setSelectedLookRecipeId = (selectedLookRecipeId: string) =>
@@ -750,11 +756,123 @@ export function App() {
     [autoTuneApplyAdapter, settings, transitionContext, transitionSettings]
   )
 
-  const handlePreviewViewportChange = React.useCallback(
-    (viewport: Partial<PreviewViewport>) => {
-      setPreviewViewport(viewport)
-    },
-    [setPreviewViewport]
+  const previewStageAdapter: PreviewStageRuntimeAdapter = React.useMemo(
+    () => ({
+      setCompareMode,
+      setPreviewViewport,
+      setPreviewDisplaySize,
+      setCurrentFrameIndex,
+      onFileSelected: handleFile,
+      onInvalidDrop: handleInvalidDrop,
+      onExport: handleExport,
+      setExportFormat,
+      setExportQuality,
+      setMotionExportSettings,
+      setAnimatedExportFormat,
+      setVideoExportSettings,
+      onPlayPause: () => setIsPlaying(!isPlaying),
+      onPrevFrame: () => {
+        if (frameSequence) {
+          setCurrentFrameIndex(
+            getPreviousMotionFrameIndex(frameSequence, currentFrameIndex)
+          )
+        }
+      },
+      onNextFrame: () => {
+        if (frameSequence) {
+          setCurrentFrameIndex(
+            getNextMotionFrameIndex(frameSequence, currentFrameIndex, {
+              wrap: false,
+            })
+          )
+        }
+      },
+      undoSettingsChange,
+      redoSettingsChange,
+    }),
+    [
+      setCompareMode,
+      setPreviewViewport,
+      setPreviewDisplaySize,
+      setCurrentFrameIndex,
+      handleFile,
+      handleInvalidDrop,
+      handleExport,
+      setExportFormat,
+      setExportQuality,
+      setMotionExportSettings,
+      setAnimatedExportFormat,
+      setVideoExportSettings,
+      setIsPlaying,
+      isPlaying,
+      frameSequence,
+      currentFrameIndex,
+      undoSettingsChange,
+      redoSettingsChange,
+    ]
+  )
+
+  const previewStageApp = React.useMemo(
+    () => createPreviewStageApplication(previewStageAdapter),
+    [previewStageAdapter]
+  )
+
+  const previewStageModel = React.useMemo(
+    () =>
+      buildPreviewStageModel({
+        algorithm: settings.algorithm,
+        compareMode,
+        isDesktopViewScale,
+        original: currentOriginal,
+        outputHeight: settings.resize.height,
+        outputWidth: settings.resize.width,
+        preview: currentPreview,
+        previewRefiningPending,
+        previewTargetHeight: previewTarget?.height ?? settings.resize.height,
+        previewTargetWidth: previewTarget?.width ?? settings.resize.width,
+        status,
+        error,
+        previewViewport,
+        exportFormat,
+        exportQuality,
+        canUndoSettingsChange,
+        canRedoSettingsChange,
+        isAnimated,
+        frameCount: frameSequence?.frames.length ?? 0,
+        currentFrame: currentFrameIndex,
+        isPlaying,
+        motionExportSettings,
+        animatedExportFormat,
+        webCodecsAvailable,
+        videoExportSettings,
+      }),
+    [
+      settings.algorithm,
+      settings.resize.height,
+      settings.resize.width,
+      compareMode,
+      isDesktopViewScale,
+      currentOriginal,
+      currentPreview,
+      previewRefiningPending,
+      previewTarget?.height,
+      previewTarget?.width,
+      status,
+      error,
+      previewViewport,
+      exportFormat,
+      exportQuality,
+      canUndoSettingsChange,
+      canRedoSettingsChange,
+      isAnimated,
+      frameSequence?.frames.length,
+      currentFrameIndex,
+      isPlaying,
+      motionExportSettings,
+      animatedExportFormat,
+      webCodecsAvailable,
+      videoExportSettings,
+    ]
   )
 
   return (
@@ -772,67 +890,8 @@ export function App() {
 
         <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
           <PreviewStage
-            isAnimated={isAnimated}
-            algorithm={settings.algorithm}
-            compareMode={compareMode}
-            isDesktopViewScale={isDesktopViewScale}
-            original={currentOriginal}
-            outputHeight={settings.resize.height}
-            outputWidth={settings.resize.width}
-            preview={currentPreview}
-            previewRefiningPending={previewRefiningPending}
-            previewTargetHeight={
-              previewTarget?.height ?? settings.resize.height
-            }
-            previewTargetWidth={previewTarget?.width ?? settings.resize.width}
-            status={status}
-            error={error}
-            previewViewport={previewViewport}
-            exportFormat={exportFormat}
-            exportQuality={exportQuality}
-            canRedoSettingsChange={canRedoSettingsChange}
-            canUndoSettingsChange={canUndoSettingsChange}
-            onExport={handleExport}
-            onCompareModeChange={setCompareMode}
-            onExportFormatChange={setExportFormat}
-            onExportQualityChange={setExportQuality}
-            motionExportSettings={motionExportSettings}
-            onMotionExportSettingsChange={setMotionExportSettings}
-            onFileSelected={handleFile}
-            onInvalidDrop={handleInvalidDrop}
-            onPreviewDisplaySizeChange={setPreviewDisplaySize}
-            onPreviewViewportChange={handlePreviewViewportChange}
-            onRedoSettingsChange={redoSettingsChange}
-            onUndoSettingsChange={undoSettingsChange}
-            frameCount={frameSequence?.frames.length ?? 0}
-            currentFrame={currentFrameIndex}
-            isPlaying={isPlaying}
-            animatedExportFormat={animatedExportFormat}
-            onAnimatedExportFormatChange={setAnimatedExportFormat}
-            webCodecsAvailable={webCodecsAvailable}
-            videoExportSettings={videoExportSettings}
-            onVideoExportSettingsChange={setVideoExportSettings}
-            onPlayPause={() => setIsPlaying(!isPlaying)}
-            onFrameChange={setCurrentFrameIndex}
-            onPrevFrame={() =>
-              frameSequence
-                ? setCurrentFrameIndex(
-                    getPreviousMotionFrameIndex(
-                      frameSequence,
-                      currentFrameIndex
-                    )
-                  )
-                : undefined
-            }
-            onNextFrame={() =>
-              frameSequence
-                ? setCurrentFrameIndex(
-                    getNextMotionFrameIndex(frameSequence, currentFrameIndex, {
-                      wrap: false,
-                    })
-                  )
-                : undefined
-            }
+            model={previewStageModel}
+            onCommand={previewStageApp.dispatch}
           />
 
           <aside className="min-h-0 min-w-0 overflow-hidden">

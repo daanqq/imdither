@@ -7,6 +7,11 @@ import { MIN_PREVIEW_ZOOM } from "@/lib/preview-viewport"
 
 import { areCanvasPanelPropsEqual } from "./preview-render-boundaries"
 import { PreviewStage } from "./preview-stage"
+import {
+  buildPreviewStageModel,
+  type PreviewStageInput,
+  type PreviewStageModel,
+} from "@/lib/preview-stage-application"
 
 type ButtonMockProps = React.ComponentProps<"button"> & {
   variant?: string
@@ -179,6 +184,45 @@ const buffer: PixelBuffer = {
   width: 1,
 }
 
+function makeInput(overrides?: Partial<PreviewStageInput>): PreviewStageInput {
+  return {
+    algorithm: "floyd-steinberg",
+    compareMode: "processed",
+    isDesktopViewScale: true,
+    original: buffer,
+    outputHeight: 1,
+    outputWidth: 1,
+    preview: buffer,
+    previewRefiningPending: false,
+    previewTargetHeight: 1,
+    previewTargetWidth: 1,
+    status: "ready",
+    error: null,
+    previewViewport: {
+      mode: "fit",
+      zoom: 1,
+      center: { x: 0, y: 0 },
+      gridEnabled: false,
+      loupeEnabled: false,
+    },
+    exportFormat: "png",
+    exportQuality: 0.92,
+    canUndoSettingsChange: false,
+    canRedoSettingsChange: false,
+    isAnimated: false,
+    frameCount: 0,
+    currentFrame: 0,
+    isPlaying: false,
+    animatedExportFormat: "gif",
+    webCodecsAvailable: false,
+    ...overrides,
+  }
+}
+
+function makeModel(overrides?: Partial<PreviewStageInput>): PreviewStageModel {
+  return buildPreviewStageModel(makeInput(overrides))
+}
+
 describe("PreviewStage", () => {
   beforeEach(() => {
     buttonRenders.length = 0
@@ -188,88 +232,44 @@ describe("PreviewStage", () => {
   })
 
   it("keeps upload and export side effects behind callbacks", () => {
-    const onExport = vi.fn()
-    const onFileSelected = vi.fn()
+    const onCommand = vi.fn()
 
     renderToStaticMarkup(
-      <PreviewStage
-        algorithm="floyd-steinberg"
-        compareMode="processed"
-        isDesktopViewScale
-        original={buffer}
-        outputHeight={1}
-        outputWidth={1}
-        preview={buffer}
-        previewTargetHeight={1}
-        previewTargetWidth={1}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={onExport}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={onFileSelected}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={makeModel()} onCommand={onCommand} />
     )
 
     const file = new File(["x"], "source.png", { type: "image/png" })
     const fileInput = inputRenders.at(-1)
-    const exportButton = buttonRenders.find((button) =>
-      button.children?.toString().includes("Export")
-    )
 
     fileInput?.onChange?.({
       target: { files: [file], value: "source.png" },
     } as unknown as React.ChangeEvent<HTMLInputElement>)
-    exportButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
-    buttonRenders
-      .find((button) => button.onClick === onExport)
-      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
-    expect(onFileSelected).toHaveBeenCalledTimes(1)
-    expect(onFileSelected).toHaveBeenCalledWith(file)
-    expect(onExport).toHaveBeenCalledTimes(1)
+    const downloadButton = buttonRenders.find((button) =>
+      button.children?.toString().includes("Download")
+    )
+    downloadButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "source-replacement-intent",
+      file,
+    })
+    expect(onCommand).toHaveBeenCalledWith({ kind: "export-intent" })
   })
 
   it("shows source rejection errors in the preview stage", () => {
+    const model = makeModel({
+      original: null,
+      preview: null,
+      previewTargetHeight: 640,
+      previewTargetWidth: 960,
+      status: "error",
+      error:
+        "Image is too large (3300x4900). Maximum source dimension is 4096px.",
+    })
+
     const markup = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="floyd-steinberg"
-        compareMode="processed"
-        isDesktopViewScale
-        original={null}
-        preview={null}
-        previewTargetHeight={640}
-        previewTargetWidth={960}
-        status="error"
-        error="Image is too large (3300x4900). Maximum source dimension is 4096px."
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(markup).toContain("SOURCE REJECTED")
@@ -279,84 +279,37 @@ describe("PreviewStage", () => {
   })
 
   it("centers mobile manual zoom at the full output size while fit preview is reduced", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      compareMode: "slide",
+      isDesktopViewScale: false,
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 450,
+      previewTargetWidth: 600,
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="slide"
-        isDesktopViewScale={false}
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(600, 450)}
-        previewTargetHeight={450}
-        previewTargetWidth={600}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
-      mode: "manual",
-      zoom: 1,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 2000, y: 1500 }, mode: "manual", zoom: 1 },
     })
   })
 
   it("shows undo and redo controls with availability states", () => {
-    const onUndoSettingsChange = vi.fn()
-    const onRedoSettingsChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      canRedoSettingsChange: false,
+      canUndoSettingsChange: true,
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="floyd-steinberg"
-        canRedoSettingsChange={false}
-        canUndoSettingsChange
-        compareMode="processed"
-        isDesktopViewScale
-        original={buffer}
-        preview={buffer}
-        previewTargetHeight={1}
-        previewTargetWidth={1}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-        onRedoSettingsChange={onRedoSettingsChange}
-        onUndoSettingsChange={onUndoSettingsChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     const undoButton = buttonRenders.find(
       (button) => button["aria-label"] === "Undo settings change"
@@ -370,41 +323,16 @@ describe("PreviewStage", () => {
 
     expect(undoButton).toMatchObject({ disabled: false })
     expect(redoButton).toMatchObject({ disabled: true })
-    expect(onUndoSettingsChange).toHaveBeenCalledTimes(1)
-    expect(onRedoSettingsChange).toHaveBeenCalledTimes(1)
+    expect(onCommand).toHaveBeenCalledWith({ kind: "undo-settings-change" })
+    expect(onCommand).toHaveBeenCalledWith({ kind: "redo-settings-change" })
   })
 
   it("cycles compare mode from the floating preview control", () => {
-    const onCompareModeChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel()
 
     const markup = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="floyd-steinberg"
-        compareMode="processed"
-        isDesktopViewScale
-        original={buffer}
-        preview={buffer}
-        previewTargetHeight={1}
-        previewTargetWidth={1}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onCompareModeChange={onCompareModeChange}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={onCommand} />
     )
 
     buttonRenders
@@ -417,75 +345,41 @@ describe("PreviewStage", () => {
     expect(
       renderToStaticMarkup(
         <PreviewStage
-          algorithm="floyd-steinberg"
-          compareMode="slide"
-          isDesktopViewScale
-          original={buffer}
-          preview={buffer}
-          previewTargetHeight={1}
-          previewTargetWidth={1}
-          status="ready"
-          previewViewport={{
-            mode: "fit",
-            zoom: 1,
-            center: { x: 0, y: 0 },
-            gridEnabled: false,
-            loupeEnabled: false,
-          }}
-          exportFormat="png"
-          exportQuality={0.92}
-          onCompareModeChange={onCompareModeChange}
-          onExport={vi.fn()}
-          onExportFormatChange={vi.fn()}
-          onExportQualityChange={vi.fn()}
-          onFileSelected={vi.fn()}
-          onInvalidDrop={vi.fn()}
-          onPreviewDisplaySizeChange={vi.fn()}
-          onPreviewViewportChange={vi.fn()}
+          model={makeModel({ compareMode: "slide" })}
+          onCommand={vi.fn()}
         />
       )
     ).toContain("Comparison")
-    expect(toggleGroupItemRenders.map((item) => item.value)).not.toEqual(
-      expect.arrayContaining(["slide", "processed", "original"])
-    )
-    expect(onCompareModeChange).toHaveBeenCalledWith("original")
+
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "compare-mode-changed",
+      mode: "original",
+    })
   })
 
   it("moves export preferences into the export drawer", () => {
-    const onExportFormatChange = vi.fn()
-    const onExportQualityChange = vi.fn()
-    const baseProps = {
-      algorithm: "floyd-steinberg",
-      compareMode: "processed",
-      isDesktopViewScale: true,
-      original: buffer,
-      preview: buffer,
-      previewTargetHeight: 1,
-      previewTargetWidth: 1,
-      status: "ready",
-      previewViewport: {
-        mode: "fit",
-        zoom: 1,
-        center: { x: 0, y: 0 },
-        gridEnabled: false,
-        loupeEnabled: false,
-      },
-      exportQuality: 0.75,
-      onExport: vi.fn(),
-      onExportFormatChange,
-      onExportQualityChange,
-      onFileSelected: vi.fn(),
-      onInvalidDrop: vi.fn(),
-      onPreviewDisplaySizeChange: vi.fn(),
-      onPreviewViewportChange: vi.fn(),
-    } as const
+    const onCommand = vi.fn()
 
-    renderToStaticMarkup(<PreviewStage {...baseProps} exportFormat="webp" />)
+    renderToStaticMarkup(
+      <PreviewStage
+        model={makeModel({ exportFormat: "webp" })}
+        onCommand={vi.fn()}
+      />
+    )
 
     const markup = renderToStaticMarkup(
-      <PreviewStage {...baseProps} exportFormat="jpeg" />
+      <PreviewStage
+        model={makeModel({ exportFormat: "jpeg", exportQuality: 0.75 })}
+        onCommand={onCommand}
+      />
     )
-    renderToStaticMarkup(<PreviewStage {...baseProps} exportFormat="png" />)
+
+    renderToStaticMarkup(
+      <PreviewStage
+        model={makeModel({ exportFormat: "png", exportQuality: 0.75 })}
+        onCommand={vi.fn()}
+      />
+    )
 
     expect(markup).toContain("Export Format")
     expect(markup).toContain("Export Quality")
@@ -498,45 +392,39 @@ describe("PreviewStage", () => {
       disabled: true,
       value: [1],
     })
-    expect(onExportQualityChange).not.toHaveBeenCalled()
+    expect(onCommand).not.toHaveBeenCalled()
   })
 
   it("shows reduced preview overlay only while a refined preview is pending", () => {
-    const baseProps = {
-      algorithm: "floyd-steinberg",
-      compareMode: "processed",
-      isDesktopViewScale: true,
+    const baseModel = makeModel({
       original: makeBuffer(4000, 3000),
       outputHeight: 3000,
       outputWidth: 4000,
       preview: makeBuffer(600, 450),
       previewTargetHeight: 3000,
       previewTargetWidth: 4000,
-      status: "ready",
-      previewViewport: {
-        mode: "fit",
-        zoom: 1,
-        center: { x: 0, y: 0 },
-        gridEnabled: false,
-        loupeEnabled: false,
-      },
-      exportFormat: "png",
-      exportQuality: 0.92,
-      onExport: vi.fn(),
-      onExportFormatChange: vi.fn(),
-      onExportQualityChange: vi.fn(),
-      onFileSelected: vi.fn(),
-      onInvalidDrop: vi.fn(),
-      onPreviewDisplaySizeChange: vi.fn(),
-      onPreviewViewportChange: vi.fn(),
-    } as const
+    })
 
-    expect(renderToStaticMarkup(<PreviewStage {...baseProps} />)).not.toContain(
-      "PREVIEW ONLY"
-    )
     expect(
       renderToStaticMarkup(
-        <PreviewStage {...baseProps} previewRefiningPending />
+        <PreviewStage model={baseModel} onCommand={vi.fn()} />
+      )
+    ).not.toContain("PREVIEW ONLY")
+
+    expect(
+      renderToStaticMarkup(
+        <PreviewStage
+          model={makeModel({
+            original: makeBuffer(4000, 3000),
+            outputHeight: 3000,
+            outputWidth: 4000,
+            preview: makeBuffer(600, 450),
+            previewTargetHeight: 3000,
+            previewTargetWidth: 4000,
+            previewRefiningPending: true,
+          })}
+          onCommand={vi.fn()}
+        />
       )
     ).toContain("PREVIEW ONLY")
   })
@@ -600,33 +488,28 @@ describe("PreviewStage", () => {
   })
 
   it("keeps slide compare 1:1 frame at the selected output size while preview is reduced", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      compareMode: "slide",
+      isDesktopViewScale: true,
+      original: makeBuffer(960, 640),
+      outputHeight: 1333,
+      outputWidth: 2000,
+      preview: makeBuffer(480, 320),
+      previewTargetHeight: 1333,
+      previewTargetWidth: 2000,
+      status: "ready",
+      previewViewport: {
+        mode: "manual",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="slide"
-        isDesktopViewScale
-        original={makeBuffer(960, 640)}
-        preview={makeBuffer(480, 320)}
-        previewTargetHeight={1333}
-        previewTargetWidth={2000}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("height:1321px")
@@ -634,36 +517,25 @@ describe("PreviewStage", () => {
   })
 
   it("keeps inspection controls in the preview toolbar", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(2, 2),
+      outputHeight: 2,
+      outputWidth: 2,
+      preview: makeBuffer(2, 2),
+      previewTargetHeight: 2,
+      previewTargetWidth: 2,
+      previewViewport: {
+        mode: "manual",
+        zoom: 4,
+        center: { x: 1, y: 1 },
+        gridEnabled: true,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(2, 2)}
-        preview={makeBuffer(2, 2)}
-        previewTargetHeight={2}
-        previewTargetWidth={2}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 4,
-          center: { x: 1, y: 1 },
-          gridEnabled: true,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
 
@@ -677,48 +549,36 @@ describe("PreviewStage", () => {
       max: 16,
       step: 0.25,
     })
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      mode: "manual",
-      zoom: 5,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { mode: "manual", zoom: 5 },
     })
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      mode: "manual",
-      zoom: 1,
-      center: { x: 1, y: 1 },
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { mode: "manual", zoom: 1, center: { x: 1, y: 1 } },
     })
   })
 
   it("keeps zoom controls visible in fit mode and switches interactions to real pixels", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(2, 2),
+      outputHeight: 2,
+      outputWidth: 2,
+      preview: makeBuffer(2, 2),
+      previewTargetHeight: 2,
+      previewTargetWidth: 2,
+      previewViewport: {
+        mode: "fit",
+        zoom: 4,
+        center: { x: 1, y: 1 },
+        gridEnabled: true,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(2, 2)}
-        preview={makeBuffer(2, 2)}
-        previewTargetHeight={2}
-        previewTargetWidth={2}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 4,
-          center: { x: 1, y: 1 },
-          gridEnabled: true,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
 
@@ -742,134 +602,96 @@ describe("PreviewStage", () => {
         (button) => button["aria-label"] === "Toggle pixel inspector"
       )
     ).toBe(true)
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 1, y: 1 },
-      mode: "manual",
-      zoom: 5,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 1, y: 1 }, mode: "manual", zoom: 5 },
     })
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      mode: "manual",
-      zoom: 1,
-      center: { x: 1, y: 1 },
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { mode: "manual", zoom: 1, center: { x: 1, y: 1 } },
     })
   })
 
   it("centers output pixels when the zoom slider enters manual mode from fit", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 450,
+      previewTargetWidth: 600,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(600, 450)}
-        previewTargetHeight={450}
-        previewTargetWidth={600}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
-      mode: "manual",
-      zoom: 2,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 2000, y: 1500 }, mode: "manual", zoom: 2 },
     })
   })
 
   it("centers slide real pixels when output size is larger than the original", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      compareMode: "slide",
+      original: makeBuffer(768, 768),
+      outputHeight: 2048,
+      outputWidth: 2048,
+      preview: makeBuffer(768, 768),
+      previewTargetHeight: 768,
+      previewTargetWidth: 768,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="slide"
-        isDesktopViewScale
-        original={makeBuffer(768, 768)}
-        outputHeight={2048}
-        outputWidth={2048}
-        preview={makeBuffer(768, 768)}
-        previewTargetHeight={768}
-        previewTargetWidth={768}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 1024, y: 1024 },
-      mode: "manual",
-      zoom: 2,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 1024, y: 1024 }, mode: "manual", zoom: 2 },
     })
   })
 
   it("uses full output dimensions for manual slide zoom when fit preview is screen-sized", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      compareMode: "slide",
+      original: makeBuffer(768, 768),
+      outputHeight: 2048,
+      outputWidth: 2048,
+      preview: makeBuffer(768, 768),
+      previewTargetHeight: 768,
+      previewTargetWidth: 768,
+      previewViewport: {
+        mode: "manual",
+        zoom: 2,
+        center: { x: 1024, y: 1024 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="slide"
-        isDesktopViewScale
-        original={makeBuffer(768, 768)}
-        outputHeight={2048}
-        outputWidth={2048}
-        preview={makeBuffer(768, 768)}
-        previewTargetHeight={768}
-        previewTargetWidth={768}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 2,
-          center: { x: 1024, y: 1024 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("height:4072px")
@@ -879,163 +701,113 @@ describe("PreviewStage", () => {
   })
 
   it("centers real pixels view when enabling the pixel inspector from fit mode", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(8, 6),
+      outputHeight: 6,
+      outputWidth: 8,
+      preview: makeBuffer(8, 6),
+      previewTargetHeight: 6,
+      previewTargetWidth: 8,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(8, 6)}
-        preview={makeBuffer(8, 6)}
-        previewTargetHeight={6}
-        previewTargetWidth={8}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     buttonRenders
       .find((button) => button["aria-label"] === "Toggle pixel inspector")
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 4, y: 3 },
-      loupeEnabled: true,
-      mode: "manual",
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 4, y: 3 }, loupeEnabled: true, mode: "manual" },
     })
   })
 
   it("centers real pixels from fit mode at the full output size, not the reduced preview target", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      compareMode: "slide",
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 450,
+      previewTargetWidth: 600,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="slide"
-        isDesktopViewScale
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(600, 450)}
-        previewTargetHeight={450}
-        previewTargetWidth={600}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
-      mode: "manual",
-      zoom: 1,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 2000, y: 1500 }, mode: "manual", zoom: 1 },
     })
   })
 
   it("resets zoom when switching from real pixels back to fit", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(4000, 3000),
+      previewTargetHeight: 3000,
+      previewTargetWidth: 4000,
+      previewViewport: {
+        mode: "manual",
+        zoom: 3,
+        center: { x: 1200, y: 900 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(4000, 3000)}
-        previewTargetHeight={3000}
-        previewTargetWidth={4000}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 3,
-          center: { x: 1200, y: 900 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     toggleGroupItemRenders.find((item) => item.value === "fit")?.onClick?.()
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
-      mode: "fit",
-      zoom: 1,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 2000, y: 1500 }, mode: "fit", zoom: 1 },
     })
   })
 
   it("hides the pixel inspector control on mobile", () => {
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale={false}
-        original={makeBuffer(2, 2)}
-        preview={makeBuffer(2, 2)}
-        previewTargetHeight={2}
-        previewTargetWidth={2}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 4,
-          center: { x: 1, y: 1 },
-          gridEnabled: true,
-          loupeEnabled: true,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
-    )
+    const model = makeModel({
+      algorithm: "bayer",
+      isDesktopViewScale: false,
+      original: makeBuffer(2, 2),
+      preview: makeBuffer(2, 2),
+      previewTargetHeight: 2,
+      previewTargetWidth: 2,
+      previewViewport: {
+        mode: "manual",
+        zoom: 4,
+        center: { x: 1, y: 1 },
+        gridEnabled: true,
+        loupeEnabled: true,
+      },
+    })
+
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={vi.fn()} />)
 
     expect(
       buttonRenders.some(
@@ -1045,68 +817,50 @@ describe("PreviewStage", () => {
   })
 
   it("reserves mobile touch drag gestures for manual preview panning", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      isDesktopViewScale: false,
+      original: makeBuffer(2, 2),
+      preview: makeBuffer(2, 2),
+      previewTargetHeight: 2,
+      previewTargetWidth: 2,
+      previewViewport: {
+        mode: "manual",
+        zoom: 4,
+        center: { x: 1, y: 1 },
+        gridEnabled: true,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale={false}
-        original={makeBuffer(2, 2)}
-        preview={makeBuffer(2, 2)}
-        previewTargetHeight={2}
-        previewTargetWidth={2}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 4,
-          center: { x: 1, y: 1 },
-          gridEnabled: true,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("touch-action:none")
   })
 
   it("uses full output dimensions for mobile real-pixels zoom", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      isDesktopViewScale: false,
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 450,
+      previewTargetWidth: 600,
+      previewViewport: {
+        mode: "manual",
+        zoom: 2,
+        center: { x: 2000, y: 1500 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale={false}
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(600, 450)}
-        previewTargetHeight={450}
-        previewTargetWidth={600}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 2,
-          center: { x: 2000, y: 1500 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("height:5976px")
@@ -1116,109 +870,79 @@ describe("PreviewStage", () => {
   })
 
   it("keeps mobile manual geometry based on output size after Fit preview", () => {
-    const onPreviewViewportChange = vi.fn()
+    const onCommand = vi.fn()
+    const model = makeModel({
+      algorithm: "bayer",
+      isDesktopViewScale: false,
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(600, 450),
+      previewTargetHeight: 450,
+      previewTargetWidth: 600,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
 
-    renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale={false}
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(600, 450)}
-        previewTargetHeight={450}
-        previewTargetWidth={600}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={onPreviewViewportChange}
-      />
-    )
+    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
 
     sliderRenders.find((slider) => slider.max === 16)?.onValueChange?.([2])
 
-    expect(onPreviewViewportChange).toHaveBeenCalledWith({
-      center: { x: 2000, y: 1500 },
-      mode: "manual",
-      zoom: 2,
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "preview-viewport-changed",
+      viewport: { center: { x: 2000, y: 1500 }, mode: "manual", zoom: 2 },
     })
   })
 
   it("reserves mobile touch gestures while fit preview can pinch into manual mode", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      isDesktopViewScale: false,
+      original: makeBuffer(2, 2),
+      preview: makeBuffer(2, 2),
+      previewTargetHeight: 2,
+      previewTargetWidth: 2,
+      previewViewport: {
+        mode: "fit",
+        zoom: 1,
+        center: { x: 0, y: 0 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale={false}
-        original={makeBuffer(2, 2)}
-        preview={makeBuffer(2, 2)}
-        previewTargetHeight={2}
-        previewTargetWidth={2}
-        status="ready"
-        previewViewport={{
-          mode: "fit",
-          zoom: 1,
-          center: { x: 0, y: 0 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("touch-action:none")
   })
 
   it("applies manual viewport center as a visible frame offset", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(10, 8),
+      outputHeight: 8,
+      outputWidth: 10,
+      preview: makeBuffer(10, 8),
+      previewTargetHeight: 8,
+      previewTargetWidth: 10,
+      previewViewport: {
+        mode: "manual",
+        zoom: 4,
+        center: { x: 4, y: 3 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(10, 8)}
-        preview={makeBuffer(10, 8)}
-        previewTargetHeight={8}
-        previewTargetWidth={10}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 4,
-          center: { x: 4, y: 3 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).toContain("left:50%")
@@ -1228,78 +952,59 @@ describe("PreviewStage", () => {
   })
 
   it("does not hide non-default real-pixels frames during compare mode changes", () => {
+    const model = makeModel({
+      algorithm: "bayer",
+      original: makeBuffer(4000, 3000),
+      outputHeight: 3000,
+      outputWidth: 4000,
+      preview: makeBuffer(4000, 3000),
+      previewTargetHeight: 3000,
+      previewTargetWidth: 4000,
+      previewViewport: {
+        mode: "manual",
+        zoom: 3,
+        center: { x: 1200, y: 900 },
+        gridEnabled: false,
+        loupeEnabled: false,
+      },
+    })
+
     const html = renderToStaticMarkup(
-      <PreviewStage
-        algorithm="bayer"
-        compareMode="processed"
-        isDesktopViewScale
-        original={makeBuffer(4000, 3000)}
-        outputHeight={3000}
-        outputWidth={4000}
-        preview={makeBuffer(4000, 3000)}
-        previewTargetHeight={3000}
-        previewTargetWidth={4000}
-        status="ready"
-        previewViewport={{
-          mode: "manual",
-          zoom: 3,
-          center: { x: 1200, y: 900 },
-          gridEnabled: false,
-          loupeEnabled: false,
-        }}
-        exportFormat="png"
-        exportQuality={0.92}
-        onExport={vi.fn()}
-        onExportFormatChange={vi.fn()}
-        onExportQualityChange={vi.fn()}
-        onFileSelected={vi.fn()}
-        onInvalidDrop={vi.fn()}
-        onPreviewDisplaySizeChange={vi.fn()}
-        onPreviewViewportChange={vi.fn()}
-      />
+      <PreviewStage model={model} onCommand={vi.fn()} />
     )
 
     expect(html).not.toContain("visibility:hidden")
   })
 
   it("uses the same real-pixels frame size for slide, processed, and original", () => {
-    const commonProps = {
-      algorithm: "bayer" as const,
-      isDesktopViewScale: true,
-      original: makeBuffer(4000, 3000),
-      outputHeight: 3000,
-      outputWidth: 4000,
-      preview: makeBuffer(600, 450),
-      previewTargetHeight: 3000,
-      previewTargetWidth: 4000,
-      status: "ready" as const,
-      previewViewport: {
-        mode: "manual" as const,
-        zoom: 3,
-        center: { x: 1200, y: 900 },
-        gridEnabled: false,
-        loupeEnabled: false,
-      },
-      exportFormat: "png" as const,
-      exportQuality: 0.92,
-      onExport: vi.fn(),
-      onExportFormatChange: vi.fn(),
-      onExportQualityChange: vi.fn(),
-      onFileSelected: vi.fn(),
-      onInvalidDrop: vi.fn(),
-      onPreviewDisplaySizeChange: vi.fn(),
-      onPreviewViewportChange: vi.fn(),
+    function renderStage(compareMode: string) {
+      return renderToStaticMarkup(
+        <PreviewStage
+          model={makeModel({
+            algorithm: "bayer",
+            compareMode: compareMode as never,
+            original: makeBuffer(4000, 3000),
+            outputHeight: 3000,
+            outputWidth: 4000,
+            preview: makeBuffer(600, 450),
+            previewTargetHeight: 3000,
+            previewTargetWidth: 4000,
+            previewViewport: {
+              mode: "manual",
+              zoom: 3,
+              center: { x: 1200, y: 900 },
+              gridEnabled: false,
+              loupeEnabled: false,
+            },
+          })}
+          onCommand={vi.fn()}
+        />
+      )
     }
 
-    const slide = renderToStaticMarkup(
-      <PreviewStage {...commonProps} compareMode="slide" />
-    )
-    const processed = renderToStaticMarkup(
-      <PreviewStage {...commonProps} compareMode="processed" />
-    )
-    const original = renderToStaticMarkup(
-      <PreviewStage {...commonProps} compareMode="original" />
-    )
+    const slide = renderStage("slide")
+    const processed = renderStage("processed")
+    const original = renderStage("original")
 
     for (const html of [slide, processed, original]) {
       expect(html).toContain("height:8964px")

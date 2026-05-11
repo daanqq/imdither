@@ -1,5 +1,4 @@
 import * as React from "react"
-import type { DitherAlgorithm, PixelBuffer } from "@workspace/core"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import {
   Empty,
@@ -27,136 +26,164 @@ import type {
 import { type ExportFormat } from "@/lib/export-image"
 import { type PreviewViewport } from "@/lib/preview-viewport"
 import { usePreviewDisplayMeasurement } from "@/lib/use-preview-display-measurement"
-import type { CompareMode, JobStatus } from "@/store/editor-store"
+import type { CompareMode } from "@/store/editor-store"
+import {
+  type PreviewStageModel,
+  type PreviewStageCommand,
+} from "@/lib/preview-stage-application"
 
 export type PreviewStageProps = {
-  algorithm: DitherAlgorithm
-  compareMode: CompareMode
-  isDesktopViewScale: boolean
-  original: PixelBuffer | null
-  outputHeight?: number
-  outputWidth?: number
-  preview: PixelBuffer | null
-  previewRefiningPending?: boolean
-  status: JobStatus
-  error?: string | null
-  previewTargetHeight: number
-  previewTargetWidth: number
-  previewViewport: PreviewViewport
-  exportFormat: ExportFormat
-  exportQuality: number
-  canRedoSettingsChange?: boolean
-  canUndoSettingsChange?: boolean
-  onExport: () => void
-  onExportFormatChange: (format: ExportFormat) => void
-  onExportQualityChange: (quality: number) => void
-  onCompareModeChange?: (mode: CompareMode) => void
-  onFileSelected: (file: File) => void | Promise<void>
-  motionExportSettings?: { frameDurationMs: number; loopCount: number }
-  onMotionExportSettingsChange?: (settings: {
-    frameDurationMs?: number
-    loopCount?: number
-  }) => void
-  onInvalidDrop: (message: string) => void
-  onPreviewDisplaySizeChange: (size: { height: number; width: number }) => void
-  onPreviewViewportChange: (viewport: Partial<PreviewViewport>) => void
-  onRedoSettingsChange?: () => void
-  onUndoSettingsChange?: () => void
-  isAnimated?: boolean
-  frameCount?: number
-  currentFrame?: number
-  isPlaying?: boolean
-  onPlayPause?: () => void
-  onFrameChange?: (frame: number) => void
-  onPrevFrame?: () => void
-  onNextFrame?: () => void
-  animatedExportFormat?: AnimatedExportFormat
-  onAnimatedExportFormatChange?: (format: AnimatedExportFormat) => void
-  webCodecsAvailable?: boolean
-  videoExportSettings?: VideoExportSettings
-  onVideoExportSettingsChange?: (settings: Partial<VideoExportSettings>) => void
+  model: PreviewStageModel
+  onCommand: (command: PreviewStageCommand) => void
 }
 
 export const PreviewStage = React.memo(function PreviewStage({
-  algorithm,
-  compareMode,
-  isDesktopViewScale,
-  original,
-  outputHeight,
-  outputWidth,
-  preview,
-  previewRefiningPending = false,
-  previewTargetHeight,
-  previewTargetWidth,
-  status,
-  error,
-  previewViewport,
-  exportFormat,
-  exportQuality,
-  canRedoSettingsChange = false,
-  canUndoSettingsChange = false,
-  onExport,
-  onExportFormatChange,
-  onExportQualityChange,
-  motionExportSettings,
-  onMotionExportSettingsChange,
-  onCompareModeChange = () => {},
-  onFileSelected,
-  onInvalidDrop,
-  onPreviewDisplaySizeChange,
-  onPreviewViewportChange,
-  onRedoSettingsChange,
-  onUndoSettingsChange,
-  isAnimated = false,
-  frameCount = 0,
-  currentFrame = 0,
-  isPlaying = false,
-  onPlayPause,
-  onFrameChange,
-  onPrevFrame,
-  onNextFrame,
-  animatedExportFormat = "gif",
-  onAnimatedExportFormatChange,
-  webCodecsAvailable,
-  videoExportSettings,
-  onVideoExportSettingsChange,
+  model,
+  onCommand,
 }: PreviewStageProps) {
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const {
+    algorithm,
+    busy,
+    compareMode,
+    error,
+    isAnimated,
+    isDesktopViewScale,
+    original,
+    outputHeight,
+    outputWidth,
+    preview,
+    previewRefining,
+    previewTargetHeight,
+    previewTargetWidth,
+    status,
+    previewViewport,
+  } = model.product
+
+  const {
+    format: exportFormat,
+    quality: exportQuality,
+    animatedFormat: animatedExportFormat,
+    motionSettings: motionExportSettings,
+    webCodecsAvailable,
+    videoSettings: videoExportSettings,
+  } = model.export
+
+  const { frameCount, currentFrame, isPlaying } = model.motion
+  const { canUndo: canUndoSettingsChange, canRedo: canRedoSettingsChange } =
+    model.history
+
   const fullOutputHeight = outputHeight ?? previewTargetHeight
   const fullOutputWidth = outputWidth ?? previewTargetWidth
-  const previewReduced = preview
-    ? preview.width !== previewTargetWidth ||
-      preview.height !== previewTargetHeight
-    : false
-  const previewRefining = previewReduced && previewRefiningPending
-  const busy =
-    status === "queued" || status === "processing" || status === "exporting"
-  const { previewDisplayRef } = usePreviewDisplayMeasurement(
-    onPreviewDisplaySizeChange
+
+  const handlePreviewDisplaySizeChange = React.useCallback(
+    (size: { height: number; width: number }) =>
+      onCommand({ kind: "preview-display-size-changed", size }),
+    [onCommand]
   )
 
-  async function handleFileInput(event: React.ChangeEvent<HTMLInputElement>) {
+  const { previewDisplayRef } = usePreviewDisplayMeasurement(
+    handlePreviewDisplaySizeChange
+  )
+
+  function handleFileInput(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ""
 
     if (file) {
-      await onFileSelected(file)
+      onCommand({ kind: "source-replacement-intent", file })
     }
   }
 
-  async function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setDragActive(false)
     const file = event.dataTransfer.files[0]
 
     if (file?.type.startsWith("image/") || file?.type.startsWith("video/")) {
-      await onFileSelected(file)
+      onCommand({ kind: "source-replacement-intent", file })
       return
     }
 
-    onInvalidDrop("Drop an image or video file")
+    onCommand({ kind: "invalid-drop", message: "Drop an image or video file" })
   }
+
+  const handleCompareModeChange = React.useCallback(
+    (mode: CompareMode) => onCommand({ kind: "compare-mode-changed", mode }),
+    [onCommand]
+  )
+
+  const handlePreviewViewportChange = React.useCallback(
+    (viewport: Partial<PreviewViewport>) =>
+      onCommand({ kind: "preview-viewport-changed", viewport }),
+    [onCommand]
+  )
+
+  const handleExport = React.useCallback(
+    () => onCommand({ kind: "export-intent" }),
+    [onCommand]
+  )
+
+  const handleExportFormatChange = React.useCallback(
+    (format: ExportFormat) =>
+      onCommand({ kind: "export-format-changed", format }),
+    [onCommand]
+  )
+
+  const handleExportQualityChange = React.useCallback(
+    (quality: number) => onCommand({ kind: "export-quality-changed", quality }),
+    [onCommand]
+  )
+
+  const handleMotionExportSettingsChange = React.useCallback(
+    (settings: { frameDurationMs?: number; loopCount?: number }) =>
+      onCommand({ kind: "motion-export-settings-changed", settings }),
+    [onCommand]
+  )
+
+  const handleAnimatedExportFormatChange = React.useCallback(
+    (format: AnimatedExportFormat) =>
+      onCommand({ kind: "animated-export-format-changed", format }),
+    [onCommand]
+  )
+
+  const handleVideoExportSettingsChange = React.useCallback(
+    (settings: Partial<VideoExportSettings>) =>
+      onCommand({ kind: "video-export-settings-changed", settings }),
+    [onCommand]
+  )
+
+  const handleUndoSettingsChange = React.useCallback(
+    () => onCommand({ kind: "undo-settings-change" }),
+    [onCommand]
+  )
+
+  const handleRedoSettingsChange = React.useCallback(
+    () => onCommand({ kind: "redo-settings-change" }),
+    [onCommand]
+  )
+
+  const handlePlayPause = React.useCallback(
+    () => onCommand({ kind: "play-pause" }),
+    [onCommand]
+  )
+
+  const handleFrameChange = React.useCallback(
+    (frame: number) => onCommand({ kind: "display-frame-changed", frame }),
+    [onCommand]
+  )
+
+  const handlePrevFrame = React.useCallback(
+    () => onCommand({ kind: "prev-frame" }),
+    [onCommand]
+  )
+
+  const handleNextFrame = React.useCallback(
+    () => onCommand({ kind: "next-frame" }),
+    [onCommand]
+  )
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
@@ -201,8 +228,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                 imageWidth={fullOutputWidth}
                 pixelInspectorEnabled={isDesktopViewScale}
                 viewport={previewViewport}
-                onCompareModeChange={onCompareModeChange}
-                onViewportChange={onPreviewViewportChange}
+                onCompareModeChange={handleCompareModeChange}
+                onViewportChange={handlePreviewViewportChange}
               />
             ) : null}
             {!original ? (
@@ -228,27 +255,23 @@ export const PreviewStage = React.memo(function PreviewStage({
                     previewTargetWidth={previewTargetWidth}
                     previewViewport={previewViewport}
                     status={status}
-                    onDisplayFrameChange={onPreviewDisplaySizeChange}
-                    onViewportChange={onPreviewViewportChange}
+                    onDisplayFrameChange={handlePreviewDisplaySizeChange}
+                    onViewportChange={handlePreviewViewportChange}
                   />
                 </div>
               </div>
             )}
           </div>
-          {frameCount > 0 &&
-          onPlayPause &&
-          onFrameChange &&
-          onPrevFrame &&
-          onNextFrame ? (
+          {frameCount > 0 ? (
             <div className="mx-2 shrink-0">
               <FrameStrip
                 frameCount={frameCount}
                 currentFrame={currentFrame}
                 isPlaying={isPlaying}
-                onPlayPause={onPlayPause}
-                onFrameChange={onFrameChange}
-                onPrevFrame={onPrevFrame}
-                onNextFrame={onNextFrame}
+                onPlayPause={handlePlayPause}
+                onFrameChange={handleFrameChange}
+                onPrevFrame={handlePrevFrame}
+                onNextFrame={handleNextFrame}
               />
             </div>
           ) : null}
@@ -268,8 +291,8 @@ export const PreviewStage = React.memo(function PreviewStage({
                   fileInputRef={fileInputRef}
                   original={original}
                   status={status}
-                  onRedoSettingsChange={onRedoSettingsChange}
-                  onUndoSettingsChange={onUndoSettingsChange}
+                  onRedoSettingsChange={handleRedoSettingsChange}
+                  onUndoSettingsChange={handleUndoSettingsChange}
                 />
                 <ExportDrawerContent
                   isAnimated={isAnimated}
@@ -281,12 +304,16 @@ export const PreviewStage = React.memo(function PreviewStage({
                   webCodecsAvailable={webCodecsAvailable}
                   videoExportSettings={videoExportSettings}
                   motionExportSettings={motionExportSettings}
-                  onExport={onExport}
-                  onExportFormatChange={onExportFormatChange}
-                  onExportQualityChange={onExportQualityChange}
-                  onAnimatedExportFormatChange={onAnimatedExportFormatChange}
-                  onVideoExportSettingsChange={onVideoExportSettingsChange}
-                  onMotionExportSettingsChange={onMotionExportSettingsChange}
+                  onExport={handleExport}
+                  onExportFormatChange={handleExportFormatChange}
+                  onExportQualityChange={handleExportQualityChange}
+                  onAnimatedExportFormatChange={
+                    handleAnimatedExportFormatChange
+                  }
+                  onVideoExportSettingsChange={handleVideoExportSettingsChange}
+                  onMotionExportSettingsChange={
+                    handleMotionExportSettingsChange
+                  }
                 />
               </ResponsiveDrawer>
             </div>

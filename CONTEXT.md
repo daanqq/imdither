@@ -189,6 +189,37 @@ Architecture terms:
 
 - Preview Stage: owns preview layout, controls, drop affordances, overlays,
   export entry, and history actions.
+- Preview Stage Application: browser-side seam under the Preview Stage shell
+  that builds a Preview Stage Model and maps Preview Stage Commands to caller
+  effects without forcing the React shell interface to mirror app state atoms.
+- Preview Stage Model: renderable model of preview shell state, including
+  Preview Product State, motion playback display state, export display state,
+  history affordances, drop affordance state, and allowed shell actions.
+- Preview Stage Command: user intent emitted by the Preview Stage shell for
+  preview, export, source replacement, motion playback, display measurement, and
+  history actions.
+- Preview Stage Application starts after raw DOM events have been normalized by
+  the React shell or local UI adapters; it must not depend on drag, drop, file
+  input, or drawer event objects.
+- Preview Stage Application may emit export intent from the preview shell, but
+  still Export Action and Motion Export Action execution remain owned by their
+  existing application seams.
+- Preview Stage Application may emit source replacement intent from upload or
+  drop affordances, but source-kind routing, Source Kind Switch, and intake
+  behavior remain owned by Source Replacement Application.
+- Preview Stage Application may model Motion Playback affordances and emit
+  playback commands, but frame-advance rules and playable-state policy remain
+  owned by Motion Playback.
+- Preview Stage Application owns the shell command shape for Compare Mode,
+  Preview Viewport patch, and Display Frame changes, while gesture math,
+  coordinate mapping, and interaction outcomes remain owned by Preview Viewport
+  Interaction and Preview Presentation Shell.
+- Preview Stage Application may build the export drawer display model and emit
+  export preference commands, but export preferences remain external editor
+  runtime state with no duplicate Preview Stage persistence path.
+- Preview Stage Application is an outer interface seam above Preview Stage shell
+  submodules; shell submodules may render slices of the Preview Stage Model but
+  do not replace the application seam.
 - Preview Presentation: renders preview surfaces from Preview Product State
   without changing processing semantics.
 - Preview Presentation Core: pure calculations for sizing, viewport movement,
@@ -214,6 +245,15 @@ Architecture terms:
 - Preview Cycle Application owns freshness checks for Source Image, Editor
   Settings, Preview Viewport mode, and Screen Preview target so superseded
   Preview Job events cannot apply runtime effects.
+- Preview Cycle Application preserves the last successful Preview output on
+  failed Preview Job events while clearing Preview Refinement state and metadata,
+  and reporting status/error effects.
+- Preview Cycle reset is a Preview Cycle Application command exposed by the
+  hook; it cancels active preview work when needed, clears Preview output and
+  Preview Refinement state, and does not mutate Editor Settings.
+- Preview Cycle cancel is a Preview Cycle Application command used by the hook
+  effect cleanup; it increments the session freshness counter and cancels the
+  active Preview Job without clearing Preview output or runtime state.
 - Preview Viewport Interaction: the view-local interaction module that owns
   Preview Viewport gesture policy, including wheel zoom, Manual View pan, Touch
   Pinch Zoom, pointer capture decisions, live viewport updates, and
