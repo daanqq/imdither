@@ -10,6 +10,10 @@ import { createProcessingJobs } from "@/lib/processing-jobs"
 import { getScreenPreviewTarget } from "@/lib/screen-preview"
 import type { PreviewViewport } from "@/lib/preview-viewport"
 import type { JobStatus } from "@/store/editor-store"
+import {
+  createPreviewCycleApplication,
+  type PreviewDisplaySize,
+} from "@/lib/preview-cycle-application"
 
 type PreviewCycleParams = {
   processingJobs: ReturnType<typeof createProcessingJobs>
@@ -21,11 +25,6 @@ type PreviewCycleParams = {
   onStatusChange: (status: JobStatus) => void
 }
 
-type PreviewDisplaySize = {
-  height: number
-  width: number
-}
-
 export function usePreviewCycle({
   processingJobs,
   previewViewportMode,
@@ -35,33 +34,12 @@ export function usePreviewCycle({
   onMetadataChange,
   onStatusChange,
 }: PreviewCycleParams) {
-  const [state, dispatch] = React.useReducer(
-    (
-      prev: { preview: PixelBuffer | null; previewRefiningPending: boolean },
-      action:
-        | Partial<{
-            preview: PixelBuffer | null
-            previewRefiningPending: boolean
-          }>
-        | ((prev: {
-            preview: PixelBuffer | null
-            previewRefiningPending: boolean
-          }) => Partial<{
-            preview: PixelBuffer | null
-            previewRefiningPending: boolean
-          }>)
-    ) => ({
-      ...prev,
-      ...(typeof action === "function" ? action(prev) : action),
-    }),
-    {
-      preview: null as PixelBuffer | null,
-      previewRefiningPending: false,
-    }
-  )
-  const { preview, previewRefiningPending } = state
+  const [preview, setPreview] = React.useState<PixelBuffer | null>(null)
+  const [previewRefiningPending, setPreviewRefiningPending] =
+    React.useState(false)
   const [previewDisplaySize, setPreviewDisplaySize] =
     React.useState<PreviewDisplaySize | null>(null)
+
   const previewTarget = React.useMemo(
     () =>
       getScreenPreviewTarget({
@@ -80,70 +58,47 @@ export function usePreviewCycle({
     ]
   )
 
+  const onErrorChangeRef = React.useRef(onErrorChange)
+  const onMetadataChangeRef = React.useRef(onMetadataChange)
+  const onStatusChangeRef = React.useRef(onStatusChange)
+
+  React.useLayoutEffect(() => {
+    onErrorChangeRef.current = onErrorChange
+    onMetadataChangeRef.current = onMetadataChange
+    onStatusChangeRef.current = onStatusChange
+  }, [onErrorChange, onMetadataChange, onStatusChange])
+
+  const app = React.useMemo(
+    () =>
+      createPreviewCycleApplication({
+        processingJobs,
+        adapter: {
+          replacePreview: (p) => setPreview(p),
+          replacePreviewRefining: (p) => setPreviewRefiningPending(p),
+          replaceStatus: (s) => onStatusChangeRef.current(s),
+          replaceError: (e) => onErrorChangeRef.current(e),
+          replaceMetadata: (m) => onMetadataChangeRef.current(m),
+        },
+      }),
+    [processingJobs]
+  )
+
   const resetPreviewCycle = React.useCallback(() => {
-    dispatch({ preview: null, previewRefiningPending: false })
-  }, [])
+    app.reset()
+  }, [app])
 
   React.useEffect(() => {
-    if (!source) {
-      return undefined
-    }
-
-    const handle = processingJobs.startPreviewJob({
-      sourceKey: source.id,
-      image: source.buffer,
+    app.refreshPreview({
+      source,
       settings,
-      previewTarget,
-      onEvent: (event) => {
-        switch (event.type) {
-          case "queued":
-            onStatusChange("queued")
-            return
-          case "processing":
-            onStatusChange("processing")
-            return
-          case "reduced-preview-ready":
-            dispatch({
-              preview: event.result.image,
-              previewRefiningPending: event.willRefine,
-            })
-            onMetadataChange(event.result.metadata)
-            onErrorChange(null)
-            onStatusChange("ready")
-            return
-          case "refined-preview-ready":
-            dispatch({
-              preview: event.result.image,
-              previewRefiningPending: false,
-            })
-            onMetadataChange(event.result.metadata)
-            onErrorChange(null)
-            onStatusChange("ready")
-            return
-          case "failed":
-            onErrorChange(event.error.message)
-            onStatusChange("error")
-            dispatch((prev) => ({
-              ...prev,
-              previewRefiningPending: false,
-            }))
-            return
-        }
-      },
+      previewViewportMode,
+      displaySize: previewDisplaySize,
     })
 
     return () => {
-      handle.cancel()
+      app.cancel()
     }
-  }, [
-    onErrorChange,
-    onMetadataChange,
-    onStatusChange,
-    previewTarget,
-    processingJobs,
-    settings,
-    source,
-  ])
+  }, [app, source, settings, previewViewportMode, previewDisplaySize])
 
   return {
     preview,

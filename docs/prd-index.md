@@ -84,6 +84,7 @@ feature shipped; update its status and keep this index current.
 | done       | [Source Intake Application Command](../.scratch/source-intake-application-command/PRD.md)           | Source Load Command and Runtime Adapter deepening.                                                   |
 | done | [Source Replacement Application](../.scratch/source-replacement-application/PRD.md)            | Unified still, demo, and motion source replacement seam above Source Intake and Motion Intake.        |
 | done | [Effect Stack Editing Application](../.scratch/effect-stack-editing-application/PRD.md)        | Renderable Effect Stack editing model and commands for the Manual tab.                               |
+| done | [Preview Cycle Application](../.scratch/preview-cycle-application/PRD.md)                      | Testable Preview Cycle application seam under the existing React hook.                                |
 | done       | [App Shell Command Seams](../.scratch/app-shell-command-seams/PRD.md)                               | Clipboard Settings, Palette Action, Editor Settings Command, and Auto-Tune Apply applications.       |
 | done       | [Preview Viewport Interaction](../.scratch/preview-viewport-interaction/PRD.md)                     | Session-style outcome module for Preview Viewport gesture policy.                                    |
 | done       | [Preview Presentation Surface Interface](../.scratch/preview-presentation-surface-interface/PRD.md) | Narrower semantic surface interface for preview adapters.                                            |

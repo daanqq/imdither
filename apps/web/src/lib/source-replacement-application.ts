@@ -74,6 +74,9 @@ export class SourceReplacementApplication {
     dependencies: SourceReplacementDependencies
   ): Promise<void> {
     if (command.kind === "demo") {
+      this.motionIntake.cancel()
+      adapter.cancelMotionCycle()
+      adapter.clearMotionState()
       return executeSourceLoadCommand(
         { kind: "demo" },
         this.toSourceIntakeAdapter(adapter),
