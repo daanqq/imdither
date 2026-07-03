@@ -4,6 +4,7 @@ import type {
   MotionExportSettings,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import {
   exportApngSequence as realExportApngSequence,
   exportGifSequence as realExportGifSequence,
@@ -110,5 +111,6 @@ function fallbackSourceName(format: AnimatedExportFormat): string {
 }
 
 function fallbackFailureCopy(format: AnimatedExportFormat): string {
-  return `${format === "apng" ? "APNG" : format === "webm" ? "WebM" : "GIF"} export failed`
+  const label = format === "apng" ? "APNG" : format === "webm" ? "WebM" : "GIF"
+  return i18n.t("error.animatedExportFailed", { format: label })
 }

@@ -6,6 +6,7 @@ import {
 } from "@workspace/core"
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
+import { useTranslation } from "react-i18next"
 import {
   Tabs,
   TabsContent,
@@ -85,6 +86,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   onSettingsTransition,
   resolutionAspectLabel,
 }: InspectorPanelProps) {
+  const { t } = useTranslation()
   const activePreset = PRESET_PALETTES.find(
     (palette) => palette.id === settings.paletteId
   )
@@ -101,8 +103,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
         <Tabs defaultValue="looks" className="h-full min-h-0 min-w-0 gap-0">
           <CardHeader className="shrink-0 px-2 pt-2 pb-0">
             <TabsList className="grid w-full grid-cols-2" variant="line">
-              <TabsTrigger value="looks">Looks</TabsTrigger>
-              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="looks">{t("tabs.looks")}</TabsTrigger>
+              <TabsTrigger value="manual">{t("tabs.manual")}</TabsTrigger>
             </TabsList>
           </CardHeader>
           <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden p-0">

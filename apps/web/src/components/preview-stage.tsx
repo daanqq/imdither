@@ -8,6 +8,7 @@ import {
 } from "@workspace/ui/components/empty"
 import { Input } from "@workspace/ui/components/input"
 import { cn } from "@workspace/ui/lib/utils"
+import { useTranslation } from "react-i18next"
 
 import { PreviewPresentation } from "@/components/preview-presentation"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
@@ -41,6 +42,7 @@ export const PreviewStage = React.memo(function PreviewStage({
   model,
   onCommand,
 }: PreviewStageProps) {
+  const { t } = useTranslation()
   const [dragActive, setDragActive] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -107,7 +109,7 @@ export const PreviewStage = React.memo(function PreviewStage({
       return
     }
 
-    onCommand({ kind: "invalid-drop", message: "Drop an image or video file" })
+    onCommand({ kind: "invalid-drop", message: t("preview.dropError") })
   }
 
   const handleCompareModeChange = React.useCallback(
@@ -233,14 +235,7 @@ export const PreviewStage = React.memo(function PreviewStage({
               />
             ) : null}
             {!original ? (
-              <Empty className="border-0">
-                <EmptyHeader>
-                  <EmptyTitle>[WAITING FOR IMAGE]</EmptyTitle>
-                  <EmptyDescription>
-                    Drop, paste, upload, or load the bundled demo.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <EmptyState />
             ) : (
               <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2">
                 <div className="min-h-0 min-w-0 flex-1">
@@ -323,3 +318,16 @@ export const PreviewStage = React.memo(function PreviewStage({
     </div>
   )
 })
+
+function EmptyState() {
+  const { t } = useTranslation()
+
+  return (
+    <Empty className="border-0">
+      <EmptyHeader>
+        <EmptyTitle>{t("preview.waiting")}</EmptyTitle>
+        <EmptyDescription>{t("preview.dropHint")}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  )
+}

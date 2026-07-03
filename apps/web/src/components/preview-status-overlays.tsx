@@ -1,4 +1,5 @@
 import type { DitherAlgorithm } from "@workspace/core"
+import { useTranslation } from "react-i18next"
 
 import type { JobStatus } from "@/store/editor-store"
 
@@ -21,24 +22,26 @@ export function ProcessingOverlay({
   previewReduced: boolean
   status: JobStatus
 }) {
+  const { t } = useTranslation()
+
   if (!busy && !previewReduced) {
     return null
   }
 
   const title =
     status === "exporting"
-      ? "EXPORTING"
+      ? t("preview.exporting")
       : busy
-        ? "PROCESSING PREVIEW"
-        : "PREVIEW ONLY"
+        ? t("preview.processing")
+        : t("preview.previewOnly")
   const detail =
     status === "exporting"
-      ? "Preparing full-size export."
+      ? t("preview.exportingDetail")
       : previewReduced
-        ? `Showing reduced preview while full ${algorithm} output catches up.`
+        ? t("preview.reducedDetail", { algorithm })
         : status === "queued"
-          ? "Queued. Controls remain editable."
-          : `${algorithm} worker is running. New changes replace queued preview.`
+          ? t("preview.queuedDetail")
+          : t("preview.workerRunningDetail", { algorithm })
 
   return (
     <div className="pointer-events-none absolute inset-x-2 top-2 z-20 border border-primary bg-background/95 p-2 shadow-none">
@@ -72,6 +75,8 @@ export function SourceErrorOverlay({
   error?: string | null
   status: JobStatus
 }) {
+  const { t } = useTranslation()
+
   if (status !== "error" || !error) {
     return null
   }
@@ -83,7 +88,7 @@ export function SourceErrorOverlay({
     >
       <div className="min-w-0">
         <div className="font-display text-xl leading-none tracking-[-0.03em] text-destructive">
-          SOURCE REJECTED
+          {t("preview.sourceRejected")}
         </div>
         <div className="mt-1 font-mono text-[11px] text-muted-foreground">
           {error}

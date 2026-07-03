@@ -2,6 +2,7 @@ import * as React from "react"
 import { Button } from "@workspace/ui/components/button"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
 import { RotateCcwIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 export type CommittedSliderFieldProps = {
   label: string
@@ -22,12 +23,16 @@ export function CommittedSliderField({
   step,
   value,
 }: CommittedSliderFieldProps) {
+  const { t } = useTranslation()
   const inputRef = React.useRef<HTMLInputElement>(null)
   const valueTextRef = React.useRef<HTMLSpanElement>(null)
   const resetButtonRef = React.useRef<HTMLButtonElement>(null)
   const committedValueRef = React.useRef(value)
   const draftValueRef = React.useRef(value)
-  const resetLabel = `Reset ${label} to ${formatSliderValue(defaultValue)}`
+  const resetLabel = t("slider.reset", {
+    label,
+    value: formatSliderValue(defaultValue),
+  })
   const canReset = canResetValue(value, defaultValue, step)
 
   React.useEffect(() => {

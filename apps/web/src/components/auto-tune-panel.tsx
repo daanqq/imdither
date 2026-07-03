@@ -6,6 +6,7 @@ import {
 } from "@workspace/core"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { SparklesIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 type AutoTunePanelProps = {
   appliedRecommendationId: string | null
@@ -24,6 +25,8 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
   sourceAvailable,
   onApplyRecommendation,
 }: AutoTunePanelProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="min-h-0 overflow-hidden">
       <div className="flex min-w-0 items-center justify-center gap-2 px-1 py-1.5 text-center">
@@ -33,13 +36,13 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
           <SparklesIcon className="size-3.5 shrink-0 text-primary" />
         )}
         <h2 className="truncate font-mono text-xs leading-none font-semibold tracking-normal text-foreground uppercase">
-          Generated Auto-Tune Looks
+          {t("autoTune.heading")}
         </h2>
       </div>
       <div className="space-y-2 pt-2">
         {!sourceAvailable && (
           <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-            Load a Source Image to generate looks.
+            {t("autoTune.noSource")}
           </p>
         )}
 
@@ -52,8 +55,8 @@ export const AutoTunePanel = React.memo(function AutoTunePanel({
         {sourceAvailable && recommendations.length === 0 && !error && (
           <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
             {isLoading
-              ? "Generating clean, mono, ink, color, and texture looks."
-              : "Generated looks will appear after upload."}
+              ? t("autoTune.generating")
+              : t("autoTune.noRecommendations")}
           </p>
         )}
 
@@ -83,23 +86,24 @@ function RecommendationButton({
   recommendation: AutoTuneRecommendation
   onApplyRecommendation: (recommendation: AutoTuneRecommendation) => void
 }) {
+  const { t } = useTranslation()
   const settings = recommendation.snapshot.settings
   const algorithmLabel =
     DITHER_ALGORITHM_OPTIONS.find(
       (algorithm) => algorithm.id === settings.algorithm
     )?.label ?? settings.algorithm
   const paletteLabel = settings.customPalette?.length
-    ? `Custom ${settings.customPalette.length}`
+    ? `${t("manual.custom")} ${settings.customPalette.length}`
     : (PRESET_PALETTES.find((palette) => palette.id === settings.paletteId)
         ?.name ?? settings.paletteId)
   const tonalLabel =
     settings.preprocess.contrast > 16
-      ? "High contrast"
+      ? t("autoTune.tonalHighContrast")
       : settings.preprocess.contrast < 0
-        ? "Soft contrast"
+        ? t("autoTune.tonalSoftContrast")
         : settings.preprocess.colorMode === "color-preserve"
-          ? "Color"
-          : "Mono"
+          ? t("autoTune.tonalColor")
+          : t("autoTune.tonalMono")
 
   return (
     <div
@@ -135,28 +139,28 @@ function RecommendationButton({
           <span className="grid h-[2rem] w-[5.75rem] shrink-0 grid-rows-2 justify-items-end gap-1 overflow-hidden">
             {recommendation.recommended && (
               <span className="rounded-sm border border-primary/40 px-1 py-0.5 font-mono text-[8px] leading-none text-primary uppercase">
-                Recommended
+                {t("autoTune.recommended")}
               </span>
             )}
             {!recommendation.recommended && applied && (
               <span className="rounded-sm border border-border px-1 py-0.5 font-mono text-[8px] leading-none text-muted-foreground uppercase">
-                Applied
+                {t("autoTune.applied")}
               </span>
             )}
             {!recommendation.recommended && !applied && (
               <span aria-hidden="true" className="invisible">
-                Applied
+                {t("autoTune.applied")}
               </span>
             )}
 
             {recommendation.recommended && applied && (
               <span className="rounded-sm border border-border px-1 py-0.5 font-mono text-[8px] leading-none text-muted-foreground uppercase">
-                Applied
+                {t("autoTune.applied")}
               </span>
             )}
             {(!recommendation.recommended || !applied) && (
               <span aria-hidden="true" className="invisible">
-                Applied
+                {t("autoTune.applied")}
               </span>
             )}
           </span>

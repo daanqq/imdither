@@ -1,3 +1,4 @@
+import i18n from "@/i18n"
 import {
   createDemoSourceIntake,
   formatSourceNotices,
@@ -40,7 +41,9 @@ export async function executeSourceLoadCommand(
       applyIntakeResult(result, adapter)
     } catch (fileError) {
       adapter.setError(
-        fileError instanceof Error ? fileError.message : "Image decode failed"
+        fileError instanceof Error
+          ? fileError.message
+          : i18n.t("error.imageDecodeFailed")
       )
       adapter.setStatus("error")
     }
@@ -59,7 +62,7 @@ export async function executeSourceLoadCommand(
         adapter.setError(
           demoError instanceof Error
             ? demoError.message
-            : "Demo image failed to load"
+            : i18n.t("error.demoLoadFailed")
         )
         adapter.setStatus("error")
       }

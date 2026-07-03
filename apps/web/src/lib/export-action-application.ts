@@ -4,6 +4,7 @@ import type {
   ProcessingMetadata,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import {
   encodePixelBuffer as realEncodePixelBuffer,
   getExportFormatOption,
@@ -87,7 +88,9 @@ export async function applyExportAction(
     adapter.setStatus("ready")
   } catch (exportError) {
     adapter.setError(
-      exportError instanceof Error ? exportError.message : "Export failed"
+      exportError instanceof Error
+        ? exportError.message
+        : i18n.t("error.exportFailed")
     )
     adapter.setStatus("error")
   }

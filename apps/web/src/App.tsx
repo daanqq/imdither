@@ -5,6 +5,7 @@ import {
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
 import { MoonIcon, SunIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { InspectorPanel } from "@/components/inspector-panel"
 import { PreviewStage } from "@/components/preview-stage"
@@ -885,7 +886,10 @@ export function App() {
               <h1 className="sr-only">IMDITHER</h1>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
         </header>
 
         <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
@@ -941,13 +945,14 @@ export function App() {
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const { t } = useTranslation()
   const nextTheme = theme === "light" ? "dark" : "light"
   const isLight = theme === "light"
 
   return (
     <Button
       type="button"
-      aria-label={`Switch to ${nextTheme} theme`}
+      aria-label={isLight ? t("theme.switchToDark") : t("theme.switchToLight")}
       aria-pressed={isLight}
       className="!size-7 !min-h-7 gap-0 p-0 font-mono text-xs md:!h-8 md:!min-h-8 md:!w-auto md:gap-1.5 md:px-2.5"
       size="icon-xs"
@@ -960,8 +965,29 @@ function ThemeToggle() {
         <SunIcon data-icon="inline-start" />
       )}
       <span className="hidden md:inline">
-        {isLight ? "Dark theme" : "Light theme"}
+        {isLight ? t("theme.dark") : t("theme.light")}
       </span>
+    </Button>
+  )
+}
+
+function LanguageToggle() {
+  const { i18n } = useTranslation()
+  const isEn = i18n.language.startsWith("en")
+  const nextLang = isEn ? "ru" : "en"
+
+  return (
+    <Button
+      type="button"
+      aria-label={i18n.t("language.toggle")}
+      title={i18n.t("language.toggle")}
+      className="!size-7 !min-h-7 gap-0 p-0 font-mono text-xs md:!h-8 md:!min-h-8 md:!w-auto md:gap-1.5 md:px-2.5"
+      size="icon-xs"
+      variant="outline"
+      onClick={() => i18n.changeLanguage(nextLang)}
+    >
+      <span className="hidden md:inline">{isEn ? "RU" : "EN"}</span>
+      <span className="md:hidden">{isEn ? "RU" : "EN"}</span>
     </Button>
   )
 }

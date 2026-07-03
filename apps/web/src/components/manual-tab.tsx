@@ -85,6 +85,7 @@ import {
   UploadIcon,
 } from "lucide-react"
 import * as React from "react"
+import { useTranslation } from "react-i18next"
 
 import { CommittedSliderField } from "@/components/committed-slider-field"
 import { ResponsiveDrawer } from "@/components/responsive-drawer"
@@ -214,6 +215,7 @@ export function ManualTab({
   onSelectLookRecipe,
   onSettingsTransition,
 }: StackTabProps) {
+  const { t } = useTranslation()
   const stackModel = React.useMemo(
     () => buildEffectStackModel(settings),
     [settings]
@@ -274,19 +276,24 @@ export function ManualTab({
           ) : (
             <ChevronRightIcon className="size-3 shrink-0" />
           )}
-          <span className="min-w-0 truncate font-mono text-xs">Output</span>
+          <span className="min-w-0 truncate font-mono text-xs">
+            {t("manual.output")}
+          </span>
         </button>
         {expandOutput ? (
           <div className="border-t border-border px-2 py-1.5">
             <NumberField
-              label="Width"
+              label={t("manual.width")}
               value={settings.resize.width}
-              description={`Height inferred: ${settings.resize.height}px / aspect ${resolutionAspectLabel}`}
+              description={t("manual.heightInferred", {
+                height: settings.resize.height,
+                aspect: resolutionAspectLabel,
+              })}
               action={
                 sourceWidth ? (
                   <Button
-                    aria-label="Reset width to source size"
-                    title="Reset width to source size"
+                    aria-label={t("manual.resetWidth")}
+                    title={t("manual.resetWidth")}
                     type="button"
                     variant="outline"
                     className="h-8 px-2 font-mono text-xs"
@@ -301,7 +308,9 @@ export function ManualTab({
               onChange={onResolutionWidthChange}
             />
             <FieldSet className="mt-1.5">
-              <FieldLegend variant="label">Resize Kernel</FieldLegend>
+              <FieldLegend variant="label">
+                {t("manual.resizeKernel")}
+              </FieldLegend>
               <ToggleGroup
                 type="single"
                 value={settings.resize.mode}
@@ -325,7 +334,9 @@ export function ManualTab({
               </ToggleGroup>
             </FieldSet>
             <FieldSet className="mt-1.5">
-              <FieldLegend variant="label">Alpha Flatten</FieldLegend>
+              <FieldLegend variant="label">
+                {t("manual.alphaFlatten")}
+              </FieldLegend>
               <ToggleGroup
                 type="single"
                 value={settings.alphaBackground}
@@ -341,10 +352,10 @@ export function ManualTab({
                 }}
               >
                 <ToggleGroupItem value="white" className="flex-1">
-                  White
+                  {t("manual.white")}
                 </ToggleGroupItem>
                 <ToggleGroupItem value="black" className="flex-1">
-                  Black
+                  {t("manual.black")}
                 </ToggleGroupItem>
               </ToggleGroup>
             </FieldSet>
@@ -377,13 +388,15 @@ export function ManualTab({
           ) : (
             <ChevronRightIcon className="size-3 shrink-0" />
           )}
-          <span className="min-w-0 truncate font-mono text-xs">Tone</span>
+          <span className="min-w-0 truncate font-mono text-xs">
+            {t("manual.tone")}
+          </span>
         </button>
         {expandTone ? (
           <div className="border-t border-border px-2 py-1.5">
             <CommittedSliderField
               defaultValue={DEFAULT_SETTINGS.preprocess.brightness}
-              label="Brightness"
+              label={t("manual.brightness")}
               max={100}
               min={-100}
               step={1}
@@ -397,7 +410,7 @@ export function ManualTab({
             />
             <CommittedSliderField
               defaultValue={DEFAULT_SETTINGS.preprocess.contrast}
-              label="Contrast"
+              label={t("manual.contrast")}
               max={100}
               min={-100}
               step={1}
@@ -416,20 +429,22 @@ export function ManualTab({
             >
               <div className="flex items-start justify-between gap-3 border-t border-border pt-2">
                 <div className="flex flex-col gap-1">
-                  <FieldLabel>Advanced</FieldLabel>
+                  <FieldLabel>{t("manual.advanced")}</FieldLabel>
                   <FieldDescription>
-                    Color mode, gamma, invert.
+                    {t("manual.advancedDesc")}
                   </FieldDescription>
                 </div>
                 <CollapsibleTrigger asChild>
                   <Button size="sm" variant="ghost">
-                    {advancedOpen ? "Close" : "Open"}
+                    {advancedOpen ? t("manual.close") : t("manual.open")}
                   </Button>
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent className="flex min-w-0 flex-col gap-3 overflow-hidden pt-3">
                 <FieldSet>
-                  <FieldLegend variant="label">Color Mode</FieldLegend>
+                  <FieldLegend variant="label">
+                    {t("manual.colorMode")}
+                  </FieldLegend>
                   <ToggleGroup
                     type="single"
                     value={settings.preprocess.colorMode}
@@ -445,16 +460,16 @@ export function ManualTab({
                     }}
                   >
                     <ToggleGroupItem value="color-preserve" className="flex-1">
-                      Color
+                      {t("manual.color")}
                     </ToggleGroupItem>
                     <ToggleGroupItem value="grayscale-first" className="flex-1">
-                      Gray
+                      {t("manual.gray")}
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </FieldSet>
                 <CommittedSliderField
                   defaultValue={DEFAULT_SETTINGS.preprocess.gamma}
-                  label="Gamma"
+                  label={t("manual.gamma")}
                   max={3}
                   min={0.2}
                   step={0.05}
@@ -469,10 +484,10 @@ export function ManualTab({
                 <Field orientation="horizontal">
                   <FieldContent>
                     <FieldLabel htmlFor="invert">
-                      Invert Before Palette
+                      {t("manual.invertLabel")}
                     </FieldLabel>
                     <FieldDescription>
-                      Applies after tone preprocessing.
+                      {t("manual.invertDesc")}
                     </FieldDescription>
                   </FieldContent>
                   <Switch
@@ -532,19 +547,21 @@ export function ManualTab({
           ) : (
             <ChevronRightIcon className="size-3 shrink-0" />
           )}
-          <span className="min-w-0 truncate font-mono text-xs">Utility</span>
+          <span className="min-w-0 truncate font-mono text-xs">
+            {t("manual.utility")}
+          </span>
         </button>
         {expandUtility ? (
           <div className="border-t border-border px-2 py-1.5">
             <div className="flex min-w-0 flex-col gap-1.5">
-              <FieldLabel>Look</FieldLabel>
+              <FieldLabel>{t("manual.look")}</FieldLabel>
               <Button
                 variant="outline"
                 className="justify-start"
                 onClick={onCopyLook}
               >
                 <ClipboardIcon data-icon="inline-start" />
-                Copy look link
+                {t("manual.copyLookLink")}
               </Button>
               <Button
                 variant="outline"
@@ -552,18 +569,18 @@ export function ManualTab({
                 onClick={onPasteLook}
               >
                 <UploadIcon data-icon="inline-start" />
-                Paste look link
+                {t("manual.pasteLookLink")}
               </Button>
             </div>
             <div className="mt-1.5 flex min-w-0 flex-col gap-1.5">
-              <FieldLabel>Settings JSON</FieldLabel>
+              <FieldLabel>{t("manual.settingsJson")}</FieldLabel>
               <Button
                 variant="outline"
                 className="justify-start"
                 onClick={onCopySettings}
               >
                 <ClipboardIcon data-icon="inline-start" />
-                Copy settings
+                {t("manual.copySettings")}
               </Button>
               <Button
                 variant="outline"
@@ -571,7 +588,7 @@ export function ManualTab({
                 onClick={onPasteSettings}
               >
                 <UploadIcon data-icon="inline-start" />
-                Paste settings
+                {t("manual.pasteSettings")}
               </Button>
               <Button
                 variant="destructive"
@@ -579,7 +596,7 @@ export function ManualTab({
                 onClick={onReset}
               >
                 <RotateCcwIcon data-icon="inline-start" />
-                Defaults
+                {t("manual.defaults")}
               </Button>
             </div>
           </div>
@@ -604,6 +621,7 @@ function LookRecipeBar({
   onSave: (name: string) => void
   onSelect: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const [state, updateState] = React.useReducer(
     (
       prev: {
@@ -645,17 +663,17 @@ function LookRecipeBar({
   return (
     <div className="flex min-w-0 items-center gap-1 border-b border-border pb-2">
       <span className="flex h-8 shrink-0 items-center border border-border px-3 font-mono text-xs text-muted-foreground uppercase">
-        PRESET
+        {t("manual.preset")}
       </span>
       <Select value={activeId} onValueChange={onSelect}>
         <SelectTrigger className="h-8 min-w-0 flex-1 justify-between">
           <span className="min-w-0 flex-1 truncate text-left">
-            {activeRecipe?.name ?? "Custom"}
+            {activeRecipe?.name ?? t("manual.custom")}
           </span>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value="custom">Custom</SelectItem>
+            <SelectItem value="custom">{t("manual.custom")}</SelectItem>
             {recipes.map((recipe) => (
               <SelectItem key={recipe.id} value={recipe.id}>
                 {recipe.name}
@@ -669,14 +687,18 @@ function LookRecipeBar({
         onOpenChange={(open) => updateState({ saveOpen: open })}
       >
         <PopoverTrigger asChild>
-          <Button aria-label="Save look recipe" size="icon" variant="ghost">
+          <Button
+            aria-label={t("manual.saveLookRecipe")}
+            size="icon"
+            variant="ghost"
+          >
             <PlusIcon className="size-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-56">
           <div className="grid gap-2">
             <Input
-              aria-label="Look recipe name"
+              aria-label={t("manual.lookRecipeName")}
               value={state.saveName}
               onChange={(event) =>
                 updateState({ saveName: event.currentTarget.value })
@@ -695,7 +717,7 @@ function LookRecipeBar({
                 updateState({ saveName: "", saveOpen: false })
               }}
             >
-              Save
+              {t("manual.save")}
             </Button>
           </div>
         </PopoverContent>
@@ -703,7 +725,7 @@ function LookRecipeBar({
       <Popover open={state.moreOpen} onOpenChange={handleMoreOpenChange}>
         <PopoverTrigger asChild>
           <Button
-            aria-label="Look recipe menu"
+            aria-label={t("manual.lookRecipeMenu")}
             size="icon"
             variant="ghost"
             disabled={isBuiltIn}
@@ -715,7 +737,7 @@ function LookRecipeBar({
           {state.renaming ? (
             <div className="grid gap-2">
               <Input
-                aria-label="Rename look recipe"
+                aria-label={t("manual.renameLook")}
                 value={state.renameName}
                 onChange={(event) =>
                   updateState({ renameName: event.currentTarget.value })
@@ -730,7 +752,7 @@ function LookRecipeBar({
                 disabled={!state.renameName.trim()}
                 onClick={handleRenameConfirm}
               >
-                Rename
+                {t("manual.rename")}
               </Button>
             </div>
           ) : (
@@ -744,7 +766,7 @@ function LookRecipeBar({
                   updateState({ renaming: true, renameName: activeRecipe.name })
                 }}
               >
-                Rename
+                {t("manual.rename")}
               </Button>
               <Button
                 disabled={!activeRecipe || isBuiltIn}
@@ -756,7 +778,7 @@ function LookRecipeBar({
                   updateState({ moreOpen: false })
                 }}
               >
-                Delete
+                {t("manual.delete")}
               </Button>
             </div>
           )}
@@ -776,6 +798,8 @@ function AddEffectButton({
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
   const [selected, setSelected] = React.useState("")
+
+  const { t } = useTranslation()
 
   return (
     <div className="flex w-full min-w-0 items-center gap-2">
@@ -797,7 +821,9 @@ function AddEffectButton({
         <SelectTrigger className="h-8 min-w-0 flex-1 justify-between overflow-hidden py-0 pr-2 pl-2.5 font-mono text-xs">
           <PlusIcon className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1 truncate text-left">
-            Add {kind}-stage
+            {kind === "pre"
+              ? t("manual.addPreStage")
+              : t("manual.addPostStage")}
           </span>
         </SelectTrigger>
         <SelectContent>
@@ -964,6 +990,7 @@ function StageRow({
   onImportPaletteFromClipboard?: () => void
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
+  const { t } = useTranslation()
   const isCore = stage.kind === "quantize" || stage.kind === "dither"
   const [expanded, setExpanded] = React.useState(isCore)
   const isReorderable = !isCore && totalCount > 1
@@ -975,7 +1002,7 @@ function StageRow({
     : null
   const effectLabel = effectId
     ? effectId.replace(/^(pre|post)\./, "")
-    : "Unknown"
+    : t("manual.unknown")
 
   return (
     <div
@@ -990,7 +1017,7 @@ function StageRow({
         {!isCore ? (
           <button
             ref={sortable.setActivatorNodeRef}
-            aria-label="Drag stage"
+            aria-label={t("manual.dragStage")}
             className="flex h-6 w-5 shrink-0 items-center justify-center text-muted-foreground"
             type="button"
             {...sortable.attributes}
@@ -1015,8 +1042,8 @@ function StageRow({
           <span className="min-w-0 truncate font-mono text-xs">
             {isCore
               ? stage.kind === "quantize"
-                ? "Palette"
-                : "Dither"
+                ? t("manual.palette")
+                : t("manual.dither")
               : effectLabel}
           </span>
         </button>
@@ -1042,7 +1069,7 @@ function StageRow({
               />
             ) : null}
             <Button
-              aria-label="Remove stage"
+              aria-label={t("manual.removeStage")}
               type="button"
               variant="ghost"
               size="icon"
@@ -1107,11 +1134,13 @@ function StageActions({
   stage: EditorSettings["effectStack"][0]
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          aria-label="Stage actions"
+          aria-label={t("manual.stageActions")}
           type="button"
           variant="ghost"
           size="icon"
@@ -1135,7 +1164,7 @@ function StageActions({
               })
             }
           >
-            Move up
+            {t("manual.moveUp")}
           </Button>
           <Button
             disabled={isLast}
@@ -1150,7 +1179,7 @@ function StageActions({
               })
             }
           >
-            Move down
+            {t("manual.moveDown")}
           </Button>
         </div>
       </PopoverContent>
@@ -1183,15 +1212,17 @@ function CoreParamsEditor({
   onImportPaletteFromClipboard?: () => void
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
+  const { t } = useTranslation()
+
   if (stageKind === "quantize") {
     return (
       <div className="grid min-w-0 gap-2">
         <div className="flex min-w-0 items-center gap-1">
           <ParamSelect
-            label="Palette"
+            label={t("manual.palette")}
             value={paletteSelectValue}
             options={[
-              { id: "custom", label: "Custom" },
+              { id: "custom", label: t("manual.custom") },
               ...PRESET_PALETTES.map((palette) => ({
                 id: palette.id,
                 label: palette.name,
@@ -1209,8 +1240,8 @@ function CoreParamsEditor({
             }}
           />
           <Button
-            aria-label="Random palette"
-            title="Random palette"
+            aria-label={t("manual.randomPalette")}
+            title={t("manual.randomPalette")}
             type="button"
             variant="outline"
             size="icon"
@@ -1235,11 +1266,11 @@ function CoreParamsEditor({
           }
         />
         <ParamSelect
-          label="Matching"
+          label={t("manual.matching")}
           value={settings.matchingMode}
           options={[
-            { id: "rgb", label: "RGB" },
-            { id: "perceptual", label: "Perceptual" },
+            { id: "rgb", label: t("manual.rgb") },
+            { id: "perceptual", label: t("manual.perceptual") },
           ]}
           onValueChange={(matchingMode) =>
             onSettingsTransition({
@@ -1250,7 +1281,7 @@ function CoreParamsEditor({
         />
         <div className="grid gap-1">
           <span className="font-mono text-[10px] text-muted-foreground">
-            Palette Swatches
+            {t("manual.paletteSwatches")}
           </span>
           <div className="grid grid-cols-8 gap-1">
             {activePaletteColors.slice(0, 32).map((color, index) => (
@@ -1260,7 +1291,7 @@ function CoreParamsEditor({
                 style={{ backgroundColor: color }}
               >
                 <PaletteColorInput
-                  aria-label={`Pick palette swatch color ${index + 1}`}
+                  aria-label={t("manual.pickSwatchColor", { n: index + 1 })}
                   className="palette-color-input absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   color={color}
                   onCommit={(nextColor) =>
@@ -1351,8 +1382,8 @@ function CoreParamsEditor({
           </Select>
         </div>
         <Button
-          aria-label="Random algorithm"
-          title="Random algorithm"
+          aria-label={t("manual.randomAlgorithm")}
+          title={t("manual.randomAlgorithm")}
           type="button"
           variant="outline"
           size="icon"
@@ -1373,7 +1404,7 @@ function CoreParamsEditor({
       {selectedAlgorithm.capabilities.bayerSize ? (
         <div className="grid gap-1">
           <span className="font-mono text-[10px] text-muted-foreground">
-            Bayer Matrix
+            {t("manual.bayerMatrix")}
           </span>
           <ToggleGroup
             type="single"
@@ -1393,7 +1424,7 @@ function CoreParamsEditor({
               <ToggleGroupItem
                 key={size}
                 value={String(size)}
-                aria-label={`${size} by ${size}`}
+                aria-label={t("manual.patternSizeItem", { n: size })}
                 className="flex-1"
               >
                 {size}x{size}
@@ -1405,11 +1436,11 @@ function CoreParamsEditor({
       {selectedAlgorithm.family === "Halftone" ? (
         <div className="grid gap-2">
           <span className="font-mono text-[10px] text-muted-foreground">
-            Halftone Screen
+            {t("manual.halftoneScreen")}
           </span>
           <div className="flex items-center justify-between gap-2">
             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-              Dot Shape
+              {t("manual.dotShape")}
             </span>
             <Select
               value={settings.halftoneScreen.dotShape}
@@ -1425,16 +1456,16 @@ function CoreParamsEditor({
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="round">Round</SelectItem>
-                  <SelectItem value="square">Square</SelectItem>
-                  <SelectItem value="line">Line</SelectItem>
+                  <SelectItem value="round">{t("manual.round")}</SelectItem>
+                  <SelectItem value="square">{t("manual.square")}</SelectItem>
+                  <SelectItem value="line">{t("manual.line")}</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-1">
             <span className="font-mono text-[10px] text-muted-foreground">
-              Angle
+              {t("manual.angle")}
             </span>
             <Slider
               value={[settings.halftoneScreen.angle]}
@@ -1452,7 +1483,7 @@ function CoreParamsEditor({
           </div>
           <div className="grid gap-1">
             <span className="font-mono text-[10px] text-muted-foreground">
-              Frequency
+              {t("manual.frequency")}
             </span>
             <Slider
               value={[settings.halftoneScreen.frequency]}
@@ -1470,7 +1501,7 @@ function CoreParamsEditor({
           </div>
           <div className="grid gap-1">
             <span className="font-mono text-[10px] text-muted-foreground">
-              Pattern Size
+              {t("manual.patternSize")}
             </span>
             <ToggleGroup
               type="single"
@@ -1490,7 +1521,7 @@ function CoreParamsEditor({
                 <ToggleGroupItem
                   key={size}
                   value={String(size)}
-                  aria-label={`${size} by ${size}`}
+                  aria-label={t("manual.patternSizeItem", { n: size })}
                   className="flex-1"
                 >
                   {size}x{size}
@@ -1502,7 +1533,7 @@ function CoreParamsEditor({
       ) : null}
       <div className="grid gap-1">
         <span className="font-mono text-[10px] text-muted-foreground">
-          Temporal Stability
+          {t("manual.temporalStability")}
         </span>
         <Select
           value={settings.temporalStability}
@@ -1517,15 +1548,17 @@ function CoreParamsEditor({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="global-palette">Global Palette</SelectItem>
+            <SelectItem value="none">{t("manual.temporalNone")}</SelectItem>
+            <SelectItem value="global-palette">
+              {t("manual.temporalGlobalPalette")}
+            </SelectItem>
           </SelectContent>
         </Select>
         <span className="font-sans text-[11px] text-muted-foreground">
           {settings.temporalStability === "none" &&
-            "Each frame dithered independently."}
+            t("manual.temporalNoneDesc")}
           {settings.temporalStability === "global-palette" &&
-            "Single palette extracted from all frames. Reduces GIF flicker."}
+            t("manual.temporalGlobalPaletteDesc")}
         </span>
       </div>
     </div>
@@ -1555,6 +1588,7 @@ function PaletteEditorDrawer({
   onImportPaletteFile?: (file: File) => void
   onImportPaletteFromClipboard?: () => void
 }) {
+  const { t } = useTranslation()
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const canAddColor = colors.length < 32
   const canDeleteColor = colors.length > 2
@@ -1567,19 +1601,19 @@ function PaletteEditorDrawer({
       <DrawerTrigger asChild>
         <Button type="button" variant="outline" className="justify-start">
           <PipetteIcon data-icon="inline-start" />
-          Edit colors
+          {t("manual.editColors")}
         </Button>
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>Custom Palette Editor</DrawerTitle>
-          <DrawerDescription>
-            Add, edit, copy, or export custom palette colors.
-          </DrawerDescription>
+          <DrawerTitle>{t("manual.paletteEditor")}</DrawerTitle>
+          <DrawerDescription>{t("manual.paletteEditorDesc")}</DrawerDescription>
         </DrawerHeader>
         <div className="min-h-0 overflow-y-auto p-3">
           <FieldSet className="gap-2">
-            <FieldLegend variant="label">Custom Palette</FieldLegend>
+            <FieldLegend variant="label">
+              {t("manual.customPalette")}
+            </FieldLegend>
             <div className="-mt-1 flex min-w-0 flex-col gap-1.5">
               <Select
                 value={extractionSizeValue}
@@ -1588,12 +1622,12 @@ function PaletteEditorDrawer({
                 }
               >
                 <SelectTrigger
-                  aria-label="Extract palette size"
+                  aria-label={t("manual.extractPalette")}
                   className="h-8 w-full min-w-0 justify-between overflow-hidden rounded-lg border-border bg-background py-0 pr-2 pl-2.5 font-sans text-sm font-medium hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
                 >
                   <PipetteIcon className="size-4 shrink-0" />
                   <span className="min-w-0 flex-1 truncate text-left">
-                    Extract palette
+                    {t("manual.extractPalette")}
                   </span>
                   <span className="flex h-full shrink-0 items-center gap-2 border-l border-border px-3 font-sans text-sm font-medium text-foreground dark:border-input">
                     <SelectValue />
@@ -1633,33 +1667,33 @@ function PaletteEditorDrawer({
                 onClick={onAddColor}
               >
                 <PlusIcon data-icon="inline-start" />
-                Add color
+                {t("manual.addColor")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <FileInputIcon data-icon="inline-start" />
-                Import file
+                {t("manual.importFile")}
               </Button>
               <Button variant="outline" onClick={() => onCopyPaletteJson?.()}>
                 <ClipboardIcon data-icon="inline-start" />
-                Copy palette JSON
+                {t("manual.copyToClipboard")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => onImportPaletteFromClipboard?.()}
               >
                 <UploadIcon data-icon="inline-start" />
-                Paste palette
+                {t("manual.pasteFromClipboard")}
               </Button>
               <Button variant="outline" onClick={() => onExportPaletteJson?.()}>
                 <DownloadIcon data-icon="inline-start" />
-                Export JSON
+                {t("manual.exportJson")}
               </Button>
               <Button variant="outline" onClick={() => onExportPaletteGpl?.()}>
                 <DownloadIcon data-icon="inline-start" />
-                Export GPL
+                {t("manual.exportGpl")}
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
@@ -1669,7 +1703,7 @@ function PaletteEditorDrawer({
                   className="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)_2rem] overflow-hidden border border-input"
                 >
                   <PaletteColorInput
-                    aria-label={`Pick palette swatch color ${index + 1}`}
+                    aria-label={t("manual.pickSwatchColor", { n: index + 1 })}
                     className="palette-color-input h-8 rounded-none border-0 p-0"
                     color={color}
                     onCommit={(nextColor) => onColorChange(index, nextColor)}
@@ -1681,7 +1715,7 @@ function PaletteEditorDrawer({
                     onColorChange={onColorChange}
                   />
                   <Button
-                    aria-label={`Delete palette swatch color ${index + 1}`}
+                    aria-label={t("manual.deleteColor", { n: index + 1 })}
                     className="h-8 rounded-none border-0 border-input p-0"
                     disabled={!canDeleteColor}
                     size="icon"
@@ -1749,6 +1783,8 @@ function PaletteHexInput({
   index: number
   onColorChange: (index: number, color: string) => void
 }) {
+  const { t } = useTranslation()
+
   function commitDraft(input: HTMLInputElement) {
     const draft = input.value.trim()
     const normalizedDraft = normalizeHexColorDraft(draft)
@@ -1768,7 +1804,7 @@ function PaletteHexInput({
   return (
     <Input
       key={`${color}-${index}`}
-      aria-label={`Hex color ${index + 1}`}
+      aria-label={t("manual.hexColor", { n: index + 1 })}
       className={className}
       defaultValue={color}
       spellCheck={false}

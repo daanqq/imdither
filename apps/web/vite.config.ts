@@ -12,6 +12,9 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1000,
   },
+  test: {
+    setupFiles: ["./src/test/i18n.ts"],
+  },
   plugins: [
     react(
       shouldUseReactCompiler

@@ -10,6 +10,7 @@ import {
   type EditorSettings,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import type {
   SettingsTransitionContext,
   SettingsTransitionResult,
@@ -42,7 +43,7 @@ export async function copySettingsJson({
     onErrorChange(
       settingsError instanceof Error
         ? settingsError.message
-        : "Settings copy failed"
+        : i18n.t("error.settingsCopyFailed")
     )
   }
 }
@@ -67,7 +68,7 @@ export async function pasteSettingsJson({
     const parsed = safeNormalizeSettings(JSON.parse(await clipboard.readText()))
 
     if (!parsed) {
-      onErrorChange("Clipboard JSON does not match settings schema v1")
+      onErrorChange(i18n.t("error.clipboardSchemaMismatch"))
       return
     }
 
@@ -84,7 +85,7 @@ export async function pasteSettingsJson({
     onErrorChange(
       settingsError instanceof Error
         ? settingsError.message
-        : "Settings paste failed"
+        : i18n.t("error.settingsPasteFailed")
     )
   }
 }
@@ -109,7 +110,9 @@ export async function copyLookPayload({
     onSourceNoticeChange("[LOOK COPIED TO CLIPBOARD]")
   } catch (lookError) {
     onErrorChange(
-      lookError instanceof Error ? lookError.message : "Look copy failed"
+      lookError instanceof Error
+        ? lookError.message
+        : i18n.t("error.lookCopyFailed")
     )
   }
 }
@@ -142,7 +145,9 @@ export async function pasteLookPayload({
     })
   } catch (lookError) {
     onErrorChange(
-      lookError instanceof Error ? lookError.message : "Look paste failed"
+      lookError instanceof Error
+        ? lookError.message
+        : i18n.t("error.lookPasteFailed")
     )
   }
 }
@@ -217,7 +222,7 @@ export async function copyPaletteJson({
   colors: string[] | undefined
 }): Promise<void> {
   if (!colors) {
-    onErrorChange("Convert the current preset to Custom before copy")
+    onErrorChange(i18n.t("error.convertToCustomBeforeCopy"))
     return
   }
 
@@ -229,7 +234,7 @@ export async function copyPaletteJson({
     onErrorChange(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette copy failed"
+        : i18n.t("error.paletteCopyFailed")
     )
   }
 }
@@ -246,7 +251,7 @@ export function exportPaletteAsset({
   format: "gpl" | "json"
 }): void {
   if (!colors) {
-    onErrorChange("Convert the current preset to Custom before export")
+    onErrorChange(i18n.t("error.convertToCustomBeforeExport"))
     return
   }
 
@@ -271,7 +276,7 @@ export function exportPaletteAsset({
     onErrorChange(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette export failed"
+        : i18n.t("error.paletteExportFailed")
     )
   }
 }

@@ -1,5 +1,6 @@
 import type { PixelBuffer } from "@workspace/core"
 
+import i18n from "@/i18n"
 import demoImageUrl from "../assets/demo.webp"
 import { hidePixelBufferData } from "./pixel-buffer-visibility"
 import {
@@ -56,7 +57,7 @@ export async function createDemoSourceIntake(): Promise<SourceIntakeResult> {
   if (!response.ok) {
     return {
       type: "rejected",
-      message: "Demo image failed to load.",
+      message: i18n.t("error.demoLoadFailed"),
     }
   }
 
@@ -141,7 +142,9 @@ function runSourceIntakeWorkerJob(file: File): Promise<SourceIntakeResult> {
 
     const handleError = (event: ErrorEvent) => {
       cleanup()
-      reject(new Error(event.message || "Image intake worker failed"))
+      reject(
+        new Error(event.message || i18n.t("error.imageIntakeWorkerFailed"))
+      )
     }
 
     worker.addEventListener("message", handleMessage)
@@ -177,7 +180,7 @@ function bitmapToPixelBuffer(bitmap: ImageBitmap): PixelBuffer {
   const context = canvas.getContext("2d")
 
   if (!context) {
-    throw new Error("Canvas context unavailable")
+    throw new Error(i18n.t("error.canvasUnavailable"))
   }
 
   context.drawImage(bitmap, 0, 0)

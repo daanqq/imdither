@@ -1,4 +1,5 @@
 import { clampOutputSize, MAX_SOURCE_DIMENSION } from "@workspace/core"
+import i18n from "@/i18n"
 
 export type OutputSizePolicy = ReturnType<typeof clampOutputSize>
 
@@ -17,7 +18,11 @@ export function getSourceRejectionMessage(
   width: number,
   height: number
 ): string {
-  return `Image is too large (${width}x${height}). Maximum source dimension is ${MAX_SOURCE_DIMENSION}px.`
+  return i18n.t("error.imageTooLargeDimension", {
+    width,
+    height,
+    max: MAX_SOURCE_DIMENSION,
+  })
 }
 
 export function getOutputAutoSizedNotice(size: OutputSizePolicy): string {

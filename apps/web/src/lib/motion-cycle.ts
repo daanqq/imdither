@@ -4,6 +4,7 @@ import type {
   PixelBuffer,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import type { JobStatus } from "@/store/editor-store"
 
 export type MotionCycleRuntimeAdapter = {
@@ -67,7 +68,9 @@ export class MotionCycle {
 
       adapter.setStatus("error")
       adapter.setError(
-        error instanceof Error ? error.message : "GIF processing failed"
+        error instanceof Error
+          ? error.message
+          : i18n.t("error.gifProcessingFailed")
       )
     }
   }

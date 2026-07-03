@@ -16,6 +16,7 @@ import {
 } from "@workspace/ui/components/select"
 import { Slider } from "@workspace/ui/components/slider"
 import { DownloadIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import {
   EXPORT_FORMAT_OPTIONS,
@@ -68,6 +69,7 @@ export function ExportDrawerContent({
     loopCount?: number
   }) => void
 }) {
+  const { t } = useTranslation()
   const [durationInput, setDurationInput] = useState<string | null>(null)
   const selectedExportFormat = isAnimated
     ? getAnimatedFormatOption(animatedExportFormat)
@@ -80,11 +82,13 @@ export function ExportDrawerContent({
   return (
     <DrawerContent>
       <DrawerHeader>
-        <DrawerTitle>Export</DrawerTitle>
+        <DrawerTitle>{t("export.title")}</DrawerTitle>
         <DrawerDescription>
           {isAnimated
-            ? `Export all frames as an animated ${animatedExportFormat === "apng" ? "PNG (APNG)" : "GIF"}.`
-            : "Format and quality for final image download."}
+            ? t("export.animatedDescription", {
+                format: animatedExportFormat === "apng" ? "PNG (APNG)" : "GIF",
+              })
+            : t("export.staticDescription")}
         </DrawerDescription>
       </DrawerHeader>
       <div className="grid min-w-0 gap-3 p-3">
@@ -93,7 +97,7 @@ export function ExportDrawerContent({
             className="grid min-w-0 content-start gap-1.5 pr-3 text-sm font-medium"
             htmlFor="export-format"
           >
-            Export Format
+            {t("export.format")}
             {isAnimated ? (
               <Select
                 value={animatedExportFormat}
@@ -102,7 +106,7 @@ export function ExportDrawerContent({
                 }
               >
                 <SelectTrigger
-                  aria-label="Animated export format"
+                  aria-label={t("export.animatedFormat")}
                   className="w-full min-w-0"
                   id="animated-export-format"
                 >
@@ -117,8 +121,7 @@ export function ExportDrawerContent({
                 </SelectContent>
                 {!webCodecsAvailable ? (
                   <span className="font-sans text-[11px] text-muted-foreground">
-                    WebM requires WebCodecs (Chrome 94+, Firefox 130+, Safari
-                    16.4+)
+                    {t("export.webmUnavailable")}
                   </span>
                 ) : null}
               </Select>
@@ -130,7 +133,7 @@ export function ExportDrawerContent({
                 }
               >
                 <SelectTrigger
-                  aria-label="Export format"
+                  aria-label={t("export.formatLabel")}
                   className="min-w-0"
                   id="export-format"
                 >
@@ -148,10 +151,10 @@ export function ExportDrawerContent({
           </label>
           <label className="grid min-w-0 grid-cols-[minmax(0,1fr)_4ch] gap-x-2 gap-y-1 border-l border-border pl-3 font-mono text-[10px] text-muted-foreground">
             <span className="font-sans text-sm font-medium text-foreground">
-              Export Quality
+              {t("export.quality")}
             </span>
             <Slider
-              aria-label="Export quality"
+              aria-label={t("export.quality")}
               className="col-span-2 row-start-2 min-w-0"
               disabled={isAnimated || !selectedExportFormat.supportsQuality}
               max={MAX_EXPORT_QUALITY}
@@ -174,18 +177,18 @@ export function ExportDrawerContent({
           <>
             <p className="text-xs text-muted-foreground">
               {animatedExportFormat === "webm"
-                ? "WebM output uses VP9 lossy compression. Palette matching and dithering still apply."
+                ? t("export.webmNote")
                 : animatedExportFormat === "apng"
-                  ? "APNG output uses 24-bit RGBA per frame. Palette matching and dithering still apply."
-                  : "GIF output uses the active palette. Palettes larger than 256 colors are not supported."}
+                  ? t("export.apngNote")
+                  : t("export.gifNote")}
             </p>
             {animatedExportFormat === "webm" &&
             videoExportSettings &&
             onVideoExportSettingsChange ? (
               <label className="grid min-w-0 gap-1.5 text-sm font-medium">
-                CRF (quality)
+                {t("export.crf")}
                 <Slider
-                  aria-label="Video quality"
+                  aria-label={t("export.crf")}
                   className="min-w-0"
                   max={63}
                   min={0}
@@ -198,10 +201,10 @@ export function ExportDrawerContent({
                 <span className="font-sans text-[11px] text-muted-foreground">
                   {videoExportSettings.crf}:{" "}
                   {videoExportSettings.crf <= 20
-                    ? "high quality"
+                    ? t("export.highQuality")
                     : videoExportSettings.crf <= 35
-                      ? "medium quality"
-                      : "low quality"}
+                      ? t("export.mediumQuality")
+                      : t("export.lowQuality")}
                 </span>
               </label>
             ) : null}
@@ -213,7 +216,7 @@ export function ExportDrawerContent({
                   className="grid min-w-0 gap-1.5 text-sm font-medium"
                   htmlFor="frame-duration"
                 >
-                  Frame Duration (ms)
+                  {t("export.frameDuration")}
                   <Input
                     className="min-w-0"
                     id="frame-duration"
@@ -248,9 +251,9 @@ export function ExportDrawerContent({
                   <span className="font-sans text-[11px] text-muted-foreground">
                     {motionExportSettings.frameDurationMs}ms ≈{" "}
                     {Math.round(1000 / motionExportSettings.frameDurationMs)}{" "}
-                    fps
+                    {t("export.fps")}
                     {frameCount != null && frameCount > 0
-                      ? ` · total ${formatDuration(motionExportSettings.frameDurationMs * frameCount)}`
+                      ? ` · ${t("export.total")} ${formatDuration(motionExportSettings.frameDurationMs * frameCount)}`
                       : ""}
                   </span>
                 </label>
@@ -258,7 +261,7 @@ export function ExportDrawerContent({
                   className="grid min-w-0 gap-1.5 text-sm font-medium"
                   htmlFor="loop-count"
                 >
-                  Loop Count
+                  {t("export.loopCount")}
                   <Select
                     value={String(motionExportSettings.loopCount)}
                     onValueChange={(value) =>
@@ -268,15 +271,15 @@ export function ExportDrawerContent({
                     }
                   >
                     <SelectTrigger
-                      aria-label="Loop count"
+                      aria-label={t("export.loopCount")}
                       className="min-w-0"
                       id="loop-count"
                     >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">∞ (infinite)</SelectItem>
-                      <SelectItem value="1">1 (once)</SelectItem>
+                      <SelectItem value="0">{t("export.infinite")}</SelectItem>
+                      <SelectItem value="1">{t("export.once")}</SelectItem>
                       <SelectItem value="2">2</SelectItem>
                       <SelectItem value="3">3</SelectItem>
                       <SelectItem value="5">5</SelectItem>
@@ -285,23 +288,23 @@ export function ExportDrawerContent({
                   </Select>
                   <span className="font-sans text-[11px] text-muted-foreground">
                     {motionExportSettings.loopCount === 0
-                      ? "Loops forever."
-                      : `Plays ${motionExportSettings.loopCount} time${motionExportSettings.loopCount === 1 ? "" : "s"}.`}
+                      ? t("export.loopsForever")
+                      : t("export.playsCount", {
+                          count: motionExportSettings.loopCount,
+                        })}
                   </span>
                 </label>
               </div>
             ) : null}
           </>
         ) : exportFormat === "png" ? (
-          <p className="text-xs text-muted-foreground">
-            PNG exports remain lossless at 100%.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("export.pngNote")}</p>
         ) : null}
       </div>
       <DrawerFooter>
         <Button disabled={status === "exporting"} onClick={onExport}>
           <DownloadIcon data-icon="inline-start" />
-          Download {selectedExportFormat.label}
+          {t("export.download", { label: selectedExportFormat.label })}
         </Button>
       </DrawerFooter>
     </DrawerContent>

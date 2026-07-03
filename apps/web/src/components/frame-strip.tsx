@@ -7,6 +7,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 export function FrameStrip({
   frameCount,
@@ -25,6 +26,8 @@ export function FrameStrip({
   onPrevFrame: () => void
   onNextFrame: () => void
 }) {
+  const { t } = useTranslation()
+
   if (frameCount <= 0) {
     return null
   }
@@ -35,8 +38,8 @@ export function FrameStrip({
   return (
     <div className="flex shrink-0 items-center gap-2 rounded-md border border-border bg-[var(--surface-inspector)] px-2 py-1.5">
       <Button
-        aria-label={isPlaying ? "Pause" : "Play"}
-        title={isPlaying ? "Pause" : "Play"}
+        aria-label={isPlaying ? t("frameStrip.pause") : t("frameStrip.play")}
+        title={isPlaying ? t("frameStrip.pause") : t("frameStrip.play")}
         variant="ghost"
         size="icon"
         className="size-7 shrink-0"
@@ -50,8 +53,8 @@ export function FrameStrip({
       </Button>
 
       <Button
-        aria-label="Previous frame"
-        title="Previous frame"
+        aria-label={t("frameStrip.previousFrame")}
+        title={t("frameStrip.previousFrame")}
         variant="ghost"
         size="icon"
         className="size-7 shrink-0"
@@ -80,8 +83,8 @@ export function FrameStrip({
       </span>
 
       <Button
-        aria-label="Next frame"
-        title="Next frame"
+        aria-label={t("frameStrip.nextFrame")}
+        title={t("frameStrip.nextFrame")}
         variant="ghost"
         size="icon"
         className="size-7 shrink-0"

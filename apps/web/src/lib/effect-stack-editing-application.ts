@@ -5,6 +5,7 @@ import {
   type StageKind,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import type { SettingsTransition } from "./editor-settings-transition"
 
 export type StackGroupKind = "pre" | "core" | "post"
@@ -50,7 +51,7 @@ function stageLabel(stage: EffectStage): string {
   if (stage.kind === "dither") return "Dither"
   const effect =
     typeof stage.params.effect === "string" ? stage.params.effect : ""
-  return effect.replace(/^(pre|post)\./, "") || "Unknown"
+  return effect.replace(/^(pre|post)\./, "") || i18n.t("error.unknown")
 }
 
 export function buildEffectStackModel(

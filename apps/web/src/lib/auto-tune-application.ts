@@ -1,5 +1,6 @@
 import type { EditorSettings } from "@workspace/core"
 import type { AutoTuneRecommendation } from "@workspace/core"
+import i18n from "@/i18n"
 import type { SettingsTransitionContext } from "./editor-settings-transition"
 
 export function applyAutoTuneLookSettings({
@@ -73,7 +74,7 @@ export function applyAutoTuneRecommendation(
     adapter.setError(
       autoTuneError instanceof Error
         ? autoTuneError.message
-        : "Auto-Tune apply failed"
+        : i18n.t("error.autoTuneApplyFailed")
     )
   }
 }

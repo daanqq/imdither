@@ -7,6 +7,7 @@ import {
   type PaletteExtractionSize,
   type PixelBuffer,
 } from "@workspace/core"
+import i18n from "@/i18n"
 import type { SettingsTransitionContext } from "./editor-settings-transition"
 
 export type PaletteActionCommand =
@@ -154,7 +155,7 @@ async function executeCopyJson(
   const { clipboard } = options
 
   if (!command.colors) {
-    adapter.setError("Convert the current preset to Custom before copy")
+    adapter.setError(i18n.t("error.convertToCustomBeforeCopy"))
     return
   }
 
@@ -170,7 +171,7 @@ async function executeCopyJson(
     adapter.setError(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette copy failed"
+        : i18n.t("error.paletteCopyFailed")
     )
   }
 }
@@ -200,7 +201,7 @@ function executeExportAsset(
   const { downloadBlob } = options
 
   if (!command.colors) {
-    adapter.setError("Convert the current preset to Custom before export")
+    adapter.setError(i18n.t("error.convertToCustomBeforeExport"))
     return
   }
 
@@ -231,7 +232,7 @@ function executeExportAsset(
     adapter.setError(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette export failed"
+        : i18n.t("error.paletteExportFailed")
     )
   }
 }
@@ -247,7 +248,7 @@ function executeExtract(
   transitionContext?: SettingsTransitionContext
 ): void {
   if (!command.source) {
-    adapter.setError("Load a Source Image before extracting a palette")
+    adapter.setError(i18n.t("error.noSourceForPalette"))
     return
   }
 
@@ -273,7 +274,7 @@ function executeExtract(
     adapter.setError(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette extraction failed"
+        : i18n.t("error.paletteExtractionFailed")
     )
   }
 }

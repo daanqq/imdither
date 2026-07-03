@@ -4,6 +4,7 @@ import {
   type PixelBuffer,
 } from "@workspace/core"
 
+import i18n from "@/i18n"
 import { acceptLoadedSource, type LoadedSource } from "./source-intake"
 import type { JobStatus } from "@/store/editor-store"
 
@@ -162,5 +163,7 @@ function isAbortError(error: unknown): boolean {
 }
 
 function fallbackError(kind: MotionLoadCommand["kind"]): string {
-  return kind === "video" ? "Video intake failed" : "GIF decode failed"
+  return kind === "video"
+    ? i18n.t("error.videoIntakeFailed")
+    : i18n.t("error.gifDecodeFailed")
 }
