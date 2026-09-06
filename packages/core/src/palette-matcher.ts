@@ -9,6 +9,18 @@ type PreparedColor = {
   oklab: readonly [number, number, number]
 }
 
+const CACHE_SIZE = 4096
+const CACHE_HASH = 0x9e3779b1
+const CACHE_PROBE_LIMIT = 256
+const SRGB_TO_LINEAR = Float64Array.from({ length: 256 }, (_, channel) =>
+  srgbToLinearExact(channel)
+)
+
+type NearestCache = {
+  keys: Uint32Array
+  indices: Int32Array
+}
+
 export function createPaletteMatcher(
   palette: Palette,
   mode: MatchingMode
@@ -17,27 +29,67 @@ export function createPaletteMatcher(
     rgb: color.rgb,
     oklab: rgbToOklab(color.rgb),
   }))
+  const cache: NearestCache = {
+    keys: new Uint32Array(CACHE_SIZE),
+    indices: new Int32Array(CACHE_SIZE),
+  }
+  cache.indices.fill(-1)
+  const findNearest =
+    mode === "perceptual" ? nearestOklabIndex : nearestRgbIndex
+  let cacheEnabled = true
+  let cacheLookups = 0
+  let cacheHits = 0
 
   return {
-    nearest: (input) =>
-      mode === "perceptual"
-        ? nearestOklab(input, colors)
-        : nearestRgb(input, colors),
+    nearest: (input) => {
+      if (!cacheEnabled) {
+        return colors[findNearest(input, colors)].rgb
+      }
+
+      const key = getByteRgbKey(input)
+
+      if (key === undefined) {
+        return colors[findNearest(input, colors)].rgb
+      }
+
+      cacheLookups += 1
+      // Use high product bits so all three channels affect the cache slot.
+      const slot = Math.imul(key, CACHE_HASH) >>> 20
+      const storedKey = key + 1
+
+      if (cache.keys[slot] === storedKey) {
+        cacheHits += 1
+        return colors[cache.indices[slot]].rgb
+      }
+
+      const index = findNearest(input, colors)
+
+      // Avoid probing a cold cache when a stream is mostly unique RGB values.
+      if (cacheLookups >= CACHE_PROBE_LIMIT && cacheHits * 16 <= cacheLookups) {
+        cacheEnabled = false
+      } else {
+        cache.keys[slot] = storedKey
+        cache.indices[slot] = index
+      }
+
+      return colors[index].rgb
+    },
   }
 }
 
-function nearestRgb(input: Rgb, colors: PreparedColor[]): Rgb {
-  let best = colors[0].rgb
+function nearestRgbIndex(input: Rgb, colors: PreparedColor[]): number {
+  let best = 0
   let bestDistance = Number.POSITIVE_INFINITY
 
-  for (const color of colors) {
+  for (let index = 0; index < colors.length; index += 1) {
+    const color = colors[index]
     const dr = input[0] - color.rgb[0]
     const dg = input[1] - color.rgb[1]
     const db = input[2] - color.rgb[2]
     const distance = dr * dr + dg * dg + db * db
 
     if (distance < bestDistance) {
-      best = color.rgb
+      best = index
       bestDistance = distance
     }
   }
@@ -45,24 +97,37 @@ function nearestRgb(input: Rgb, colors: PreparedColor[]): Rgb {
   return best
 }
 
-function nearestOklab(input: Rgb, colors: PreparedColor[]): Rgb {
+function nearestOklabIndex(input: Rgb, colors: PreparedColor[]): number {
   const lab = rgbToOklab(input)
-  let best = colors[0].rgb
+  let best = 0
   let bestDistance = Number.POSITIVE_INFINITY
 
-  for (const color of colors) {
+  for (let index = 0; index < colors.length; index += 1) {
+    const color = colors[index]
     const dl = lab[0] - color.oklab[0]
     const da = lab[1] - color.oklab[1]
     const db = lab[2] - color.oklab[2]
     const distance = dl * dl + da * da + db * db
 
     if (distance < bestDistance) {
-      best = color.rgb
+      best = index
       bestDistance = distance
     }
   }
 
   return best
+}
+
+function getByteRgbKey(input: Rgb): number | undefined {
+  if (!isByte(input[0]) || !isByte(input[1]) || !isByte(input[2])) {
+    return undefined
+  }
+
+  return input[0] * 65536 + input[1] * 256 + input[2]
+}
+
+function isByte(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 255
 }
 
 function rgbToOklab(rgb: Rgb): readonly [number, number, number] {
@@ -87,6 +152,10 @@ function rgbToOklab(rgb: Rgb): readonly [number, number, number] {
 }
 
 function srgbToLinear(channel: number): number {
+  return isByte(channel) ? SRGB_TO_LINEAR[channel] : srgbToLinearExact(channel)
+}
+
+function srgbToLinearExact(channel: number): number {
   const value = channel / 255
 
   return value <= 0.04045

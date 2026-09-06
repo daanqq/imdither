@@ -26,4 +26,64 @@ describe("palette matcher", () => {
 
     expect(matcher.nearest([0, 5, 0])).toEqual([0, 0, 255])
   })
+
+  it("keeps ties resolved by palette order", () => {
+    const tiePalette: Palette = {
+      ...palette,
+      colors: [
+        { name: "First", hex: "#7f0000", rgb: [127, 0, 0] },
+        { name: "Second", hex: "#800000", rgb: [128, 0, 0] },
+      ],
+    }
+
+    expect(
+      createPaletteMatcher(tiePalette, "rgb").nearest([127.5, 0, 0])
+    ).toEqual([127, 0, 0])
+  })
+
+  it("does not cache fractional or out-of-range RGB inputs", () => {
+    const edgePalette: Palette = {
+      ...palette,
+      colors: [
+        { name: "Black", hex: "#000000", rgb: [0, 0, 0] },
+        { name: "Red", hex: "#ff0000", rgb: [255, 0, 0] },
+      ],
+    }
+    const matcher = createPaletteMatcher(edgePalette, "rgb")
+
+    expect(matcher.nearest([255, 0, 0])).toEqual([255, 0, 0])
+    expect(matcher.nearest([256, 0, 0])).toEqual([255, 0, 0])
+    expect(matcher.nearest([-1, 0, 0])).toEqual([0, 0, 0])
+  })
+
+  it("checks the full RGB key after a cache collision", () => {
+    const collisionPalette: Palette = {
+      ...palette,
+      colors: [
+        { name: "Black", hex: "#000000", rgb: [0, 0, 0] },
+        { name: "Blue", hex: "#001055", rgb: [0, 16, 85] },
+      ],
+    }
+    const matcher = createPaletteMatcher(collisionPalette, "rgb")
+
+    expect(matcher.nearest([0, 0, 0])).toEqual([0, 0, 0])
+    expect(matcher.nearest([0, 16, 85])).toEqual([0, 16, 85])
+    expect(matcher.nearest([0, 0, 0])).toEqual([0, 0, 0])
+  })
+
+  it("isolates caches between palettes and matching modes", () => {
+    const otherPalette: Palette = {
+      ...palette,
+      colors: [
+        { name: "Black", hex: "#000000", rgb: [0, 0, 0] },
+        { name: "White", hex: "#ffffff", rgb: [255, 255, 255] },
+      ],
+    }
+
+    const rgbMatcher = createPaletteMatcher(otherPalette, "rgb")
+    const perceptualMatcher = createPaletteMatcher(palette, "perceptual")
+
+    expect(rgbMatcher.nearest([0, 5, 0])).toEqual([0, 0, 0])
+    expect(perceptualMatcher.nearest([0, 5, 0])).toEqual([0, 0, 255])
+  })
 })
