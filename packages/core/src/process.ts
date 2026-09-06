@@ -38,19 +38,22 @@ export function processImage(
   )
   const preStages = settings.effectStack.filter((s) => s.kind === "pre")
   const postStages = settings.effectStack.filter((s) => s.kind === "post")
-  const effectStackKey = JSON.stringify(settings.effectStack)
+  const preStagesKey = JSON.stringify(preStages)
+  const resizeKey = `resize:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}`
 
-  const resized = getOrSet(
-    options.cache,
-    `resize:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}`,
-    () => resizeImage(flattened, settings.resize, settings.alphaBackground)
+  const resized = getOrSet(options.cache, resizeKey, () =>
+    resizeImage(flattened, settings.resize, settings.alphaBackground)
   )
 
-  const effected = applyEffectStages(resized, preStages)
+  const effected = getOrSet(
+    options.cache,
+    `effects:${resizeKey}:${preStagesKey}`,
+    () => applyEffectStages(resized, preStages)
+  )
 
   const preprocessed = getOrSet(
     options.cache,
-    `pre:${sourceKey}:${settings.alphaBackground}:${JSON.stringify(settings.resize)}:${JSON.stringify(settings.preprocess)}:${effectStackKey}`,
+    `pre:${resizeKey}:${preStagesKey}:${JSON.stringify(settings.preprocess)}`,
     () => applyPreprocess(effected, settings.preprocess)
   )
 
