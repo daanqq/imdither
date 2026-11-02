@@ -105,15 +105,16 @@ import {
 } from "@/lib/effect-stack-editing-application"
 
 const PRE_EFFECTS = [
-  { id: "pre.blur", label: "Blur" },
-  { id: "pre.contrast-shape", label: "Contrast Shape" },
+  { id: "pre.blur", labelKey: "manual.effectBlur" },
+  { id: "pre.contrast-shape", labelKey: "manual.effectContrastShape" },
 ] as const
 
 const POST_EFFECTS = [
-  { id: "post.grain", label: "Grain" },
-  { id: "post.edge-threshold", label: "Edge Threshold" },
-  { id: "post.paper-noise", label: "Paper Noise" },
-  { id: "post.crt-bloom", label: "CRT Bloom" },
+  { id: "post.grain", labelKey: "manual.effectGrain" },
+  { id: "post.edge-threshold", labelKey: "manual.effectEdgeThreshold" },
+  { id: "post.paper-noise", labelKey: "manual.effectPaperNoise" },
+  { id: "post.crt-bloom", labelKey: "manual.effectCrtBloom" },
+  { id: "post.invert", labelKey: "manual.effectInvert" },
 ] as const
 
 type LookRecipeOption = {
@@ -794,7 +795,7 @@ function AddEffectButton({
   onSettingsTransition,
 }: {
   kind: "pre" | "post"
-  effects: readonly { id: string; label: string }[]
+  effects: readonly { id: string; labelKey: string }[]
   onSettingsTransition: (transition: SettingsTransition) => void
 }) {
   const [selected, setSelected] = React.useState("")
@@ -830,7 +831,7 @@ function AddEffectButton({
           <SelectGroup>
             {effects.map((effect) => (
               <SelectItem key={effect.id} value={effect.id}>
-                {effect.label}
+                {t(effect.labelKey)}
               </SelectItem>
             ))}
           </SelectGroup>

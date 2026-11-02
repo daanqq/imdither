@@ -170,6 +170,54 @@ describe("core pipeline", () => {
     expect(Array.from(first)).toEqual(Array.from(second))
   })
 
+  it("inverts the final dithered output in the post.invert stage, after palette mapping", () => {
+    // Unlike preprocess.invert, a post-stage negative is expected to leave the
+    // palette: users pick it to get a negative of the finished image.
+    const input = grayscaleGradientBuffer(9, 9)
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      paletteId: "sea-glass",
+      resize: {
+        ...DEFAULT_SETTINGS.resize,
+        width: 9,
+        height: 9,
+        mode: "nearest" as const,
+        fit: "stretch" as const,
+      },
+    }
+
+    const plain = processImage(input, settings).image
+    const inverted = processImage(input, {
+      ...settings,
+      effectStack: [
+        ...settings.effectStack,
+        {
+          instanceId: "post-invert",
+          kind: "post" as const,
+          enabled: true,
+          params: { effect: "post.invert" },
+        },
+      ],
+    }).image
+    const paletteHexes = new Set(
+      PRESET_PALETTES.find((item) => item.id === "sea-glass")!.colors.map(
+        (color) => color.hex.toLowerCase()
+      )
+    )
+
+    for (let i = 0; i < plain.data.length; i += 4) {
+      expect(inverted.data[i]).toBe(255 - plain.data[i])
+      expect(inverted.data[i + 1]).toBe(255 - plain.data[i + 1])
+      expect(inverted.data[i + 2]).toBe(255 - plain.data[i + 2])
+      expect(inverted.data[i + 3]).toBe(plain.data[i + 3])
+    }
+    expect(
+      [...collectRgbTriples(inverted)].some(
+        (rgb) => !paletteHexes.has(rgbTripleToHex(rgb))
+      )
+    ).toBe(true)
+  })
+
   it("supports Matt Parker threshold dithering", () => {
     const input = grayscaleGradientBuffer(9, 9)
     const settings = {
@@ -414,4 +462,11 @@ function grayscaleGradientBuffer(width: number, height: number): PixelBuffer {
   }
 
   return { width, height, data }
+}
+
+function rgbTripleToHex(rgb: string): string {
+  return `#${rgb
+    .split(",")
+    .map((channel) => Number(channel).toString(16).padStart(2, "0"))
+    .join("")}`
 }

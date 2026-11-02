@@ -9,6 +9,7 @@ export type EffectId =
   | "post.edge-threshold"
   | "post.paper-noise"
   | "post.crt-bloom"
+  | "post.invert"
 
 type ParamBound = { min: number; max: number; default: number }
 
@@ -75,6 +76,13 @@ export const EFFECT_DEFINITIONS: readonly EffectDefinition[] = [
     },
     paramOptions: {},
     process: applyCrtBloom,
+  },
+  {
+    id: "post.invert",
+    defaultParams: {},
+    paramBounds: {},
+    paramOptions: {},
+    process: invertColors,
   },
 ]
 
@@ -175,6 +183,19 @@ function applyCrtBloom(
   const radius = clampToNumber(params.radius, 2, 1, 4)
 
   return crtBloom(input, intensity, Math.round(radius))
+}
+
+function invertColors(input: PixelBuffer): PixelBuffer {
+  const output = acquirePixelBuffer(input.width, input.height)
+
+  for (let i = 0; i < input.data.length; i += 4) {
+    output.data[i] = 255 - input.data[i]
+    output.data[i + 1] = 255 - input.data[i + 1]
+    output.data[i + 2] = 255 - input.data[i + 2]
+    output.data[i + 3] = input.data[i + 3]
+  }
+
+  return output
 }
 
 function boxBlur(input: PixelBuffer, radius: number): PixelBuffer {

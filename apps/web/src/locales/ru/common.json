@@ -156,6 +156,7 @@
     "temporalGlobalPaletteDesc": "Единая палитра, извлечённая из всех кадров. Уменьшает мерцание GIF.",
     "addPreStage": "Добавить pre-этап",
     "addPostStage": "Добавить post-этап",
+    "effectInvert": "Инвертировать результат",
     "dragStage": "Перетащить этап",
     "removeStage": "Удалить этап",
     "stageActions": "Действия с этапом",

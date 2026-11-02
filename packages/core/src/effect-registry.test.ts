@@ -45,6 +45,7 @@ describe("effect registry", () => {
     expect(ids).toContain("post.edge-threshold")
     expect(ids).toContain("post.paper-noise")
     expect(ids).toContain("post.crt-bloom")
+    expect(ids).toContain("post.invert")
   })
 
   it("returns input unchanged when effect stack is empty", () => {
