@@ -4,11 +4,12 @@ import {
   type AutoTuneRecommendation,
 } from "@workspace/core"
 import { Button } from "@workspace/ui/components/button"
-import { MoonIcon, SunIcon } from "lucide-react"
+import { GlobeIcon, MoonIcon, SunIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { InspectorPanel } from "@/components/inspector-panel"
 import { PreviewStage } from "@/components/preview-stage"
+import { SourceNoticeToast } from "@/components/source-notice-toast"
 import { useTheme } from "@/components/theme-provider"
 
 import brandMarkUrl from "@/assets/brand-mark.svg"
@@ -17,10 +18,14 @@ import {
   type AutoTuneApplyAdapter,
 } from "@/lib/auto-tune-application"
 import { executeClipboardCommand } from "@/lib/clipboard-settings-application"
+import { createEditorShortcutsController } from "@/lib/editor-shortcuts"
 import {
+  applyCopyImageAction,
   applyExportAction,
+  type CopyImageActionRuntimeAdapter,
   type ExportActionRuntimeAdapter,
 } from "@/lib/export-action-application"
+import { formatAspectRatio } from "@/lib/i18n-labels"
 import {
   applyMotionExportAction,
   type MotionExportActionRuntimeAdapter,
@@ -82,7 +87,7 @@ function BrandMark() {
   return (
     <span
       aria-hidden="true"
-      className="block aspect-[214/34] w-[10.5rem] shrink-0 bg-primary drop-shadow-[0_0_10px_color-mix(in_srgb,var(--primary)_42%,transparent)] md:w-[14rem]"
+      className="block aspect-[214/34] w-[9.5rem] shrink-0 bg-primary md:w-[12.5rem] dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--primary)_24%,transparent)]"
       style={{
         mask: `url(${brandMarkUrl}) center / contain no-repeat`,
         WebkitMask: `url(${brandMarkUrl}) center / contain no-repeat`,
@@ -92,6 +97,7 @@ function BrandMark() {
 }
 
 export function App() {
+  const { t } = useTranslation()
   const settings = useEditorStore((state) => state.settings)
   const compareMode = useEditorStore((state) => state.compareMode)
   const previewViewport = useEditorStore((state) => state.previewViewport)
@@ -101,6 +107,10 @@ export function App() {
   const lookRecipes = useEditorStore((state) => state.lookRecipes)
   const status = useEditorStore((state) => state.status)
   const error = useEditorStore((state) => state.error)
+  const sourceNotice = useEditorStore((state) => state.sourceNotice)
+  const sourceNoticeVersion = useEditorStore(
+    (state) => state.sourceNoticeVersion
+  )
   const canRedoSettingsChange = useEditorStore(
     (state) => state.canRedoSettingsChange
   )
@@ -501,6 +511,26 @@ export function App() {
       [setError, setStatus]
     )
 
+  const copyImageActionAdapter: CopyImageActionRuntimeAdapter = React.useMemo(
+    () => ({
+      setStatus,
+      setSourceNotice,
+    }),
+    [setSourceNotice, setStatus]
+  )
+
+  const handleCopyImage = React.useCallback(async () => {
+    await applyCopyImageAction(
+      {
+        source,
+        fallbackBuffer: currentPreview,
+        settings,
+      },
+      copyImageActionAdapter,
+      { runExportJob: processingJobs.runExportJob }
+    )
+  }, [copyImageActionAdapter, currentPreview, processingJobs, settings, source])
+
   const handleExport = React.useCallback(async () => {
     if (isAnimated && frameSequence) {
       await applyMotionExportAction(
@@ -717,8 +747,9 @@ export function App() {
     (name: string) => {
       const recipe = saveLookRecipe(name)
       handleSelectLookRecipe(recipe.id)
+      setSourceNotice(t("notice.lookRecipeSaved", { name: recipe.name }))
     },
-    [saveLookRecipe, handleSelectLookRecipe]
+    [saveLookRecipe, handleSelectLookRecipe, setSourceNotice, t]
   )
 
   const handleSettingsTransition = React.useCallback(
@@ -766,6 +797,7 @@ export function App() {
       onFileSelected: handleFile,
       onInvalidDrop: handleInvalidDrop,
       onExport: handleExport,
+      onCopyImage: handleCopyImage,
       setExportFormat,
       setExportQuality,
       setMotionExportSettings,
@@ -799,6 +831,7 @@ export function App() {
       handleFile,
       handleInvalidDrop,
       handleExport,
+      handleCopyImage,
       setExportFormat,
       setExportQuality,
       setMotionExportSettings,
@@ -822,11 +855,14 @@ export function App() {
     () =>
       buildPreviewStageModel({
         algorithm: settings.algorithm,
+        alphaBackground: settings.alphaBackground,
         compareMode,
+        customPalette: settings.customPalette,
         isDesktopViewScale,
         original: currentOriginal,
         outputHeight: settings.resize.height,
         outputWidth: settings.resize.width,
+        paletteId: settings.paletteId,
         preview: currentPreview,
         previewRefiningPending,
         previewTargetHeight: previewTarget?.height ?? settings.resize.height,
@@ -849,6 +885,9 @@ export function App() {
       }),
     [
       settings.algorithm,
+      settings.alphaBackground,
+      settings.customPalette,
+      settings.paletteId,
       settings.resize.height,
       settings.resize.width,
       compareMode,
@@ -876,12 +915,72 @@ export function App() {
     ]
   )
 
+  const shortcutsStateRef = React.useRef({
+    canRedo: canRedoSettingsChange,
+    canUndo: canUndoSettingsChange,
+    compareMode,
+    hasSource: Boolean(currentOriginal),
+    outputHeight: settings.resize.height,
+    outputWidth: settings.resize.width,
+    previewViewport,
+  })
+  shortcutsStateRef.current = {
+    canRedo: canRedoSettingsChange,
+    canUndo: canUndoSettingsChange,
+    compareMode,
+    hasSource: Boolean(currentOriginal),
+    outputHeight: settings.resize.height,
+    outputWidth: settings.resize.width,
+    previewViewport,
+  }
+
+  React.useEffect(() => {
+    const controller = createEditorShortcutsController(
+      () => shortcutsStateRef.current,
+      {
+        redo: redoSettingsChange,
+        setCompareMode,
+        setPreviewViewport,
+        undo: undoSettingsChange,
+      }
+    )
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      controller.handleKeyDown(event)
+    }
+    const onKeyUp = (event: KeyboardEvent) => {
+      controller.handleKeyUp(event)
+    }
+    const onBlur = () => {
+      controller.handleWindowBlur()
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    window.addEventListener("keyup", onKeyUp)
+    window.addEventListener("blur", onBlur)
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("keyup", onKeyUp)
+      window.removeEventListener("blur", onBlur)
+    }
+  }, [
+    redoSettingsChange,
+    setCompareMode,
+    setPreviewViewport,
+    undoSettingsChange,
+  ])
+
+  const handleDismissSourceNotice = React.useCallback(() => {
+    setSourceNotice(null)
+  }, [setSourceNotice])
+
   return (
     <main className="h-[100dvh] w-full overflow-hidden bg-[var(--surface-workbench)] text-foreground">
       <div className="mx-auto flex h-full w-full max-w-[1800px] min-w-0 flex-col gap-2 overflow-hidden p-2 md:gap-3 md:p-3">
-        <header className="flex shrink-0 items-center justify-between gap-1.5 border-b border-border pb-1.5 md:gap-3 md:pb-2">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border pb-2 md:gap-3">
+          <div className="flex min-w-0 items-center gap-3 md:gap-4">
+            <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
               <BrandMark />
               <h1 className="sr-only">IMDITHER</h1>
             </div>
@@ -892,11 +991,18 @@ export function App() {
           </div>
         </header>
 
-        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 overflow-hidden md:gap-3 xl:grid-cols-[minmax(0,1fr)_380px] xl:grid-rows-1">
-          <PreviewStage
-            model={previewStageModel}
-            onCommand={previewStageApp.dispatch}
-          />
+        <section className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,0.92fr)_minmax(0,1.08fr)] gap-2 overflow-hidden sm:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="relative grid min-h-0 min-w-0">
+            <PreviewStage
+              model={previewStageModel}
+              onCommand={previewStageApp.dispatch}
+            />
+            <SourceNoticeToast
+              notice={sourceNotice}
+              noticeVersion={sourceNoticeVersion}
+              onDismiss={handleDismissSourceNotice}
+            />
+          </div>
 
           <aside className="min-h-0 min-w-0 overflow-hidden">
             <InspectorPanel
@@ -905,6 +1011,7 @@ export function App() {
               autoTuneError={autoTuneError}
               autoTuneLoading={isAutoTuneLoading}
               autoTuneRecommendations={autoTuneRecommendations}
+              isAnimated={isAnimated}
               lookRecipeId={lookRecipeId}
               lookRecipes={allLookRecipes}
               settings={settings}
@@ -954,15 +1061,16 @@ function ThemeToggle() {
       type="button"
       aria-label={isLight ? t("theme.switchToDark") : t("theme.switchToLight")}
       aria-pressed={isLight}
-      className="!size-7 !min-h-7 gap-0 p-0 font-mono text-xs md:!h-8 md:!min-h-8 md:!w-auto md:gap-1.5 md:px-2.5"
-      size="icon-xs"
+      title={isLight ? t("theme.switchToDark") : t("theme.switchToLight")}
+      className="h-7 w-7 gap-0 p-0 font-sans text-xs md:h-8 md:w-auto md:gap-1.5 md:px-2.5"
+      size="sm"
       variant="outline"
       onClick={() => setTheme(nextTheme)}
     >
       {isLight ? (
-        <MoonIcon data-icon="inline-start" />
+        <MoonIcon className="size-3.5" />
       ) : (
-        <SunIcon data-icon="inline-start" />
+        <SunIcon className="size-3.5" />
       )}
       <span className="hidden md:inline">
         {isLight ? t("theme.dark") : t("theme.light")}
@@ -971,44 +1079,28 @@ function ThemeToggle() {
   )
 }
 
-function LanguageToggle() {
-  const { i18n } = useTranslation()
+export function LanguageToggle() {
+  const { i18n, t } = useTranslation()
   const isEn = i18n.language.startsWith("en")
   const nextLang = isEn ? "ru" : "en"
+  const nextLangLabel = isEn ? "Русский" : "English"
+  const switchLabel = t("language.switchTo", { lang: nextLangLabel })
 
   return (
     <Button
       type="button"
-      aria-label={i18n.t("language.toggle")}
-      title={i18n.t("language.toggle")}
-      className="!size-7 !min-h-7 gap-0 p-0 font-mono text-xs md:!h-8 md:!min-h-8 md:!w-auto md:gap-1.5 md:px-2.5"
-      size="icon-xs"
+      aria-label={switchLabel}
+      title={switchLabel}
+      className="h-7 gap-1 px-2 font-mono text-xs md:h-8 md:gap-1.5 md:px-2.5"
+      size="sm"
       variant="outline"
       onClick={() => i18n.changeLanguage(nextLang)}
     >
-      <span className="hidden md:inline">{isEn ? "RU" : "EN"}</span>
-      <span className="md:hidden">{isEn ? "RU" : "EN"}</span>
+      <GlobeIcon
+        aria-hidden="true"
+        className="size-3.5 text-muted-foreground"
+      />
+      <span>{isEn ? "EN" : "RU"}</span>
     </Button>
   )
-}
-
-function formatAspectRatio(width: number, height: number): string {
-  const safeWidth = Math.max(1, Math.round(width))
-  const safeHeight = Math.max(1, Math.round(height))
-  const divisor = greatestCommonDivisor(safeWidth, safeHeight)
-
-  return `${safeWidth / divisor}:${safeHeight / divisor}`
-}
-
-function greatestCommonDivisor(left: number, right: number): number {
-  let a = Math.abs(left)
-  let b = Math.abs(right)
-
-  while (b > 0) {
-    const next = a % b
-    a = b
-    b = next
-  }
-
-  return Math.max(1, a)
 }

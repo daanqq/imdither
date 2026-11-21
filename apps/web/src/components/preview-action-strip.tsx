@@ -27,33 +27,44 @@ export function PreviewActionStrip({
   const { t } = useTranslation()
 
   return (
-    <div className="grid h-8 w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2 md:h-full md:grid-cols-[auto_1fr_auto]">
-      <div className="grid min-w-0 grid-cols-2 gap-2 md:w-[20rem]">
+    <div
+      data-slot="preview-action-strip"
+      className="flex w-full min-w-0 items-center justify-between gap-2 md:gap-3"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
         <Button
-          className="h-full w-full min-w-0 !pl-2.5 text-xs"
+          type="button"
+          className="h-8 min-w-0 flex-1 px-2.5 text-xs whitespace-nowrap sm:w-auto sm:flex-none sm:px-3"
+          title={t("actions.uploadHint")}
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
         >
-          <UploadIcon data-icon="inline-start" />
-          {t("actions.upload")}
+          <UploadIcon data-icon="inline-start" className="size-3.5 shrink-0" />
+          <span>{t("actions.upload")}</span>
         </Button>
         <DrawerTrigger asChild>
           <Button
-            className="h-full w-full min-w-0 border border-primary text-xs"
+            type="button"
+            className="h-8 min-w-0 flex-1 px-2.5 text-xs font-semibold whitespace-nowrap sm:w-auto sm:flex-none sm:px-3"
             disabled={!original || status === "exporting"}
+            title={t("actions.exportHint")}
           >
-            <DownloadIcon data-icon="inline-start" />
-            {status === "exporting"
-              ? t("actions.exporting")
-              : t("actions.export")}
+            <DownloadIcon
+              data-icon="inline-start"
+              className="size-3.5 shrink-0"
+            />
+            <span>
+              {status === "exporting"
+                ? t("actions.exporting")
+                : t("actions.export")}
+            </span>
           </Button>
         </DrawerTrigger>
       </div>
-      <div aria-hidden="true" className="hidden md:block" />
       <HistoryControls
         canRedo={canRedoSettingsChange}
         canUndo={canUndoSettingsChange}
-        className="md:w-44"
+        className="shrink-0"
         onRedo={onRedoSettingsChange}
         onUndo={onUndoSettingsChange}
       />

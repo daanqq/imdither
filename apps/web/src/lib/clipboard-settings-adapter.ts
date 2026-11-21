@@ -173,7 +173,7 @@ export function applyLookText({
   const payload = extractLookPayload(text)
 
   if (!payload) {
-    throw new Error("Look payload is empty")
+    throw new Error(i18n.t("error.lookPayloadEmpty"))
   }
 
   const snapshot = decodeLookPayload(payload)

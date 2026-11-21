@@ -1,6 +1,7 @@
 import * as React from "react"
 import type { PixelBuffer } from "@workspace/core"
 import { cn } from "@workspace/ui/lib/utils"
+import { useTranslation } from "react-i18next"
 
 import { SlideComparePreview } from "@/components/slide-compare-preview"
 import {
@@ -753,10 +754,16 @@ function PreviewPlaceholder({
   status?: string
   width: number
 }) {
+  const { t } = useTranslation()
+  const statusKey = status ?? "processing"
+  const localizedStatus = t(`preview.status.${statusKey}`, {
+    defaultValue: statusKey,
+  })
+
   return (
     <div className="dot-grid-subtle flex size-full items-center justify-center bg-background text-center">
       <div className="flex flex-col gap-1 font-mono text-[11px] text-muted-foreground">
-        <span>[{status ?? "processing"}]</span>
+        <span>[{localizedStatus}]</span>
         <span>
           {width}x{height}
         </span>

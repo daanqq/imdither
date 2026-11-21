@@ -48,14 +48,17 @@ export const PreviewStage = React.memo(function PreviewStage({
 
   const {
     algorithm,
+    alphaBackground,
     busy,
     compareMode,
+    customPalette,
     error,
     isAnimated,
     isDesktopViewScale,
     original,
     outputHeight,
     outputWidth,
+    paletteId,
     preview,
     previewRefining,
     previewTargetHeight,
@@ -125,6 +128,11 @@ export const PreviewStage = React.memo(function PreviewStage({
 
   const handleExport = React.useCallback(
     () => onCommand({ kind: "export-intent" }),
+    [onCommand]
+  )
+
+  const handleCopyImage = React.useCallback(
+    () => onCommand({ kind: "copy-image-intent" }),
     [onCommand]
   )
 
@@ -237,7 +245,7 @@ export const PreviewStage = React.memo(function PreviewStage({
             {!original ? (
               <EmptyState />
             ) : (
-              <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2">
+              <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 pt-10 md:pt-0">
                 <div className="min-h-0 min-w-0 flex-1">
                   <PreviewPresentation
                     compareMode={compareMode}
@@ -290,15 +298,23 @@ export const PreviewStage = React.memo(function PreviewStage({
                   onUndoSettingsChange={handleUndoSettingsChange}
                 />
                 <ExportDrawerContent
+                  algorithm={algorithm}
+                  alphaBackground={alphaBackground}
+                  customPalette={customPalette}
                   isAnimated={isAnimated}
                   animatedExportFormat={animatedExportFormat}
                   exportFormat={exportFormat}
                   exportQuality={exportQuality}
+                  outputHeight={fullOutputHeight}
+                  outputWidth={fullOutputWidth}
+                  paletteId={paletteId}
+                  previewBuffer={preview}
                   status={status}
                   frameCount={frameCount}
                   webCodecsAvailable={webCodecsAvailable}
                   videoExportSettings={videoExportSettings}
                   motionExportSettings={motionExportSettings}
+                  onCopyImage={handleCopyImage}
                   onExport={handleExport}
                   onExportFormatChange={handleExportFormatChange}
                   onExportQualityChange={handleExportQualityChange}

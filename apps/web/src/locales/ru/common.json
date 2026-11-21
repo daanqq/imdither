@@ -1,4 +1,8 @@
 {
+  "common": {
+    "close": "Закрыть",
+    "loading": "Загрузка"
+  },
   "theme": {
     "switchToDark": "Переключить на тёмную тему",
     "switchToLight": "Переключить на светлую тему",
@@ -6,15 +10,24 @@
     "light": "Светлая тема"
   },
   "language": {
-    "toggle": "Сменить язык"
+    "toggle": "Сменить язык",
+    "switchTo": "Переключить язык на {{lang}}"
+  },
+  "header": {
+    "demoSource": "Демо",
+    "sourceContext": "Параметры текущего проекта",
+    "colorsCount_one": "{{count}} цвет",
+    "colorsCount_few": "{{count}} цвета",
+    "colorsCount_many": "{{count}} цветов",
+    "colorsCount_other": "{{count}} цв."
   },
   "tabs": {
-    "looks": "Look'и",
+    "looks": "Стили",
     "manual": "Ручная"
   },
   "preview": {
     "waiting": "[ОЖИДАНИЕ ИЗОБРАЖЕНИЯ]",
-    "dropHint": "Перетащите, вставьте, загрузите или загрузите демо.",
+    "dropHint": "Перетащите, вставьте, загрузите или откройте демо.",
     "dropError": "Перетащите изображение или видеофайл",
     "exporting": "ЭКСПОРТ",
     "processing": "ОБРАБОТКА ПРЕВЬЮ",
@@ -23,18 +36,30 @@
     "reducedDetail": "Показ уменьшенного превью, пока полный вывод {{algorithm}} догоняет.",
     "queuedDetail": "В очереди. Настройки доступны для редактирования.",
     "workerRunningDetail": "Обработчик {{algorithm}} запущен. Новые изменения заменят очередь превью.",
-    "sourceRejected": "ИСТОЧНИК ОТКЛОНЁН"
+    "sourceRejected": "ИСТОЧНИК ОТКЛОНЁН",
+    "status": {
+      "idle": "ожидание",
+      "queued": "в очереди",
+      "processing": "обработка",
+      "ready": "готово",
+      "exporting": "экспорт",
+      "error": "ошибка"
+    }
   },
   "actions": {
     "upload": "Загрузить",
     "export": "Экспорт",
-    "exporting": "Экспорт…"
+    "exporting": "Экспорт...",
+    "uploadHint": "Загрузить изображение или видео",
+    "exportHint": "Открыть настройки экспорта"
   },
   "history": {
     "undo": "Отменить",
     "redo": "Повторить",
     "undoAria": "Отменить изменение настроек",
-    "redoAria": "Повторить изменение настроек"
+    "redoAria": "Повторить изменение настроек",
+    "undoHint": "Отменить (Ctrl/Cmd+Z)",
+    "redoHint": "Повторить (Ctrl/Cmd+Shift+Z)"
   },
   "frameStrip": {
     "play": "Воспроизвести",
@@ -43,10 +68,16 @@
     "nextFrame": "Следующий кадр"
   },
   "compare": {
+    "modeGroup": "Режим сравнения превью",
     "switchTo": "Переключить сравнение на {{mode}}",
     "comparison": "Сравнение",
+    "split": "Сплит",
+    "result": "Результат",
     "processed": "Обработано",
-    "original": "Оригинал"
+    "original": "Оригинал",
+    "cycleHint": "Переключить режим (C). Удерживайте Пробел для оригинала.",
+    "holdSpaceHint": "Удерживайте Пробел для оригинала",
+    "dividerAria": "Разделитель сравнения"
   },
   "viewport": {
     "openControls": "Открыть настройки просмотра",
@@ -57,6 +88,9 @@
     "setOneToOne": "Установить пиксели 1:1",
     "zoom": "Масштаб",
     "previewZoom": "Масштаб превью",
+    "zoomIn": "Увеличить",
+    "zoomOut": "Уменьшить",
+    "zoomShortcutHint": "Масштаб (+ / - / 0)",
     "fitPreview": "Вписать превью",
     "inspectPixels": "Инспектировать пиксели",
     "toggleInspector": "Переключить инспектор пикселей",
@@ -65,23 +99,43 @@
   "export": {
     "title": "Экспорт",
     "animatedDescription": "Экспортировать все кадры как анимированный {{format}}.",
-    "staticDescription": "Формат и качество для скачивания итогового изображения.",
+    "staticDescription": "Формат и качество для сохранения итогового изображения.",
+    "summaryHeading": "Параметры вывода",
+    "dimensions": "Размер",
+    "aspectRatio": "Пропорции",
+    "algorithm": "Алгоритм",
+    "palette": "Палитра",
+    "estimatedSize": "Оценка веса",
+    "calculatingSize": "Расчёт...",
+    "sizeUnavailable": "--",
+    "frames": "Кадры",
+    "frameRate": "Частота",
+    "duration": "Длительность",
     "format": "Формат экспорта",
     "animatedFormat": "Формат анимированного экспорта",
     "quality": "Качество экспорта",
+    "losslessBadge": "Без потерь · 100%",
     "formatLabel": "Формат экспорта",
     "webmUnavailable": "WebM требует WebCodecs (Chrome 94+, Firefox 130+, Safari 16.4+)",
     "gifNote": "GIF использует активную палитру. Палитры более 256 цветов не поддерживаются.",
     "apngNote": "APNG использует 24-битный RGBA на кадр. Сопоставление палитры и дизеринг применяются.",
     "webmNote": "WebM использует сжатие VP9 с потерями. Сопоставление палитры и дизеринг применяются.",
     "pngNote": "Экспорт PNG остаётся без потерь при 100%.",
+    "webpNote": "Компактный современный формат с прозрачностью и настройкой качества.",
+    "jpegNote": "Минимальный размер с потерями; прозрачность сводится на выбранный фон.",
     "crf": "CRF (качество)",
     "highQuality": "высокое качество",
     "mediumQuality": "среднее качество",
     "lowQuality": "низкое качество",
     "frameDuration": "Длительность кадра (мс)",
-    "fps": "fps",
+    "fps": "кадр/с",
     "total": "всего",
+    "unitMs": "мс",
+    "unitSec": "с",
+    "unitPx": "px",
+    "unitBytes": "Б",
+    "unitKilobytes": "КБ",
+    "unitMegabytes": "МБ",
     "loopCount": "Количество повторов",
     "infinite": "∞ (бесконечно)",
     "once": "1 (один раз)",
@@ -89,31 +143,126 @@
     "playsCount_one": "Проигрывается {{count}} раз.",
     "playsCount_few": "Проигрывается {{count}} раза.",
     "playsCount_many": "Проигрывается {{count}} раз.",
+    "playsCount_other": "Проигрывается {{count}} раза.",
+    "copyImage": "Копировать PNG",
+    "copyImageHint": "Скопировать итоговое PNG-изображение в буфер",
     "download": "Скачать {{label}}"
   },
   "slider": {
     "reset": "Сбросить {{label}} до {{value}}"
   },
   "autoTune": {
-    "heading": "Сгенерированные Auto-Tune Look'и",
-    "noSource": "Загрузите исходное изображение для генерации look'ов.",
-    "generating": "Генерация чистых, моно, цветных и текстурных look'ов.",
-    "noRecommendations": "Сгенерированные look'и появятся после загрузки.",
+    "heading": "Автоподбор стилей",
+    "noSource": "Загрузите изображение, чтобы подобрать стили.",
+    "generating": "Подбираем чистые, монохромные, графичные, цветные и текстурные стили.",
+    "noRecommendations": "Подобранные стили появятся после загрузки.",
     "recommended": "Рекомендовано",
     "applied": "Применено",
     "tonalHighContrast": "Высокий контраст",
     "tonalSoftContrast": "Мягкий контраст",
     "tonalColor": "Цвет",
-    "tonalMono": "Моно"
+    "tonalMono": "Моно",
+    "presets": {
+      "clean-reduction": {
+        "label": "Чистая редукция",
+        "intent": "Прямое сопоставление цветов с минимальной текстурой для логотипов и графики."
+      },
+      "fine-ordered-mono": {
+        "label": "Тонкий моно-растр",
+        "intent": "Аккуратная монохромная сетка Байера для фото и мягких градиентов."
+      },
+      "high-contrast-ink": {
+        "label": "Контрастная тушь",
+        "intent": "Графичный чёрно-белый отпечаток с подчёркнутыми контурами."
+      },
+      "screenprint-color": {
+        "label": "Цветная шелкография",
+        "intent": "Печатная цветная палитра с перцепционным подбором оттенков."
+      },
+      "texture-noise-look": {
+        "label": "Текстурный шум",
+        "intent": "Выраженная зернистая фактура для спокойных плоскостей и атмосферных кадров."
+      },
+      "soft-poster": {
+        "label": "Мягкий постер",
+        "intent": "Ограниченная плакатная палитра со спокойной тоновой кривой."
+      },
+      "newsprint-mono": {
+        "label": "Газетная печать",
+        "intent": "Крупный чёрно-белый полутоновый растр с печатной фактурой."
+      },
+      "low-noise-photo": {
+        "label": "Мягкое фото",
+        "intent": "Деликатная диффузия ошибок для сканов и шумных фотографий."
+      },
+      "arcade-color": {
+        "label": "Аркадный цвет",
+        "intent": "Упорядоченный игровой дизеринг в компактной ретро-палитре."
+      },
+      "ink-wash": {
+        "label": "Размытая тушь",
+        "intent": "Мягкий монохром с заметным зерном и деликатными переходами."
+      }
+    }
+  },
+  "looks": {
+    "recipesHeading": "Рецепты",
+    "builtInGroup": "Встроенные",
+    "savedGroup": "Сохранённые",
+    "saveCurrent": "Сохранить стиль",
+    "savePlaceholder": "Название стиля...",
+    "cancel": "Отмена",
+    "deleteRecipe": "Удалить стиль {{name}}",
+    "effectsCount": "+{{count}} эф.",
+    "builtIn": {
+      "clean-mono": "Чистое моно",
+      "warm-grain": "Тёплое зерно",
+      "poster-edge": "Постерные контуры",
+      "crt-bloom": "Свечение CRT",
+      "soft-newsprint": "Мягкая газета",
+      "hard-contrast": "Жёсткий контраст",
+      "paper-dither": "Бумажный дизеринг",
+      "blurred-bloom": "Размытое свечение"
+    }
+  },
+  "notice": {
+    "dismiss": "Закрыть уведомление",
+    "demoLoaded": "Загружено демо-изображение",
+    "autoTuneApplied": "Применён автоподбор: {{detail}}",
+    "outputClamped": "Вывод ограничен: {{detail}}",
+    "outputAutoSized": "Размер вывода: {{detail}}",
+    "settingsCopied": "Настройки скопированы в буфер",
+    "settingsPasted": "Настройки вставлены из буфера",
+    "lookCopied": "Ссылка на стиль скопирована",
+    "lookPasted": "Стиль вставлен из буфера",
+    "lookAppliedFromUrl": "Стиль применён из ссылки",
+    "paletteImported": "Палитра импортирована",
+    "paletteImportedClipboard": "Палитра импортирована из буфера",
+    "paletteJsonCopied": "JSON палитры скопирован",
+    "paletteJsonExported": "JSON палитры экспортирован",
+    "paletteGplExported": "GPL палитры экспортирован",
+    "paletteExtracted": "Палитра извлечена: {{detail}}",
+    "customPaletteReplaced": "Своя палитра заменена",
+    "lookRecipeSaved": "Стиль сохранён: {{name}}",
+    "imageCopied": "Изображение скопировано в буфер",
+    "imageCopyFailed": "Не удалось скопировать изображение",
+    "imageCopyUnsupported": "Копирование изображений в буфер не поддерживается в этом браузере"
   },
   "manual": {
     "output": "Вывод",
     "tone": "Тон",
     "utility": "Утилиты",
+    "effects": "Эффекты",
+    "preEffects": "До дизеринга",
+    "postEffects": "После дизеринга",
+    "modified": "Изменено",
     "width": "Ширина",
     "heightInferred": "Высота вычислена: {{height}}px / пропорции {{aspect}}",
     "resetWidth": "Сбросить ширину до размера источника",
+    "scalePreset": "Установить ширину {{scale}}",
     "resizeKernel": "Ядро ресайза",
+    "resizeBilinear": "Билинейный",
+    "resizeNearest": "Ближайший",
     "alphaFlatten": "Сведение альфы",
     "white": "Белый",
     "black": "Чёрный",
@@ -129,7 +278,10 @@
     "gamma": "Гамма",
     "invertLabel": "Инвертировать до палитры",
     "invertDesc": "Применяется после тоновой предобработки.",
+    "colorDepth": "Глубина цвета",
+    "colorDepthFull": "Все",
     "paletteSwatches": "Образцы палитры",
+    "moreSwatches": "Ещё {{count}} цв.",
     "pickSwatchColor": "Выбрать цвет образца палитры {{n}}",
     "halftoneScreen": "Полутоновый растр",
     "dotShape": "Форма точки",
@@ -141,6 +293,18 @@
     "patternSize": "Размер узора",
     "patternSizeItem": "{{n}} на {{n}}",
     "algorithm": "Алгоритм",
+    "algorithmFamilies": {
+      "directMapping": "Прямое сопоставление",
+      "ordered": "Упорядоченный",
+      "errorDiffusion": "Диффузия ошибок",
+      "blueNoise": "Синий шум",
+      "halftone": "Полутон"
+    },
+    "algorithms": {
+      "none": "Без дизеринга",
+      "blue-noise": "Синий шум",
+      "halftone-dot": "Полутоновый растр"
+    },
     "randomAlgorithm": "Случайный алгоритм",
     "bayerMatrix": "Матрица Байера",
     "randomPalette": "Случайная палитра",
@@ -154,9 +318,32 @@
     "temporalGlobalPalette": "Глобальная палитра",
     "temporalNoneDesc": "Каждый кадр дизерится независимо.",
     "temporalGlobalPaletteDesc": "Единая палитра, извлечённая из всех кадров. Уменьшает мерцание GIF.",
-    "addPreStage": "Добавить pre-этап",
-    "addPostStage": "Добавить post-этап",
+    "addPreStage": "Добавить эффект до",
+    "addPostStage": "Добавить эффект после",
+    "effectBlur": "Размытие",
+    "effectContrastShape": "Кривая контраста",
+    "effectGrain": "Зерно",
+    "effectEdgeThreshold": "Контуры",
+    "effectPaperNoise": "Фактура бумаги",
+    "effectCrtBloom": "Свечение CRT",
     "effectInvert": "Инвертировать результат",
+    "effectParams": {
+      "radius": "Радиус",
+      "amount": "Сила",
+      "curve": "Кривая",
+      "seed": "Сид",
+      "threshold": "Порог",
+      "strength": "Интенсивность",
+      "scale": "Масштаб",
+      "intensity": "Интенсивность"
+    },
+    "effectParamOptions": {
+      "soft": "Мягкая",
+      "medium": "Средняя",
+      "hard": "Жёсткая"
+    },
+    "noParameters": "Нет параметров",
+    "enableStage": "Переключить {{name}}",
     "dragStage": "Перетащить этап",
     "removeStage": "Удалить этап",
     "stageActions": "Действия с этапом",
@@ -166,12 +353,20 @@
     "unknown": "Неизвестно",
     "paletteEditor": "Редактор своей палитры",
     "paletteEditorDesc": "Добавление, правка, копирование и экспорт цветов своей палитры.",
+    "paletteLimitAria": "Использовано {{count}} из {{max}} цветов",
+    "paletteTools": "Инструменты импорта и экспорта палитры",
     "customPalette": "Своя палитра",
     "extractPalette": "Извлечь палитру",
+    "extractFromImage": "Извлечь из изображения",
+    "extractAction": "Извлечь",
+    "extractColorCount": "Количество извлекаемых цветов",
     "addColor": "Добавить цвет",
     "importFile": "Импорт файла",
+    "importFileShort": "Импорт",
     "copyToClipboard": "Копировать в буфер",
+    "copyJson": "Копировать JSON",
     "pasteFromClipboard": "Вставить из буфера",
+    "pastePalette": "Вставить",
     "exportJson": "Экспорт JSON",
     "exportGpl": "Экспорт GPL",
     "colorPickers": "Пипетки",
@@ -181,33 +376,39 @@
     "deleteColor": "Удалить цвет {{n}}",
     "hexColor": "HEX-цвет {{n}}",
     "preset": "ПРЕСЕТ",
-    "look": "Look",
-    "saveLookRecipe": "Сохранить look-рецепт",
-    "lookRecipeName": "Название look-рецепта",
+    "lookRecipe": "Рецепт стиля",
+    "look": "Стиль",
+    "saveLookRecipe": "Сохранить стиль",
+    "lookRecipeName": "Название стиля",
     "save": "Сохранить",
-    "lookRecipeMenu": "Меню look-рецепта",
+    "lookRecipeMenu": "Меню стиля",
     "rename": "Переименовать",
-    "renameLook": "Переименовать look-рецепт",
+    "renameLook": "Переименовать стиль",
     "delete": "Удалить",
-    "copyLookLink": "Копировать look-ссылку",
-    "pasteLookLink": "Вставить look-ссылку",
+    "copyLookLink": "Ссылка на стиль",
+    "pasteLookLink": "Вставить ссылку",
     "settingsJson": "Настройки JSON",
     "copySettings": "Копировать настройки",
     "pasteSettings": "Вставить настройки",
-    "defaults": "По умолчанию"
+    "defaults": "Сбросить настройки"
   },
   "error": {
     "settingsCopyFailed": "Не удалось скопировать настройки",
     "settingsPasteFailed": "Не удалось вставить настройки",
-    "lookCopyFailed": "Не удалось скопировать look",
-    "lookPasteFailed": "Не удалось вставить look",
+    "lookCopyFailed": "Не удалось скопировать стиль",
+    "lookPasteFailed": "Не удалось вставить стиль",
+    "lookImportFailed": "Не удалось импортировать стиль",
+    "lookPayloadEmpty": "Данные стиля пусты",
     "paletteCopyFailed": "Не удалось скопировать палитру",
+    "paletteImportFailed": "Не удалось импортировать палитру",
+    "paletteClipboardImportFailed": "Не удалось импортировать палитру из буфера",
     "paletteExportFailed": "Не удалось экспортировать палитру",
     "paletteExtractionFailed": "Не удалось извлечь палитру",
-    "autoTuneApplyFailed": "Не удалось применить Auto-Tune",
+    "autoTuneApplyFailed": "Не удалось применить автоподбор",
     "exportFailed": "Не удалось экспортировать",
     "exportNoSource": "Для экспорта требуется исходное изображение",
     "animatedExportFailed": "Не удалось экспортировать {{format}}",
+    "webmRequiresWebCodecs": "Экспорт WebM требует поддержку WebCodecs в этом браузере",
     "imageDecodeFailed": "Не удалось декодировать изображение",
     "imageIntakeWorkerFailed": "Сбой обработчика загрузки изображения",
     "gifProcessingFailed": "Не удалось обработать GIF",

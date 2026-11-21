@@ -29,13 +29,19 @@ function DrawerClose({
 
 function DrawerOverlay({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Overlay> & {
+  variant?: "default" | "subtle"
+}) {
   return (
     <DrawerPrimitive.Overlay
+      data-overlay-variant={variant}
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-foreground/16 supports-backdrop-filter:bg-foreground/12 supports-backdrop-filter:backdrop-blur-[1px] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        variant === "subtle"
+          ? "fixed inset-0 z-50 bg-foreground/8 md:bg-transparent data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          : "fixed inset-0 z-50 bg-foreground/16 supports-backdrop-filter:bg-foreground/12 supports-backdrop-filter:backdrop-blur-[1px] data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -46,15 +52,19 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  overlayVariant = "default",
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  overlayVariant?: "default" | "subtle"
+}) {
   return (
     <DrawerPortal data-slot="drawer-portal">
-      <DrawerOverlay />
+      <DrawerOverlay variant={overlayVariant} />
       <DrawerPrimitive.Content
+        data-overlay-variant={overlayVariant}
         data-slot="drawer-content"
         className={cn(
-          "group/drawer-content fixed z-50 flex h-auto flex-col border-border bg-[var(--surface-inspector)] text-sm text-foreground shadow-none outline-none data-[vaul-drawer-direction=bottom]:inset-x-2 data-[vaul-drawer-direction=bottom]:bottom-2 data-[vaul-drawer-direction=bottom]:mt-16 data-[vaul-drawer-direction=bottom]:max-h-[min(82dvh,42rem)] data-[vaul-drawer-direction=bottom]:rounded-[var(--radius)] data-[vaul-drawer-direction=bottom]:border data-[vaul-drawer-direction=left]:inset-y-2 data-[vaul-drawer-direction=left]:left-2 data-[vaul-drawer-direction=left]:w-[min(24rem,calc(100vw-1rem))] data-[vaul-drawer-direction=left]:rounded-[var(--radius)] data-[vaul-drawer-direction=left]:border data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:w-[min(24rem,calc(100vw-1rem))] data-[vaul-drawer-direction=right]:rounded-[var(--radius)] data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=top]:inset-x-2 data-[vaul-drawer-direction=top]:top-2 data-[vaul-drawer-direction=top]:mb-16 data-[vaul-drawer-direction=top]:max-h-[min(82dvh,42rem)] data-[vaul-drawer-direction=top]:rounded-[var(--radius)] data-[vaul-drawer-direction=top]:border",
+          "group/drawer-content fixed z-50 flex h-auto flex-col border-border bg-[var(--surface-inspector)] text-sm text-foreground shadow-[var(--shadow-drawer)] outline-none data-[vaul-drawer-direction=bottom]:inset-x-2 data-[vaul-drawer-direction=bottom]:bottom-2 data-[vaul-drawer-direction=bottom]:mt-16 data-[vaul-drawer-direction=bottom]:max-h-[min(82dvh,42rem)] data-[vaul-drawer-direction=bottom]:rounded-[var(--radius)] data-[vaul-drawer-direction=bottom]:border data-[vaul-drawer-direction=left]:inset-y-2 data-[vaul-drawer-direction=left]:left-2 data-[vaul-drawer-direction=left]:w-[min(24rem,calc(100vw-1rem))] data-[vaul-drawer-direction=left]:rounded-[var(--radius)] data-[vaul-drawer-direction=left]:border data-[vaul-drawer-direction=right]:inset-y-2 data-[vaul-drawer-direction=right]:right-2 data-[vaul-drawer-direction=right]:w-[min(24rem,calc(100vw-1rem))] data-[vaul-drawer-direction=right]:rounded-[var(--radius)] data-[vaul-drawer-direction=right]:border data-[vaul-drawer-direction=top]:inset-x-2 data-[vaul-drawer-direction=top]:top-2 data-[vaul-drawer-direction=top]:mb-16 data-[vaul-drawer-direction=top]:max-h-[min(82dvh,42rem)] data-[vaul-drawer-direction=top]:rounded-[var(--radius)] data-[vaul-drawer-direction=top]:border",
           className
         )}
         {...props}
@@ -71,7 +81,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="drawer-header"
       className={cn(
-        "flex flex-col gap-1 border-b border-border px-3 py-2 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left group-data-[vaul-drawer-direction=top]/drawer-content:text-left",
+        "flex flex-col gap-1 border-b border-border px-3.5 py-2.5 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left group-data-[vaul-drawer-direction=top]/drawer-content:text-left",
         className
       )}
       {...props}
@@ -84,7 +94,7 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="drawer-footer"
       className={cn(
-        "mt-auto flex flex-col gap-2 border-t border-border px-3 py-2",
+        "mt-auto flex flex-col gap-2 border-t border-border px-3.5 py-3",
         className
       )}
       {...props}

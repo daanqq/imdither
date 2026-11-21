@@ -21,28 +21,36 @@ export function HistoryControls({
   const { t } = useTranslation()
 
   return (
-    <div className={cn("grid h-full w-full grid-cols-2 gap-2", className)}>
+    <div className={cn("flex shrink-0 items-center gap-1.5", className)}>
       <Button
+        type="button"
         aria-label={t("history.undoAria")}
-        className="h-full w-full gap-1 text-xs"
+        className="size-8 gap-1.5 px-0 text-xs whitespace-nowrap sm:h-8 sm:w-auto sm:px-2.5"
         disabled={!canUndo}
-        size="icon"
+        size="sm"
+        title={t("history.undoHint")}
         variant="outline"
         onClick={onUndo ?? noop}
       >
-        <Undo2Icon />
-        {t("history.undo")}
+        <Undo2Icon className="size-3.5 shrink-0" />
+        <span className="hidden whitespace-nowrap sm:inline">
+          {t("history.undo")}
+        </span>
       </Button>
       <Button
+        type="button"
         aria-label={t("history.redoAria")}
-        className="h-full w-full gap-1 text-xs"
+        className="size-8 gap-1.5 px-0 text-xs whitespace-nowrap sm:h-8 sm:w-auto sm:px-2.5"
         disabled={!canRedo}
-        size="icon"
+        size="sm"
+        title={t("history.redoHint")}
         variant="outline"
         onClick={onRedo ?? noop}
       >
-        <Redo2Icon />
-        {t("history.redo")}
+        <Redo2Icon className="size-3.5 shrink-0" />
+        <span className="hidden whitespace-nowrap sm:inline">
+          {t("history.redo")}
+        </span>
       </Button>
     </div>
   )

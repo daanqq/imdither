@@ -29,6 +29,12 @@ describe("AutoTunePanel", () => {
     expect(markup).toContain("Screenprint 16")
     expect(markup).toContain("Blue Noise")
     expect(markup).not.toContain("Details")
+    expect(markup).not.toContain("color-preserve")
+    expect(markup).not.toContain("grayscale-first")
+    expect(markup.match(/data-slot="palette-swatch-bar"/g)).toHaveLength(
+      DEMO_AUTO_TUNE_RECOMMENDATIONS.length
+    )
+    expect(markup).toContain("background-color:#ddd4c5")
     expect(markup).toContain(
       "Color-preserving print palette with perceptual matching."
     )

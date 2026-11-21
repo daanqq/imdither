@@ -146,6 +146,9 @@ vi.mock("@workspace/ui/components/drawer", () => ({
   Drawer: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  DrawerClose: ({ children }: { children: React.ReactNode }) => (
+    <span data-slot="drawer-close">{children}</span>
+  ),
   DrawerContent: ({ children }: { children: React.ReactNode }) => (
     <div data-slot="drawer-content">{children}</div>
   ),
@@ -250,11 +253,17 @@ describe("PreviewStage", () => {
     )
     downloadButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
+    const copyImageButton = buttonRenders.find(
+      (button) => button.title === "Copy rendered PNG image to clipboard"
+    )
+    copyImageButton?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+
     expect(onCommand).toHaveBeenCalledWith({
       kind: "source-replacement-intent",
       file,
     })
     expect(onCommand).toHaveBeenCalledWith({ kind: "export-intent" })
+    expect(onCommand).toHaveBeenCalledWith({ kind: "copy-image-intent" })
   })
 
   it("shows source rejection errors in the preview stage", () => {
@@ -327,7 +336,7 @@ describe("PreviewStage", () => {
     expect(onCommand).toHaveBeenCalledWith({ kind: "redo-settings-change" })
   })
 
-  it("cycles compare mode from the floating preview control", () => {
+  it("switches compare mode directly from the 3-way segmented HUD control", () => {
     const onCommand = vi.fn()
     const model = makeModel()
 
@@ -335,25 +344,22 @@ describe("PreviewStage", () => {
       <PreviewStage model={model} onCommand={onCommand} />
     )
 
-    buttonRenders
-      .find(
-        (button) => button["aria-label"] === "Switch compare mode to Original"
-      )
-      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+    expect(markup).toContain("Split")
+    expect(markup).toContain("Result")
+    expect(markup).toContain("Original")
 
-    expect(markup).toContain("Processed")
-    expect(
-      renderToStaticMarkup(
-        <PreviewStage
-          model={makeModel({ compareMode: "slide" })}
-          onCommand={vi.fn()}
-        />
-      )
-    ).toContain("Comparison")
+    toggleGroupItemRenders
+      .find((item) => item.value === "original")
+      ?.onClick?.()
+    toggleGroupItemRenders.find((item) => item.value === "slide")?.onClick?.()
 
     expect(onCommand).toHaveBeenCalledWith({
       kind: "compare-mode-changed",
       mode: "original",
+    })
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "compare-mode-changed",
+      mode: "slide",
     })
   })
 
@@ -374,7 +380,7 @@ describe("PreviewStage", () => {
       />
     )
 
-    renderToStaticMarkup(
+    const pngMarkup = renderToStaticMarkup(
       <PreviewStage
         model={makeModel({ exportFormat: "png", exportQuality: 0.75 })}
         onCommand={vi.fn()}
@@ -387,11 +393,14 @@ describe("PreviewStage", () => {
     expect(markup).not.toContain("Palette JSON")
     expect(markup).not.toContain("Palette GPL")
     expect(inputRenders.some((input) => input.type === "range")).toBe(false)
-    expect(sliderRenders.find((slider) => slider.max === 1)).toBeDefined()
-    expect(sliderRenders.at(-1)).toMatchObject({
-      disabled: true,
-      value: [1],
+    const qualitySliders = sliderRenders.filter((slider) => slider.max === 1)
+    expect(qualitySliders).toHaveLength(2)
+    expect(qualitySliders.at(-1)).toMatchObject({
+      disabled: false,
+      value: [0.75],
     })
+    expect(pngMarkup).toContain('data-slot="export-lossless-badge"')
+    expect(pngMarkup).toContain("Lossless · 100%")
     expect(onCommand).not.toHaveBeenCalled()
   })
 
@@ -516,7 +525,7 @@ describe("PreviewStage", () => {
     expect(html).toContain("width:1982px")
   })
 
-  it("keeps inspection controls in the preview toolbar", () => {
+  it("keeps inspection controls in the preview toolbar without redundant 1:1 button", () => {
     const onCommand = vi.fn()
     const model = makeModel({
       algorithm: "bayer",
@@ -535,15 +544,21 @@ describe("PreviewStage", () => {
       },
     })
 
-    renderToStaticMarkup(<PreviewStage model={model} onCommand={onCommand} />)
+    const markup = renderToStaticMarkup(
+      <PreviewStage model={model} onCommand={onCommand} />
+    )
 
     const zoomSlider = sliderRenders.find((slider) => slider.max === 16)
 
     zoomSlider?.onValueChange?.([5])
-    buttonRenders
-      .find((button) => button["aria-label"] === "Set output pixels to 1:1")
-      ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
+    toggleGroupItemRenders.find((item) => item.value === "manual")?.onClick?.()
 
+    expect(markup).toContain("400%")
+    expect(
+      buttonRenders.some(
+        (button) => button["aria-label"] === "Set output pixels to 1:1"
+      )
+    ).toBe(false)
     expect(zoomSlider).toMatchObject({
       min: MIN_PREVIEW_ZOOM,
       max: 16,
@@ -584,7 +599,7 @@ describe("PreviewStage", () => {
 
     zoomSlider?.onValueChange?.([5])
     buttonRenders
-      .find((button) => button["aria-label"] === "Set output pixels to 1:1")
+      .find((button) => button["aria-label"] === "Zoom in")
       ?.onClick?.({} as React.MouseEvent<HTMLButtonElement>)
 
     expect(zoomSlider).toMatchObject({
@@ -593,9 +608,10 @@ describe("PreviewStage", () => {
       step: 0.25,
     })
     expect(
-      buttonRenders.some(
-        (button) => button["aria-label"] === "Set output pixels to 1:1"
-      )
+      buttonRenders.some((button) => button["aria-label"] === "Zoom in")
+    ).toBe(true)
+    expect(
+      buttonRenders.some((button) => button["aria-label"] === "Zoom out")
     ).toBe(true)
     expect(
       buttonRenders.some(
@@ -608,7 +624,7 @@ describe("PreviewStage", () => {
     })
     expect(onCommand).toHaveBeenCalledWith({
       kind: "preview-viewport-changed",
-      viewport: { mode: "manual", zoom: 1, center: { x: 1, y: 1 } },
+      viewport: { mode: "manual", zoom: 1.25, center: { x: 1, y: 1 } },
     })
   })
 

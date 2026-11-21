@@ -124,4 +124,23 @@ describe("SourceErrorOverlay", () => {
     expect(html).toContain('role="alert"')
     expect(html).toContain("text-destructive")
   })
+
+  it("positions overlays below the top HUD bar to avoid colliding with surface controls", () => {
+    const processingHtml = renderToStaticMarkup(
+      <ProcessingOverlay
+        algorithm="floyd-steinberg"
+        busy
+        previewReduced={false}
+        status="processing"
+      />
+    )
+    const errorHtml = renderToStaticMarkup(
+      <SourceErrorOverlay error="Bad source" status="error" />
+    )
+
+    expect(processingHtml).toContain("top-14")
+    expect(processingHtml).not.toContain("top-2")
+    expect(errorHtml).toContain("top-14")
+    expect(errorHtml).not.toContain("top-2")
+  })
 })

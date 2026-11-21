@@ -1,5 +1,7 @@
 import * as React from "react"
 import { cn } from "@workspace/ui/lib/utils"
+import { ChevronsLeftRightIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { PreviewPresentationSurface } from "@/components/preview-presentation"
 import { drawPixelBuffer, drawPixelBufferToCanvasSize } from "@/lib/image"
@@ -23,6 +25,8 @@ import {
   usePreviewSurfaceLifecycle,
 } from "@/components/preview-surface-lifecycle"
 
+const EDGE_LABEL_HIDE_THRESHOLD = 18
+
 export const SlideComparePreview = React.memo(function SlideComparePreview({
   dividerPercent,
   displayModel,
@@ -36,6 +40,7 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   onViewportChange,
   onViewportBoxChange,
 }: SlideComparePreviewProps) {
+  const { t } = useTranslation()
   const surfaceLifecycle = usePreviewSurfaceLifecycle()
   const originalCanvasRef = React.useRef<HTMLCanvasElement>(null)
   const processedCanvasRef = React.useRef<HTMLCanvasElement>(null)
@@ -43,6 +48,8 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
   const viewportRef = React.useRef(previewViewport ?? null)
   const dividerLineRef = React.useRef<HTMLDivElement>(null)
   const dividerHandleRef = React.useRef<HTMLButtonElement>(null)
+  const originalLabelRef = React.useRef<HTMLSpanElement>(null)
+  const processedLabelRef = React.useRef<HTMLSpanElement>(null)
   const dividerPercentRef = React.useRef(clampSlideDivider(dividerPercent))
   const pendingDividerPercentRef = React.useRef(dividerPercentRef.current)
   const dividerAnimationFrameRef = React.useRef<number | null>(null)
@@ -70,10 +77,13 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     viewport: previewViewport,
     viewportBox,
   })
+  const hideOriginalLabel = dividerViewportPercent < EDGE_LABEL_HIDE_THRESHOLD
+  const hideProcessedLabel =
+    dividerViewportPercent > 100 - EDGE_LABEL_HIDE_THRESHOLD
   const dividerLine = processedReady ? (
     <div
       ref={dividerLineRef}
-      className="pointer-events-none absolute inset-y-0 w-px bg-primary ring-1 ring-background/75"
+      className="pointer-events-none absolute inset-y-0 w-[1.5px] -translate-x-1/2 bg-primary shadow-[0_0_0_1px_color-mix(in_srgb,var(--background)_70%,transparent)]"
       style={{ left: `${effectiveDividerPercent}%` }}
     />
   ) : null
@@ -81,11 +91,11 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
     <button
       ref={dividerHandleRef}
       type="button"
-      aria-label="Slide comparison divider"
+      aria-label={t("compare.dividerAria")}
       aria-valuemax={SLIDE_COMPARE_MAX}
       aria-valuemin={SLIDE_COMPARE_MIN}
       aria-valuenow={Math.round(clampedDivider)}
-      className="absolute top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 border border-primary bg-background font-mono text-[10px] text-primary ring-2 ring-background/75 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="absolute top-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize items-center justify-center rounded-full border border-border bg-[var(--surface-hud)] text-foreground shadow-[var(--shadow-hud)] backdrop-blur-md transition-[transform,border-color,color] duration-150 ease-out outline-none hover:scale-105 hover:border-primary/70 hover:text-primary focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-95"
       role="slider"
       style={{ left: `${dividerViewportPercent}%`, touchAction: "none" }}
       onKeyDown={handleKeyDown}
@@ -116,8 +126,36 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         isDividerDraggingRef.current = false
       }}
     >
-      ||
+      <ChevronsLeftRightIcon aria-hidden="true" className="size-4" />
     </button>
+  ) : null
+  const cornerLabels = processedReady ? (
+    <>
+      <span
+        ref={originalLabelRef}
+        aria-hidden="true"
+        data-hidden={hideOriginalLabel}
+        data-slot="slide-label-original"
+        className={cn(
+          "pointer-events-none absolute bottom-2.5 left-2.5 z-10 rounded-sm border border-border/80 bg-[var(--surface-hud)] px-1.5 py-0.5 font-sans text-[10px] leading-none font-medium text-foreground shadow-[var(--shadow-control)] backdrop-blur-sm transition-opacity duration-150",
+          hideOriginalLabel && "opacity-0"
+        )}
+      >
+        {t("compare.original")}
+      </span>
+      <span
+        ref={processedLabelRef}
+        aria-hidden="true"
+        data-hidden={hideProcessedLabel}
+        data-slot="slide-label-processed"
+        className={cn(
+          "pointer-events-none absolute right-2.5 bottom-2.5 z-10 rounded-sm border border-border/80 bg-[var(--surface-hud)] px-1.5 py-0.5 font-sans text-[10px] leading-none font-medium text-foreground shadow-[var(--shadow-control)] backdrop-blur-sm transition-opacity duration-150",
+          hideProcessedLabel && "opacity-0"
+        )}
+      >
+        {t("compare.result")}
+      </span>
+    </>
   ) : null
   const applyDividerVisual = React.useCallback(
     (percent: number) => {
@@ -150,6 +188,26 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
         dividerHandleRef.current.setAttribute(
           "aria-valuenow",
           String(Math.round(nextPercent))
+        )
+      }
+
+      const shouldHideOriginal = nextViewportPercent < EDGE_LABEL_HIDE_THRESHOLD
+      const shouldHideProcessed =
+        nextViewportPercent > 100 - EDGE_LABEL_HIDE_THRESHOLD
+
+      if (originalLabelRef.current) {
+        originalLabelRef.current.style.opacity = shouldHideOriginal ? "0" : ""
+        originalLabelRef.current.setAttribute(
+          "data-hidden",
+          String(shouldHideOriginal)
+        )
+      }
+
+      if (processedLabelRef.current) {
+        processedLabelRef.current.style.opacity = shouldHideProcessed ? "0" : ""
+        processedLabelRef.current.setAttribute(
+          "data-hidden",
+          String(shouldHideProcessed)
         )
       }
     },
@@ -352,10 +410,15 @@ export const SlideComparePreview = React.memo(function SlideComparePreview({
                   dividerLine
                 ) : (
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-background/80 p-2 font-mono text-[11px] text-muted-foreground">
-                    [{status ?? "processing"}]
+                    [
+                    {t(`preview.status.${status ?? "processing"}`, {
+                      defaultValue: status ?? "processing",
+                    })}
+                    ]
                   </div>
                 )}
               </div>
+              {cornerLabels}
               {dividerHandle}
             </>
           )

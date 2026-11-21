@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Button } from "@workspace/ui/components/button"
 import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { cn } from "@workspace/ui/lib/utils"
 import { RotateCcwIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -11,6 +12,7 @@ export type CommittedSliderFieldProps = {
   max: number
   step: number
   value: number
+  unit?: string
   onCommit: (value: number) => void
 }
 
@@ -21,6 +23,7 @@ export function CommittedSliderField({
   min,
   onCommit,
   step,
+  unit,
   value,
 }: CommittedSliderFieldProps) {
   const { t } = useTranslation()
@@ -31,9 +34,13 @@ export function CommittedSliderField({
   const draftValueRef = React.useRef(value)
   const resetLabel = t("slider.reset", {
     label,
-    value: formatSliderValue(defaultValue),
+    value: formatSliderValueWithUnit(defaultValue, unit),
   })
   const canReset = canResetValue(value, defaultValue, step)
+  const isBipolar = isBipolarRange(min, max)
+  const zeroPercent = isBipolar ? getSliderPercent(0, min, max) : 0
+  const fill = getSliderFillRange(value, min, max)
+  const needsUnitSpace = unit ? /^[a-zA-Z]/.test(unit) : false
 
   React.useEffect(() => {
     committedValueRef.current = value
@@ -117,21 +124,36 @@ export function CommittedSliderField({
   }
 
   return (
-    <Field>
-      <div className="flex items-center justify-between gap-3">
+    <Field className="gap-1">
+      <div className="flex items-center justify-between gap-2">
         <FieldLabel>{label}</FieldLabel>
-        <div className="flex items-center gap-1.5">
-          <span
-            ref={valueTextRef}
-            className="font-mono text-xs text-muted-foreground"
-          >
-            {formatSliderValue(value)}
+        <div className="flex items-center gap-1">
+          <span className="inline-flex items-baseline font-mono text-xs text-muted-foreground tabular-nums">
+            <span ref={valueTextRef}>{formatSliderValue(value)}</span>
+            {unit ? (
+              <span
+                data-slot="committed-slider-unit"
+                className={cn(
+                  "text-[11px] text-muted-foreground/80",
+                  needsUnitSpace && "ml-0.5"
+                )}
+              >
+                {unit}
+              </span>
+            ) : null}
           </span>
           <Button
             ref={resetButtonRef}
+            aria-hidden={!canReset || undefined}
             aria-label={resetLabel}
+            className={cn(
+              "transition-opacity duration-150 disabled:pointer-events-none disabled:opacity-0",
+              !canReset && "pointer-events-none opacity-0"
+            )}
+            data-dirty={canReset ? "true" : "false"}
             disabled={!canReset}
             size="icon-xs"
+            tabIndex={canReset ? 0 : -1}
             title={resetLabel}
             type="button"
             variant="ghost"
@@ -141,27 +163,40 @@ export function CommittedSliderField({
           </Button>
         </div>
       </div>
-      <input
-        ref={inputRef}
-        aria-label={label}
-        className="w-full"
-        data-slot="committed-range-slider"
-        defaultValue={value}
-        max={max}
-        min={min}
-        step={step}
-        style={
-          {
-            "--committed-slider-percent": `${getSliderPercent(value, min, max)}%`,
-          } as React.CSSProperties
-        }
-        type="range"
-        onBlur={commitCurrentValue}
-        onInput={updateDraftValue}
-        onKeyUp={handleKeyUp}
-        onPointerCancel={commitCurrentValue}
-        onPointerUp={commitCurrentValue}
-      />
+      <div className="relative flex w-full items-center">
+        {isBipolar ? (
+          <span
+            aria-hidden="true"
+            data-slot="committed-slider-center-tick"
+            className="pointer-events-none absolute top-1/2 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/25"
+            style={{ left: `${zeroPercent}%` }}
+          />
+        ) : null}
+        <input
+          ref={inputRef}
+          aria-label={label}
+          className="relative z-10 w-full"
+          data-bipolar={isBipolar ? "true" : undefined}
+          data-slot="committed-range-slider"
+          defaultValue={value}
+          max={max}
+          min={min}
+          step={step}
+          style={
+            {
+              "--committed-slider-percent": `${fill.percent}%`,
+              "--committed-slider-fill-start": `${fill.start}%`,
+              "--committed-slider-fill-end": `${fill.end}%`,
+            } as React.CSSProperties
+          }
+          type="range"
+          onBlur={commitCurrentValue}
+          onInput={updateDraftValue}
+          onKeyUp={handleKeyUp}
+          onPointerCancel={commitCurrentValue}
+          onPointerUp={commitCurrentValue}
+        />
+      </div>
     </Field>
   )
 }
@@ -186,11 +221,11 @@ function applyDraftValue({
   valueText: HTMLSpanElement | null
 }) {
   if (input) {
+    const fill = getSliderFillRange(value, min, max)
     input.value = String(value)
-    input.style.setProperty(
-      "--committed-slider-percent",
-      `${getSliderPercent(value, min, max)}%`
-    )
+    input.style.setProperty("--committed-slider-percent", `${fill.percent}%`)
+    input.style.setProperty("--committed-slider-fill-start", `${fill.start}%`)
+    input.style.setProperty("--committed-slider-fill-end", `${fill.end}%`)
   }
 
   if (valueText) {
@@ -198,8 +233,22 @@ function applyDraftValue({
   }
 
   if (resetButton) {
-    resetButton.disabled = !canResetValue(value, defaultValue, step)
+    const nextCanReset = canResetValue(value, defaultValue, step)
+    resetButton.disabled = !nextCanReset
+    resetButton.dataset.dirty = nextCanReset ? "true" : "false"
+    resetButton.tabIndex = nextCanReset ? 0 : -1
+    if (nextCanReset) {
+      resetButton.removeAttribute("aria-hidden")
+      resetButton.classList.remove("opacity-0", "pointer-events-none")
+    } else {
+      resetButton.setAttribute("aria-hidden", "true")
+      resetButton.classList.add("opacity-0", "pointer-events-none")
+    }
   }
+}
+
+function isBipolarRange(min: number, max: number) {
+  return min < 0 && max > 0
 }
 
 function normalizeSliderValue(value: number, min: number, max: number) {
@@ -218,10 +267,34 @@ function getSliderPercent(value: number, min: number, max: number) {
   return ((normalizeSliderValue(value, min, max) - min) / (max - min)) * 100
 }
 
+function getSliderFillRange(value: number, min: number, max: number) {
+  const percent = getSliderPercent(value, min, max)
+  if (!isBipolarRange(min, max)) {
+    return { percent, start: 0, end: percent }
+  }
+
+  const zeroPercent = getSliderPercent(0, min, max)
+  return {
+    percent,
+    start: Math.min(zeroPercent, percent),
+    end: Math.max(zeroPercent, percent),
+  }
+}
+
 function canResetValue(value: number, defaultValue: number, step: number) {
   return Math.abs(value - defaultValue) >= step / 2
 }
 
 function formatSliderValue(value: number): string | number {
   return Number.isInteger(value) ? value : value.toFixed(2)
+}
+
+function formatSliderValueWithUnit(value: number, unit?: string): string {
+  const formatted = String(formatSliderValue(value))
+  if (!unit) {
+    return formatted
+  }
+
+  const separator = /^[a-zA-Z]/.test(unit) ? " " : ""
+  return `${formatted}${separator}${unit}`
 }

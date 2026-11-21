@@ -59,7 +59,7 @@ export async function applyMotionExportAction(
       command.animatedExportFormat === "webm" &&
       !command.webCodecsAvailable
     ) {
-      throw new Error("WebM export requires WebCodecs support in this browser")
+      throw new Error(i18n.t("error.webmRequiresWebCodecs"))
     }
 
     const encoder = selectEncoder(command.animatedExportFormat, dependencies)

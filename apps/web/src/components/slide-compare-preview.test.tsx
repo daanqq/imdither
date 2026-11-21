@@ -74,6 +74,48 @@ describe("SlideComparePreview", () => {
     expect(html).toContain('aria-valuemin="2"')
     expect(html).toContain('aria-valuemax="98"')
     expect(html).not.toContain("[processing]")
+    expect(html).not.toContain(">||<")
+    expect(html).toContain("<svg")
+    expect(html).toContain('data-slot="slide-label-original"')
+    expect(html).toContain('data-slot="slide-label-processed"')
+    expect(html).toContain("Original")
+    expect(html).toContain("Result")
+  })
+
+  it("auto-hides split corner labels when the divider approaches either edge", () => {
+    const leftEdgeHtml = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={8}
+        displayModel={fitDisplayModel()}
+        original={makePixelBuffer(4, 3)}
+        processed={makePixelBuffer(4, 3)}
+        status="ready"
+        onDividerChange={() => {}}
+      />
+    )
+    const rightEdgeHtml = renderToStaticMarkup(
+      <SlideComparePreview
+        dividerPercent={92}
+        displayModel={fitDisplayModel()}
+        original={makePixelBuffer(4, 3)}
+        processed={makePixelBuffer(4, 3)}
+        status="ready"
+        onDividerChange={() => {}}
+      />
+    )
+
+    expect(leftEdgeHtml).toContain(
+      'data-hidden="true" data-slot="slide-label-original"'
+    )
+    expect(leftEdgeHtml).toContain(
+      'data-hidden="false" data-slot="slide-label-processed"'
+    )
+    expect(rightEdgeHtml).toContain(
+      'data-hidden="false" data-slot="slide-label-original"'
+    )
+    expect(rightEdgeHtml).toContain(
+      'data-hidden="true" data-slot="slide-label-processed"'
+    )
   })
 
   it("keeps mobile drag gestures reserved for slide comparison", () => {

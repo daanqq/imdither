@@ -3,7 +3,9 @@ import type { EditorSettings } from "@workspace/core"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  applyCopyImageAction,
   applyExportAction,
+  type CopyImageActionRuntimeAdapter,
   type ExportActionRuntimeAdapter,
 } from "./export-action-application"
 import type { LoadedSource } from "./source-intake"
@@ -246,5 +248,108 @@ describe("applyExportAction", () => {
     expect(adapter.setError).not.toHaveBeenCalled()
     expect(adapter.setMetadata).not.toHaveBeenCalled()
     expect(adapter.downloadBlob).not.toHaveBeenCalled()
+  })
+})
+
+describe("applyCopyImageAction", () => {
+  function createCopyAdapter(): CopyImageActionRuntimeAdapter {
+    return {
+      setStatus: vi.fn(),
+      setSourceNotice: vi.fn(),
+    }
+  }
+
+  function createSource(): LoadedSource {
+    return {
+      id: "src-copy",
+      name: "photo.png",
+      buffer: { width: 4, height: 4, data: new Uint8ClampedArray(64) },
+      autoTuneAnalysisSample: {
+        width: 4,
+        height: 4,
+        data: new Uint8ClampedArray(64),
+      },
+      originalWidth: 4,
+      originalHeight: 4,
+    }
+  }
+
+  it("renders PNG blob, writes to clipboard, and surfaces success toast notice", async () => {
+    const adapter = createCopyAdapter()
+    const blob = new Blob(["png"], { type: "image/png" })
+    const runExportJob = vi.fn(async () => ({
+      type: "complete" as const,
+      jobId: 1,
+      image: { width: 4, height: 4, data: new Uint8ClampedArray(64) },
+      metadata: {
+        sourceWidth: 4,
+        sourceHeight: 4,
+        outputWidth: 4,
+        outputHeight: 4,
+        paletteSize: 2,
+        algorithmName: "floyd-steinberg",
+        processingTimeMs: 5,
+        exportFormat: "PNG",
+      },
+    }))
+    const encodePixelBuffer = vi.fn(async () => blob)
+    const writeImageToClipboard = vi.fn(async () => {})
+
+    await applyCopyImageAction(
+      {
+        source: createSource(),
+        settings: { alphaBackground: "white" } as EditorSettings,
+      },
+      adapter,
+      { runExportJob, encodePixelBuffer, writeImageToClipboard }
+    )
+
+    expect(encodePixelBuffer).toHaveBeenCalledWith(expect.any(Object), {
+      alphaBackground: "white",
+      format: "png",
+      quality: 1,
+    })
+    expect(writeImageToClipboard).toHaveBeenCalledWith(blob)
+    expect(adapter.setSourceNotice).toHaveBeenCalledWith(
+      "[IMAGE COPIED TO CLIPBOARD]"
+    )
+    expect(adapter.setStatus).toHaveBeenLastCalledWith("ready")
+  })
+
+  it("surfaces failure toast notice and restores ready status when clipboard write fails", async () => {
+    const adapter = createCopyAdapter()
+    const runExportJob = vi.fn(async () => ({
+      type: "complete" as const,
+      jobId: 2,
+      image: { width: 4, height: 4, data: new Uint8ClampedArray(64) },
+      metadata: {
+        sourceWidth: 4,
+        sourceHeight: 4,
+        outputWidth: 4,
+        outputHeight: 4,
+        paletteSize: 2,
+        algorithmName: "floyd-steinberg",
+        processingTimeMs: 5,
+        exportFormat: "PNG",
+      },
+    }))
+
+    await applyCopyImageAction(
+      {
+        source: createSource(),
+        settings: { alphaBackground: "white" } as EditorSettings,
+      },
+      adapter,
+      {
+        runExportJob,
+        encodePixelBuffer: vi.fn(async () => new Blob(["png"])),
+        writeImageToClipboard: vi.fn(async () => {
+          throw new Error("Permission denied")
+        }),
+      }
+    )
+
+    expect(adapter.setSourceNotice).toHaveBeenCalledWith("[IMAGE COPY FAILED]")
+    expect(adapter.setStatus).toHaveBeenLastCalledWith("ready")
   })
 })

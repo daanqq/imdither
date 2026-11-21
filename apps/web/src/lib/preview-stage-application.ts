@@ -1,4 +1,8 @@
-import type { DitherAlgorithm, PixelBuffer } from "@workspace/core"
+import type {
+  AlphaBackground,
+  DitherAlgorithm,
+  PixelBuffer,
+} from "@workspace/core"
 
 import type {
   AnimatedExportFormat,
@@ -10,11 +14,14 @@ import type { CompareMode, JobStatus } from "@/store/editor-store"
 
 export type PreviewStageInput = {
   algorithm: DitherAlgorithm
+  alphaBackground?: AlphaBackground
   compareMode: CompareMode
+  customPalette?: readonly string[]
   isDesktopViewScale: boolean
   original: PixelBuffer | null
   outputHeight: number
   outputWidth: number
+  paletteId?: string
   preview: PixelBuffer | null
   previewRefiningPending: boolean
   previewTargetHeight: number
@@ -38,14 +45,17 @@ export type PreviewStageInput = {
 
 export type PreviewProductState = {
   algorithm: DitherAlgorithm
+  alphaBackground: AlphaBackground
   busy: boolean
   compareMode: CompareMode
+  customPalette?: readonly string[]
   error: string | null
   isAnimated: boolean
   isDesktopViewScale: boolean
   original: PixelBuffer | null
   outputHeight: number
   outputWidth: number
+  paletteId: string
   preview: PixelBuffer | null
   previewRefiningPending: boolean
   previewReduced: boolean
@@ -111,6 +121,7 @@ export type PreviewStageCommand =
   | { kind: "source-replacement-intent"; file: File }
   | { kind: "invalid-drop"; message: string }
   | { kind: "export-intent" }
+  | { kind: "copy-image-intent" }
   | { kind: "export-format-changed"; format: ExportFormat }
   | { kind: "export-quality-changed"; quality: number }
   | {
@@ -136,6 +147,7 @@ export type PreviewStageRuntimeAdapter = {
   onFileSelected: (file: File) => void | Promise<void>
   onInvalidDrop: (message: string) => void
   onExport: () => void
+  onCopyImage?: () => void
   setExportFormat: (format: ExportFormat) => void
   setExportQuality: (quality: number) => void
   setMotionExportSettings: (settings: {
@@ -183,6 +195,9 @@ export function createPreviewStageApplication(
           break
         case "export-intent":
           adapter.onExport()
+          break
+        case "copy-image-intent":
+          adapter.onCopyImage?.()
           break
         case "export-format-changed":
           adapter.setExportFormat(command.format)
@@ -233,14 +248,17 @@ export function buildPreviewStageModel(
   return {
     product: {
       algorithm: input.algorithm,
+      alphaBackground: input.alphaBackground ?? "white",
       busy: cropBusy,
       compareMode: input.compareMode,
+      customPalette: input.customPalette,
       error: input.error,
       isAnimated: input.isAnimated,
       isDesktopViewScale: input.isDesktopViewScale,
       original: input.original,
       outputHeight: input.outputHeight,
       outputWidth: input.outputWidth,
+      paletteId: input.paletteId ?? "black-white",
       preview: input.preview,
       previewRefiningPending: input.previewRefiningPending,
       previewReduced: cropPreviewReduced,

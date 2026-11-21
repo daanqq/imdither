@@ -95,3 +95,102 @@ export async function applyExportAction(
     adapter.setStatus("error")
   }
 }
+
+export type CopyImageActionCommand = {
+  source: LoadedSource | null
+  fallbackBuffer?: PixelBuffer | null
+  settings: EditorSettings
+}
+
+export type CopyImageActionRuntimeAdapter = {
+  setStatus: (status: JobStatus) => void
+  setSourceNotice: (notice: string | null) => void
+}
+
+type CopyImageActionOptions = {
+  runExportJob?: (params: ExportJobParams) => Promise<DitherJobResult>
+  encodePixelBuffer?: (
+    buffer: PixelBuffer,
+    options: EncodePixelBufferOptions
+  ) => Promise<Blob>
+  writeImageToClipboard?: (blob: Blob) => Promise<void>
+}
+
+class CopyImageUnsupportedError extends Error {
+  constructor() {
+    super("Clipboard image copy is not supported")
+  }
+}
+
+async function defaultWriteImageToClipboard(blob: Blob): Promise<void> {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.clipboard?.write ||
+    typeof ClipboardItem === "undefined"
+  ) {
+    throw new CopyImageUnsupportedError()
+  }
+
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+}
+
+export async function applyCopyImageAction(
+  command: CopyImageActionCommand,
+  adapter: CopyImageActionRuntimeAdapter,
+  options: CopyImageActionOptions = {}
+): Promise<void> {
+  if (!command.source && !command.fallbackBuffer) {
+    return
+  }
+
+  if (
+    !options.writeImageToClipboard &&
+    (typeof navigator === "undefined" ||
+      !navigator.clipboard?.write ||
+      typeof ClipboardItem === "undefined")
+  ) {
+    adapter.setSourceNotice("[IMAGE COPY UNSUPPORTED]")
+    return
+  }
+
+  const encode = options.encodePixelBuffer ?? realEncodePixelBuffer
+  const writeImage =
+    options.writeImageToClipboard ?? defaultWriteImageToClipboard
+
+  adapter.setStatus("exporting")
+
+  try {
+    let imageBuffer: PixelBuffer | null = command.fallbackBuffer ?? null
+
+    if (command.source && options.runExportJob) {
+      const result = await options.runExportJob({
+        sourceKey: command.source.id,
+        image: command.source.buffer,
+        settings: command.settings,
+      })
+      imageBuffer = result.image
+    }
+
+    if (!imageBuffer) {
+      adapter.setSourceNotice("[IMAGE COPY FAILED]")
+      return
+    }
+
+    const blob = await encode(imageBuffer, {
+      alphaBackground: command.settings.alphaBackground,
+      format: "png",
+      quality: 1,
+    })
+
+    await writeImage(blob)
+    adapter.setSourceNotice("[IMAGE COPIED TO CLIPBOARD]")
+  } catch (copyError) {
+    if (copyError instanceof CopyImageUnsupportedError) {
+      adapter.setSourceNotice("[IMAGE COPY UNSUPPORTED]")
+    } else {
+      adapter.setSourceNotice("[IMAGE COPY FAILED]")
+    }
+  } finally {
+    adapter.setStatus("ready")
+  }
+}

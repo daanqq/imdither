@@ -87,7 +87,7 @@ async function executeImportFile(
     adapter.setError(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette import failed"
+        : i18n.t("error.paletteImportFailed")
     )
   }
 }
@@ -116,7 +116,7 @@ async function executeImportClipboard(
     adapter.setError(
       paletteError instanceof Error
         ? paletteError.message
-        : "Palette clipboard import failed"
+        : i18n.t("error.paletteClipboardImportFailed")
     )
   }
 }

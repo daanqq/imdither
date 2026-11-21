@@ -60,6 +60,7 @@ type EditorState = {
   status: JobStatus
   error: string | null
   sourceNotice: string | null
+  sourceNoticeVersion: number
   metadata: ProcessingMetadata | null
   transitionSettings: (
     transition: SettingsTransition,
@@ -133,6 +134,7 @@ export const useEditorStore = create<EditorState>()(
       status: "idle",
       error: null,
       sourceNotice: null,
+      sourceNoticeVersion: 0,
       metadata: null,
       transitionSettings: (transition, context, options = {}) => {
         let transitionResult: SettingsTransitionResult | null = null
@@ -170,7 +172,12 @@ export const useEditorStore = create<EditorState>()(
               ? resetPreviewViewportForOutputChange(state.previewViewport)
               : {}),
             ...(result.sourceNotice !== undefined
-              ? { sourceNotice: result.sourceNotice }
+              ? {
+                  sourceNotice: result.sourceNotice,
+                  sourceNoticeVersion: result.sourceNotice
+                    ? state.sourceNoticeVersion + 1
+                    : state.sourceNoticeVersion,
+                }
               : {}),
           }
         })
@@ -299,7 +306,13 @@ export const useEditorStore = create<EditorState>()(
         }),
       setStatus: (status) => set({ status }),
       setError: (error) => set({ error }),
-      setSourceNotice: (sourceNotice) => set({ sourceNotice }),
+      setSourceNotice: (sourceNotice) =>
+        set((state) => ({
+          sourceNotice,
+          sourceNoticeVersion: sourceNotice
+            ? state.sourceNoticeVersion + 1
+            : state.sourceNoticeVersion,
+        })),
       setMetadata: (metadata) => set({ metadata }),
       frameSequence: null,
       animatedSourceName: null,

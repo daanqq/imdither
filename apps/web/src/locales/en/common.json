@@ -1,4 +1,8 @@
 {
+  "common": {
+    "close": "Close",
+    "loading": "Loading"
+  },
   "theme": {
     "switchToDark": "Switch to dark theme",
     "switchToLight": "Switch to light theme",
@@ -6,7 +10,14 @@
     "light": "Light theme"
   },
   "language": {
-    "toggle": "Switch language"
+    "toggle": "Switch language",
+    "switchTo": "Switch language to {{lang}}"
+  },
+  "header": {
+    "demoSource": "Demo",
+    "sourceContext": "Active workspace summary",
+    "colorsCount_one": "{{count}} color",
+    "colorsCount_other": "{{count}} colors"
   },
   "tabs": {
     "looks": "Looks",
@@ -23,18 +34,30 @@
     "reducedDetail": "Showing reduced preview while full {{algorithm}} output catches up.",
     "queuedDetail": "Queued. Controls remain editable.",
     "workerRunningDetail": "{{algorithm}} worker is running. New changes replace queued preview.",
-    "sourceRejected": "SOURCE REJECTED"
+    "sourceRejected": "SOURCE REJECTED",
+    "status": {
+      "idle": "idle",
+      "queued": "queued",
+      "processing": "processing",
+      "ready": "ready",
+      "exporting": "exporting",
+      "error": "error"
+    }
   },
   "actions": {
     "upload": "Upload",
     "export": "Export",
-    "exporting": "Exporting"
+    "exporting": "Exporting",
+    "uploadHint": "Upload image or video",
+    "exportHint": "Open export options"
   },
   "history": {
     "undo": "Undo",
     "redo": "Redo",
     "undoAria": "Undo settings change",
-    "redoAria": "Redo settings change"
+    "redoAria": "Redo settings change",
+    "undoHint": "Undo (Ctrl/Cmd+Z)",
+    "redoHint": "Redo (Ctrl/Cmd+Shift+Z)"
   },
   "frameStrip": {
     "play": "Play",
@@ -43,10 +66,16 @@
     "nextFrame": "Next frame"
   },
   "compare": {
+    "modeGroup": "Preview comparison mode",
     "switchTo": "Switch compare mode to {{mode}}",
     "comparison": "Comparison",
+    "split": "Split",
+    "result": "Result",
     "processed": "Processed",
-    "original": "Original"
+    "original": "Original",
+    "cycleHint": "Cycle compare mode (C). Hold Space for Original.",
+    "holdSpaceHint": "Hold Space to peek Original",
+    "dividerAria": "Slide comparison divider"
   },
   "viewport": {
     "openControls": "Open preview view controls",
@@ -57,6 +86,9 @@
     "setOneToOne": "Set output pixels to 1:1",
     "zoom": "Zoom",
     "previewZoom": "Preview zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomShortcutHint": "Zoom controls (+ / - / 0)",
     "fitPreview": "Fit preview",
     "inspectPixels": "Inspect output pixels",
     "toggleInspector": "Toggle pixel inspector",
@@ -66,15 +98,29 @@
     "title": "Export",
     "animatedDescription": "Export all frames as an animated {{format}}.",
     "staticDescription": "Format and quality for final image download.",
+    "summaryHeading": "Output Summary",
+    "dimensions": "Dimensions",
+    "aspectRatio": "Aspect",
+    "algorithm": "Algorithm",
+    "palette": "Palette",
+    "estimatedSize": "Est. Size",
+    "calculatingSize": "Calculating...",
+    "sizeUnavailable": "--",
+    "frames": "Frames",
+    "frameRate": "Frame Rate",
+    "duration": "Duration",
     "format": "Export Format",
     "animatedFormat": "Animated export format",
     "quality": "Export Quality",
+    "losslessBadge": "Lossless · 100%",
     "formatLabel": "Export format",
     "webmUnavailable": "WebM requires WebCodecs (Chrome 94+, Firefox 130+, Safari 16.4+)",
     "gifNote": "GIF output uses the active palette. Palettes larger than 256 colors are not supported.",
     "apngNote": "APNG output uses 24-bit RGBA per frame. Palette matching and dithering still apply.",
     "webmNote": "WebM output uses VP9 lossy compression. Palette matching and dithering still apply.",
     "pngNote": "PNG exports remain lossless at 100%.",
+    "webpNote": "Compact modern format with alpha channel and adjustable quality.",
+    "jpegNote": "Small lossy file size; transparency flattens to the selected background.",
     "crf": "CRF (quality)",
     "highQuality": "high quality",
     "mediumQuality": "medium quality",
@@ -82,12 +128,20 @@
     "frameDuration": "Frame Duration (ms)",
     "fps": "fps",
     "total": "total",
+    "unitMs": "ms",
+    "unitSec": "s",
+    "unitPx": "px",
+    "unitBytes": "B",
+    "unitKilobytes": "KB",
+    "unitMegabytes": "MB",
     "loopCount": "Loop Count",
     "infinite": "∞ (infinite)",
     "once": "1 (once)",
     "loopsForever": "Loops forever.",
     "playsCount_one": "Plays {{count}} time.",
     "playsCount_other": "Plays {{count}} times.",
+    "copyImage": "Copy Image",
+    "copyImageHint": "Copy rendered PNG image to clipboard",
     "download": "Download {{label}}"
   },
   "slider": {
@@ -103,16 +157,108 @@
     "tonalHighContrast": "High contrast",
     "tonalSoftContrast": "Soft contrast",
     "tonalColor": "Color",
-    "tonalMono": "Mono"
+    "tonalMono": "Mono",
+    "presets": {
+      "clean-reduction": {
+        "label": "Clean Reduction",
+        "intent": "Plain mapped color with minimal texture for logos and flat art."
+      },
+      "fine-ordered-mono": {
+        "label": "Fine Ordered Mono",
+        "intent": "Controlled monochrome Bayer texture for photos and soft gradients."
+      },
+      "high-contrast-ink": {
+        "label": "High Contrast Ink",
+        "intent": "Graphic black and white output with firm edge emphasis."
+      },
+      "screenprint-color": {
+        "label": "Screenprint Color",
+        "intent": "Color-preserving print palette with perceptual matching."
+      },
+      "texture-noise-look": {
+        "label": "Texture/Noise Look",
+        "intent": "Visible screen texture for smooth fields and atmospheric images."
+      },
+      "soft-poster": {
+        "label": "Soft Poster",
+        "intent": "Reduced poster color with a quieter tonal curve."
+      },
+      "newsprint-mono": {
+        "label": "Newsprint Mono",
+        "intent": "Coarse black and white halftone for print-like source texture."
+      },
+      "low-noise-photo": {
+        "label": "Low Noise Photo",
+        "intent": "Gentler diffusion for scans and noisy photographic sources."
+      },
+      "arcade-color": {
+        "label": "Arcade Color",
+        "intent": "Game-like ordered color using a compact retro palette."
+      },
+      "ink-wash": {
+        "label": "Ink Wash",
+        "intent": "Soft monochrome wash with visible grain and less edge bite."
+      }
+    }
+  },
+  "looks": {
+    "recipesHeading": "Look Recipes",
+    "builtInGroup": "Built-in",
+    "savedGroup": "Saved",
+    "saveCurrent": "Save Current",
+    "savePlaceholder": "Recipe name...",
+    "cancel": "Cancel",
+    "deleteRecipe": "Delete recipe {{name}}",
+    "effectsCount": "+{{count}} fx",
+    "builtIn": {
+      "clean-mono": "Clean Mono",
+      "warm-grain": "Warm Grain",
+      "poster-edge": "Poster Edge",
+      "crt-bloom": "CRT Bloom",
+      "soft-newsprint": "Soft Newsprint",
+      "hard-contrast": "Hard Contrast",
+      "paper-dither": "Paper Dither",
+      "blurred-bloom": "Blurred Bloom"
+    }
+  },
+  "notice": {
+    "dismiss": "Dismiss notification",
+    "demoLoaded": "Demo image loaded",
+    "autoTuneApplied": "Auto-Tune applied: {{detail}}",
+    "outputClamped": "Output clamped: {{detail}}",
+    "outputAutoSized": "Output auto-sized: {{detail}}",
+    "settingsCopied": "Settings copied to clipboard",
+    "settingsPasted": "Settings pasted from clipboard",
+    "lookCopied": "Look link copied to clipboard",
+    "lookPasted": "Look pasted from clipboard",
+    "lookAppliedFromUrl": "Look applied from link",
+    "paletteImported": "Palette imported",
+    "paletteImportedClipboard": "Palette imported from clipboard",
+    "paletteJsonCopied": "Palette JSON copied to clipboard",
+    "paletteJsonExported": "Palette JSON exported",
+    "paletteGplExported": "Palette GPL exported",
+    "paletteExtracted": "Palette extracted: {{detail}}",
+    "customPaletteReplaced": "Custom palette replaced",
+    "lookRecipeSaved": "Saved look recipe: {{name}}",
+    "imageCopied": "Image copied to clipboard",
+    "imageCopyFailed": "Failed to copy image to clipboard",
+    "imageCopyUnsupported": "Image clipboard copy is not supported in this browser"
   },
   "manual": {
     "output": "Output",
     "tone": "Tone",
     "utility": "Utility",
+    "effects": "Effects",
+    "preEffects": "Pre-Effects",
+    "postEffects": "Post-Effects",
+    "modified": "Modified",
     "width": "Width",
     "heightInferred": "Height inferred: {{height}}px / aspect {{aspect}}",
     "resetWidth": "Reset width to source size",
+    "scalePreset": "Set width to {{scale}}",
     "resizeKernel": "Resize Kernel",
+    "resizeBilinear": "Bilinear",
+    "resizeNearest": "Nearest",
     "alphaFlatten": "Alpha Flatten",
     "white": "White",
     "black": "Black",
@@ -128,7 +274,10 @@
     "gamma": "Gamma",
     "invertLabel": "Invert Before Palette",
     "invertDesc": "Applies after tone preprocessing.",
+    "colorDepth": "Color Depth",
+    "colorDepthFull": "Full",
     "paletteSwatches": "Palette Swatches",
+    "moreSwatches": "{{count}} more colors",
     "pickSwatchColor": "Pick palette swatch color {{n}}",
     "halftoneScreen": "Halftone Screen",
     "dotShape": "Dot Shape",
@@ -140,6 +289,18 @@
     "patternSize": "Pattern Size",
     "patternSizeItem": "{{n}} by {{n}}",
     "algorithm": "Algorithm",
+    "algorithmFamilies": {
+      "directMapping": "Direct Mapping",
+      "ordered": "Ordered",
+      "errorDiffusion": "Error Diffusion",
+      "blueNoise": "Blue Noise",
+      "halftone": "Halftone"
+    },
+    "algorithms": {
+      "none": "None",
+      "blue-noise": "Blue Noise",
+      "halftone-dot": "Halftone Dot"
+    },
     "randomAlgorithm": "Random algorithm",
     "bayerMatrix": "Bayer Matrix",
     "randomPalette": "Random palette",
@@ -153,8 +314,8 @@
     "temporalGlobalPalette": "Global Palette",
     "temporalNoneDesc": "Each frame dithered independently.",
     "temporalGlobalPaletteDesc": "Single palette extracted from all frames. Reduces GIF flicker.",
-    "addPreStage": "Add pre-stage",
-    "addPostStage": "Add post-stage",
+    "addPreStage": "Add Pre-Effect",
+    "addPostStage": "Add Post-Effect",
     "effectBlur": "Blur",
     "effectContrastShape": "Contrast Shape",
     "effectGrain": "Grain",
@@ -162,6 +323,23 @@
     "effectPaperNoise": "Paper Noise",
     "effectCrtBloom": "CRT Bloom",
     "effectInvert": "Invert Output",
+    "effectParams": {
+      "radius": "Radius",
+      "amount": "Amount",
+      "curve": "Curve",
+      "seed": "Seed",
+      "threshold": "Threshold",
+      "strength": "Strength",
+      "scale": "Scale",
+      "intensity": "Intensity"
+    },
+    "effectParamOptions": {
+      "soft": "Soft",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "noParameters": "No parameters",
+    "enableStage": "Toggle {{name}}",
     "dragStage": "Drag stage",
     "removeStage": "Remove stage",
     "stageActions": "Stage actions",
@@ -171,12 +349,20 @@
     "unknown": "Unknown",
     "paletteEditor": "Custom Palette Editor",
     "paletteEditorDesc": "Add, edit, copy, or export custom palette colors.",
+    "paletteLimitAria": "{{count}} of {{max}} colors used",
+    "paletteTools": "Palette import and export tools",
     "customPalette": "Custom Palette",
     "extractPalette": "Extract palette",
+    "extractFromImage": "Extract from image",
+    "extractAction": "Extract",
+    "extractColorCount": "Palette extraction size",
     "addColor": "Add color",
     "importFile": "Import file",
+    "importFileShort": "Import",
     "copyToClipboard": "Copy to clipboard",
+    "copyJson": "Copy JSON",
     "pasteFromClipboard": "Paste from clipboard",
+    "pastePalette": "Paste",
     "exportJson": "Export JSON",
     "exportGpl": "Export GPL",
     "colorPickers": "Color pickers",
@@ -186,6 +372,7 @@
     "deleteColor": "Delete color {{n}}",
     "hexColor": "Hex color {{n}}",
     "preset": "PRESET",
+    "lookRecipe": "Look recipe",
     "look": "Look",
     "saveLookRecipe": "Save look recipe",
     "lookRecipeName": "Look recipe name",
@@ -199,20 +386,25 @@
     "settingsJson": "Settings JSON",
     "copySettings": "Copy settings",
     "pasteSettings": "Paste settings",
-    "defaults": "Defaults"
+    "defaults": "Reset to Defaults"
   },
   "error": {
     "settingsCopyFailed": "Settings copy failed",
     "settingsPasteFailed": "Settings paste failed",
     "lookCopyFailed": "Look copy failed",
     "lookPasteFailed": "Look paste failed",
+    "lookImportFailed": "Look import failed",
+    "lookPayloadEmpty": "Look payload is empty",
     "paletteCopyFailed": "Palette copy failed",
+    "paletteImportFailed": "Palette import failed",
+    "paletteClipboardImportFailed": "Palette clipboard import failed",
     "paletteExportFailed": "Palette export failed",
     "paletteExtractionFailed": "Palette extraction failed",
     "autoTuneApplyFailed": "Auto-Tune apply failed",
     "exportFailed": "Export failed",
     "exportNoSource": "Export Job dependency is required when a Source Image is present",
     "animatedExportFailed": "{{format}} export failed",
+    "webmRequiresWebCodecs": "WebM export requires WebCodecs support in this browser",
     "imageDecodeFailed": "Image decode failed",
     "imageIntakeWorkerFailed": "Image intake worker failed",
     "gifProcessingFailed": "GIF processing failed",

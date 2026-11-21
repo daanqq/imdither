@@ -181,6 +181,7 @@ describe("createPreviewStageApplication", () => {
       onFileSelected: vi.fn(),
       onInvalidDrop: vi.fn(),
       onExport: vi.fn(),
+      onCopyImage: vi.fn(),
       setExportFormat: vi.fn(),
       setExportQuality: vi.fn(),
       setMotionExportSettings: vi.fn(),
@@ -369,6 +370,15 @@ describe("createPreviewStageApplication", () => {
     expect(adapter.redoSettingsChange).toHaveBeenCalled()
   })
 
+  it("dispatches copy-image-intent", () => {
+    const adapter = createAdapter()
+    const app = createPreviewStageApplication(adapter)
+
+    app.dispatch({ kind: "copy-image-intent" })
+
+    expect(adapter.onCopyImage).toHaveBeenCalledTimes(1)
+  })
+
   it("commands do not contain DOM event objects", () => {
     const commands: PreviewStageCommand[] = [
       { kind: "compare-mode-changed", mode: "slide" },
@@ -381,6 +391,7 @@ describe("createPreviewStageApplication", () => {
       { kind: "source-replacement-intent", file: new File([], "x.png") },
       { kind: "invalid-drop", message: "x" },
       { kind: "export-intent" },
+      { kind: "copy-image-intent" },
       { kind: "export-format-changed", format: "png" },
       { kind: "export-quality-changed", quality: 1 },
       {

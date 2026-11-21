@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-  PRESET_PALETTES,
   type AutoTuneRecommendation,
   type EditorSettings,
 } from "@workspace/core"
@@ -15,8 +14,10 @@ import {
 } from "@workspace/ui/components/tabs"
 
 import { AutoTunePanel } from "@/components/auto-tune-panel"
+import { LookRecipesGallery } from "@/components/look-recipes-gallery"
 import { ManualTab } from "@/components/manual-tab"
 import type { LookRecipe } from "@/lib/look-recipes"
+import { resolvePaletteColors } from "@/lib/palette-preview"
 import type { SettingsTransition } from "@/lib/editor-settings-transition"
 
 type InspectorPanelProps = {
@@ -25,6 +26,7 @@ type InspectorPanelProps = {
   autoTuneError: string | null
   autoTuneLoading: boolean
   autoTuneRecommendations: AutoTuneRecommendation[]
+  isAnimated?: boolean
   settings: EditorSettings
   lookRecipeId: string
   lookRecipes: readonly LookRecipe[]
@@ -60,6 +62,7 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   autoTuneError,
   autoTuneLoading,
   autoTuneRecommendations,
+  isAnimated = false,
   settings,
   lookRecipeId,
   lookRecipes,
@@ -87,13 +90,10 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   resolutionAspectLabel,
 }: InspectorPanelProps) {
   const { t } = useTranslation()
-  const activePreset = PRESET_PALETTES.find(
-    (palette) => palette.id === settings.paletteId
+  const activePaletteColors = resolvePaletteColors(
+    settings.paletteId,
+    settings.customPalette
   )
-  const activePaletteColors =
-    settings.customPalette ??
-    activePreset?.colors.map((color) => color.hex) ??
-    PRESET_PALETTES[0].colors.map((color) => color.hex)
   const paletteSelectValue = settings.customPalette?.length
     ? "custom"
     : settings.paletteId
@@ -109,19 +109,29 @@ export const InspectorPanel = React.memo(function InspectorPanel({
           </CardHeader>
           <CardContent className="min-h-0 min-w-0 flex-1 basis-0 overflow-hidden p-0">
             <InspectorTab value="looks">
-              <AutoTunePanel
-                appliedRecommendationId={appliedRecommendationId}
-                error={autoTuneError}
-                isLoading={autoTuneLoading}
-                recommendations={autoTuneRecommendations}
-                sourceAvailable={sourceAvailable}
-                onApplyRecommendation={onApplyAutoTuneRecommendation}
-              />
+              <div className="space-y-4">
+                <AutoTunePanel
+                  appliedRecommendationId={appliedRecommendationId}
+                  error={autoTuneError}
+                  isLoading={autoTuneLoading}
+                  recommendations={autoTuneRecommendations}
+                  sourceAvailable={sourceAvailable}
+                  onApplyRecommendation={onApplyAutoTuneRecommendation}
+                />
+                <LookRecipesGallery
+                  activeRecipeId={lookRecipeId}
+                  recipes={lookRecipes}
+                  onDeleteRecipe={onDeleteLookRecipe}
+                  onSaveRecipe={onSaveLookRecipe}
+                  onSelectRecipe={onSelectLookRecipe}
+                />
+              </div>
             </InspectorTab>
             <InspectorTab value="manual">
               <ManualTab
                 activePaletteColors={activePaletteColors}
                 advancedOpen={advancedOpen}
+                isAnimated={isAnimated}
                 lookRecipeId={lookRecipeId}
                 lookRecipes={lookRecipes}
                 paletteSelectValue={paletteSelectValue}

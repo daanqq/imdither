@@ -1,5 +1,6 @@
 import type { EditorSettings } from "@workspace/core"
 
+import i18n from "@/i18n"
 import {
   applyLookText,
   copyLookPayload,
@@ -120,7 +121,9 @@ export async function executeClipboardCommand(
         opts.clearLookHash?.()
       } catch (lookError) {
         adapter.setError(
-          lookError instanceof Error ? lookError.message : "Look import failed"
+          lookError instanceof Error
+            ? lookError.message
+            : i18n.t("error.lookImportFailed")
         )
       }
   }
